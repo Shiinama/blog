@@ -11,7 +11,7 @@ import PostSimple from '@/layouts/PostSimple'
 import PostLayout from '@/layouts/PostLayout'
 import PostBanner from '@/layouts/PostBanner'
 import { Metadata } from 'next'
-import siteMetadata from '@/data/siteMetadata'
+import { SITE } from 'config/const'
 
 const defaultLayout = 'PostLayout'
 const layouts = {
@@ -39,13 +39,13 @@ export async function generateMetadata({
   const publishedAt = new Date(post.date).toISOString()
   const modifiedAt = new Date(post.lastmod || post.date).toISOString()
   const authors = authorDetails.map((author) => author.name)
-  let imageList = [siteMetadata.socialBanner]
+  let imageList = [SITE.socialBanner]
   if (post.images) {
     imageList = typeof post.images === 'string' ? [post.images] : post.images
   }
   const ogImages = imageList.map((img) => {
     return {
-      url: img.includes('http') ? img : siteMetadata.siteUrl + img,
+      url: img.includes('http') ? img : SITE.website + img,
     }
   })
 
@@ -55,14 +55,14 @@ export async function generateMetadata({
     openGraph: {
       title: post.title,
       description: post.summary,
-      siteName: siteMetadata.title,
+      siteName: SITE.title,
       locale: 'en_US',
       type: 'article',
       publishedTime: publishedAt,
       modifiedTime: modifiedAt,
       url: './',
       images: ogImages,
-      authors: authors.length > 0 ? authors : [siteMetadata.author],
+      authors: authors.length > 0 ? authors : [SITE.author],
     },
     twitter: {
       card: 'summary_large_image',

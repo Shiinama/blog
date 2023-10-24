@@ -2,7 +2,14 @@
 
 import { useState } from 'react'
 import Link from './Link'
-import headerNavLinks from '@/data/headerNavLinks'
+
+const headerNavLinks = [
+  { href: '/', title: 'Home' },
+  { href: '/blog', title: 'Blog' },
+  { href: '/tags', title: 'Tags' },
+  { href: '/projects', title: 'Projects' },
+  { href: '/about', title: 'About' },
+]
 
 const MobileNav = () => {
   const [navShow, setNavShow] = useState(false)

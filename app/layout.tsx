@@ -6,7 +6,7 @@ import { SearchProvider, SearchConfig } from 'pliny/search'
 import Header from '@/components/Header'
 import SectionContainer from '@/components/SectionContainer'
 import Footer from '@/components/Footer'
-import siteMetadata from '@/data/siteMetadata'
+import { SITE } from 'config/const'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
 
@@ -17,25 +17,25 @@ const space_grotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteMetadata.siteUrl),
+  metadataBase: new URL(SITE.website),
   title: {
-    default: siteMetadata.title,
-    template: `%s | ${siteMetadata.title}`,
+    default: SITE.title,
+    template: `%s | ${SITE.title}`,
   },
-  description: siteMetadata.description,
+  description: SITE.description,
   openGraph: {
-    title: siteMetadata.title,
-    description: siteMetadata.description,
+    title: SITE.title,
+    description: SITE.description,
     url: './',
-    siteName: siteMetadata.title,
-    images: [siteMetadata.socialBanner],
+    siteName: SITE.title,
+    images: [SITE.socialBanner],
     locale: 'en_US',
     type: 'website',
   },
   alternates: {
     canonical: './',
     types: {
-      'application/rss+xml': `${siteMetadata.siteUrl}/feed.xml`,
+      'application/rss+xml': `${SITE.website}/feed.xml`,
     },
   },
   robots: {
@@ -50,19 +50,15 @@ export const metadata: Metadata = {
     },
   },
   twitter: {
-    title: siteMetadata.title,
+    title: SITE.title,
     card: 'summary_large_image',
-    images: [siteMetadata.socialBanner],
+    images: [SITE.socialBanner],
   },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang={siteMetadata.language}
-      className={`${space_grotesk.variable} scroll-smooth`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={`${space_grotesk.variable} scroll-smooth`} suppressHydrationWarning>
       <link rel="apple-touch-icon" sizes="76x76" href="/static/favicons/apple-touch-icon.png" />
       <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png" />
       <link rel="icon" type="image/png" sizes="16x16" href="/static/favicons/favicon-16x16.png" />
@@ -76,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProviders>
           <SectionContainer>
             <div className="flex h-screen flex-col justify-between font-sans">
-              <SearchProvider searchConfig={siteMetadata.search as SearchConfig}>
+              <SearchProvider searchConfig={SITE.search as SearchConfig}>
                 <Header />
                 <main className="mb-auto">{children}</main>
               </SearchProvider>
