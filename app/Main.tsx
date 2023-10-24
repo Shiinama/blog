@@ -1,5 +1,4 @@
 import Link from '@/components/Link'
-import Tag from '@/components/Tag'
 import { SITE } from 'config/const'
 
 const MAX_DISPLAY = 10
@@ -11,7 +10,7 @@ const formatDate = (date) => {
 export default function Home({ posts }) {
   return (
     <>
-      <div className="w-1/2">
+      <div className="w-full px-5 md:w-1/2">
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {!posts.length && 'No posts found.'}
           {posts.slice(0, MAX_DISPLAY).map((post) => {

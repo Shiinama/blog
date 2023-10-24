@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { AlgoliaButton } from 'pliny/search/AlgoliaButton'
 import { KBarButton } from 'pliny/search/KBarButton'
 import { SITE } from 'config/const'
@@ -24,25 +25,23 @@ const SearchButton = () => {
     const SearchButtonWrapper = SITE.search.provider === 'algolia' ? AlgoliaButton : KBarButton
 
     return (
-      <SearchButtonWrapper aria-label="Search" className="mx-6 w-1/2 px-4">
+      <SearchButtonWrapper className="mx-6 w-1/2">
         <chakra.button
           flex="1"
           type="button"
           mx="6"
           lineHeight="1.2"
-          w="100%"
           bg="gray.400"
           whiteSpace="nowrap"
           display={{ base: 'none', sm: 'flex' }}
           alignItems="center"
-          color="gray.600"
-          _dark={{ bg: 'gray.700', color: 'gray.400' }}
+          color="gray.400"
           py="3"
           px="4"
           outline="0"
           _focus={{ shadow: 'outline' }}
           shadow="base"
-          rounded="lg"
+          className="w-full rounded-full hover:bg-gray-200 hover:text-gray-400 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 "
         >
           <SearchIcon />
           <HStack w="full" ml="3" spacing="4px">

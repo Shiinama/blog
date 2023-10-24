@@ -1,9 +1,12 @@
-import { SITE } from 'config/const'
+import dynamic from 'next/dynamic'
+
 import Logo from '@/content/logo.svg'
+import { SITE } from 'config/const'
+
 import Link from './Link'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
-import SearchButton from './SearchButton'
+const SearchButton = dynamic(() => import('./SearchButton'), { ssr: false })
 
 const headerNavLinks = [
   { href: '/', title: 'Home' },
