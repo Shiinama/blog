@@ -2,7 +2,7 @@ import type { Site, SocialObjects } from './types'
 
 export const SITE: Site = {
   website: 'https://example.com/',
-  author: 'author',
+  author: 'test',
   email: 'example@gmail.com',
   description: '这里是网站描述',
   title: 'My Blog',

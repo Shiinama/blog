@@ -2,7 +2,7 @@ import Link from '@/components/Link'
 import Tag from '@/components/Tag'
 import { SITE } from 'config/const'
 
-const MAX_DISPLAY = 5
+const MAX_DISPLAY = 10
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('zh-CN')
@@ -11,58 +11,30 @@ const formatDate = (date) => {
 export default function Home({ posts }) {
   return (
     <>
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        <div className="space-y-2 pb-8 pt-6 md:space-y-5">
-          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
-            Latest
-          </h1>
-          <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">{SITE.description}</p>
-        </div>
+      <div className="w-1/2">
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {!posts.length && 'No posts found.'}
           {posts.slice(0, MAX_DISPLAY).map((post) => {
-            const { slug, date, title, summary, tags } = post
+            const { slug, date, title, summary, author } = post
             return (
-              <li key={slug} className="py-12">
-                <article>
-                  <div className="space-y-2 xl:grid xl:grid-cols-4 xl:items-baseline xl:space-y-0">
-                    <dl>
-                      <dt className="sr-only">Published on</dt>
-                      <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                        <time dateTime={date}>{formatDate(date)}</time>
-                      </dd>
-                    </dl>
-                    <div className="space-y-5 xl:col-span-3">
-                      <div className="space-y-6">
-                        <div>
-                          <h2 className="text-2xl font-bold leading-8 tracking-tight">
-                            <Link
-                              href={`/blog/${slug}`}
-                              className="text-gray-900 dark:text-gray-100"
-                            >
-                              {title}
-                            </Link>
-                          </h2>
-                          <div className="flex flex-wrap">
-                            {tags.map((tag) => (
-                              <Tag key={tag} text={tag} />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
-                      </div>
-                      <div className="text-base font-medium leading-6">
-                        <Link
-                          href={`/blog/${slug}`}
-                          className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-                          aria-label={`Read "${title}"`}
-                        >
-                          Read more &rarr;
-                        </Link>
-                      </div>
-                    </div>
+              <li key={slug} className="py-6">
+                <article className="hover:text-primary-600">
+                  <div>
+                    <h2 className="text-2xl font-bold leading-8 tracking-tight ">
+                      <Link
+                        href={`/blog/${slug}`}
+                        className="text-gray-800 hover:text-primary-600 dark:text-gray-100 dark:hover:text-primary-600"
+                      >
+                        {title}
+                      </Link>
+                    </h2>
+                  </div>
+                  <div className="prose mt-2 max-w-none text-gray-400 hover:text-primary-600">
+                    {summary}
+                  </div>
+                  <div className="prose mt-2 text-lg text-gray-400">
+                    Posted by {author ?? SITE.author} on{' '}
+                    <time dateTime={date}>{formatDate(date)}</time>
                   </div>
                 </article>
               </li>
