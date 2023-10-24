@@ -3,6 +3,7 @@ import Logo from '@/content/logo.svg'
 import Link from './Link'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
+import SearchButton from './SearchButton'
 
 const headerNavLinks = [
   { href: '/', title: 'Home' },
@@ -31,6 +32,7 @@ const Header = () => {
           </div>
         </Link>
       </div>
+      <SearchButton />
       <div className="flex items-center space-x-4 leading-5 sm:space-x-6">
         {headerNavLinks
           .filter((link) => link.href !== '/')

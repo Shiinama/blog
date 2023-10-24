@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import { SITE } from 'config/const'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
+import { Providers as ChakraProvider } from '@/components/ChakraProvider'
 
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -69,13 +70,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <link rel="alternate" type="application/rss+xml" href="/feed.xml" />
       <body className="bg-white text-black antialiased dark:bg-gray-950 dark:text-white">
         <ThemeProviders>
-          <div className="flex h-screen flex-col justify-between font-sans">
-            <SearchProvider searchConfig={SITE.search as SearchConfig}>
-              <Header />
-              <main className="mb-auto">{children}</main>
-            </SearchProvider>
-            <Footer />
-          </div>
+          <ChakraProvider>
+            <div className="flex h-screen flex-col justify-between font-sans">
+              <SearchProvider searchConfig={SITE.search as SearchConfig}>
+                <Header />
+                <main className="mb-auto">{children}</main>
+              </SearchProvider>
+              <Footer />
+            </div>
+          </ChakraProvider>
         </ThemeProviders>
       </body>
     </html>
