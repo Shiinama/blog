@@ -6,6 +6,10 @@ import PageTitle from '@/components/PageTitle'
 import SectionContainer from '@/components/SectionContainer'
 import ScrollTop from '@/components/ScrollTop'
 
+const formatDate = (date) => {
+  return new Date(date).toLocaleDateString('zh-CN')
+}
+
 interface LayoutProps {
   content: CoreContent<Blog>
   children: ReactNode
@@ -27,7 +31,7 @@ export default function PostLayout({ content, next, prev, children }: LayoutProp
                 <div>
                   <dt className="sr-only">Published on</dt>
                   <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                    <time dateTime={date}>{date}</time>
+                    <time dateTime={date}>{formatDate(date)}</time>
                   </dd>
                 </div>
               </dl>

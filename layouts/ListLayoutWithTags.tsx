@@ -9,6 +9,9 @@ import Link from '@/components/Link'
 import Tag from '@/components/Tag'
 import tagData from 'app/tag-data.json'
 
+const formatDate = (date) => {
+  return new Date(date).toLocaleDateString('zh-CN')
+}
 interface PaginationProps {
   totalPages: number
   currentPage: number
@@ -127,7 +130,7 @@ export default function ListLayoutWithTags({
                       <dl>
                         <dt className="sr-only">Published on</dt>
                         <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                          <time dateTime={date}>{date}</time>
+                          <time dateTime={date}>{formatDate(date)}</time>
                         </dd>
                       </dl>
                       <div className="space-y-3">

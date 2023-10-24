@@ -4,6 +4,10 @@ import { SITE } from 'config/const'
 
 const MAX_DISPLAY = 5
 
+const formatDate = (date) => {
+  return new Date(date).toLocaleDateString('zh-CN')
+}
+
 export default function Home({ posts }) {
   return (
     <>
@@ -25,7 +29,7 @@ export default function Home({ posts }) {
                     <dl>
                       <dt className="sr-only">Published on</dt>
                       <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                        <time dateTime={date}>{date}</time>
+                        <time dateTime={date}>{formatDate(date)}</time>
                       </dd>
                     </dl>
                     <div className="space-y-5 xl:col-span-3">
