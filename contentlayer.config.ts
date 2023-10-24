@@ -85,7 +85,6 @@ export const Blog = defineDocumentType(() => ({
     summary: { type: 'string' },
     images: { type: 'json' },
     authors: { type: 'string' },
-    layout: { type: 'string' },
     canonicalUrl: { type: 'string' },
   },
   computedFields: {
@@ -116,7 +115,6 @@ export const About = defineDocumentType(() => ({
     email: { type: 'string' },
     twitter: { type: 'string' },
     github: { type: 'string' },
-    layout: { type: 'string' },
   },
   computedFields,
   isSingleton: true,
