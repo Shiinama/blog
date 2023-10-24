@@ -3,7 +3,6 @@ import Logo from '@/content/logo.svg'
 import Link from './Link'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
-import SearchButton from './SearchButton'
 
 const headerNavLinks = [
   { href: '/', title: 'Home' },
@@ -15,7 +14,7 @@ const headerNavLinks = [
 
 const Header = () => {
   return (
-    <header className="flex items-center justify-between py-10">
+    <header className="mx-5 flex items-center justify-between py-5">
       <div>
         <Link href="/" aria-label={SITE.headerTitle}>
           <div className="flex items-center justify-between">
@@ -23,7 +22,9 @@ const Header = () => {
               <Logo />
             </div>
             {typeof SITE.headerTitle === 'string' ? (
-              <div className="hidden h-6 text-2xl font-semibold sm:block">{SITE.headerTitle}</div>
+              <div className="hidden h-6 text-2xl font-semibold text-slate-400  dark:text-slate-300 sm:block">
+                {SITE.headerTitle}
+              </div>
             ) : (
               SITE.headerTitle
             )}
@@ -37,12 +38,11 @@ const Header = () => {
             <Link
               key={link.title}
               href={link.href}
-              className="hidden font-medium text-gray-900 dark:text-gray-100 sm:block"
+              className="hidden font-medium text-slate-400 hover:text-gray-800 dark:text-slate-300 sm:block"
             >
               {link.title}
             </Link>
           ))}
-        <SearchButton />
         <ThemeSwitch />
         <MobileNav />
       </div>
