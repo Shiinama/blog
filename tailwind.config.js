@@ -10,7 +10,7 @@ module.exports = {
     './pages/**/*.{js,ts,tsx}',
     './components/**/*.{js,ts,tsx}',
     './layouts/**/*.{js,ts,tsx}',
-    './data/**/*.mdx',
+    './content/**/*.mdx',
   ],
   darkMode: 'class',
   theme: {

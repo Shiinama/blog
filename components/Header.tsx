@@ -1,5 +1,5 @@
 import { SITE } from 'config/const'
-import Logo from '@/data/logo.svg'
+import Logo from '@/content/logo.svg'
 import Link from './Link'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
