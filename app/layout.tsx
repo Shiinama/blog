@@ -1,4 +1,4 @@
-import 'css/tailwind.css'
+import 'styles/tailwind.css'
 import 'pliny/search/algolia.css'
 
 import { Space_Grotesk } from 'next/font/google'
