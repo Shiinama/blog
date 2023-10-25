@@ -48,3 +48,10 @@ export type SocialMedia =
   | 'Steam'
   | 'Telegram'
   | 'Mastodon'
+
+export type Friend = {
+  name: string
+  link: string
+}
+
+export type Friends = Friend[]

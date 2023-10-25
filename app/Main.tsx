@@ -1,16 +1,22 @@
 import Link from '@/components/Link'
-import { SITE } from 'config/const'
+import { SITE, FRIENDS } from 'config/const'
+import tagData from 'app/tag-data.json'
+import Tag from '@/components/Tag'
 
-const MAX_DISPLAY = 10
+const MAX_DISPLAY = 5
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('zh-CN')
 }
 
 export default function Home({ posts }) {
+  const tagCounts = tagData as Record<string, number>
+  const tagKeys = Object.keys(tagCounts)
+  const sortedTags = tagKeys.sort((a, b) => tagCounts[b] - tagCounts[a])
+
   return (
-    <>
-      <div className="w-full px-5 md:w-1/2">
+    <div className="flex w-full flex-col px-5 md:w-3/5 md:flex-row">
+      <div className="md:3/4 w-full">
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
           {!posts.length && 'No posts found.'}
           {posts.slice(0, MAX_DISPLAY).map((post) => {
@@ -40,18 +46,45 @@ export default function Home({ posts }) {
             )
           })}
         </ul>
+        {posts.length > MAX_DISPLAY && (
+          <div className="flex justify-end text-base font-medium leading-6">
+            <Link
+              href="/blog"
+              className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+              aria-label="All posts"
+            >
+              All Posts &rarr;
+            </Link>
+          </div>
+        )}
       </div>
-      {posts.length > MAX_DISPLAY && (
-        <div className="flex justify-end text-base font-medium leading-6">
-          <Link
-            href="/blog"
-            className="text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
-            aria-label="All posts"
-          >
-            All Posts &rarr;
-          </Link>
+      <div className="w-full md:ml-6 md:w-1/4">
+        <div>
+          <div className="mb-6 text-sm font-bold text-[#bfbfbf]">FEATURED TAGS</div>
+          {sortedTags.map((t) => {
+            return (
+              <div key={t} className="mb-2 mr-2 inline-block">
+                <Tag text={t} />
+              </div>
+            )
+          })}
         </div>
-      )}
-    </>
+        <div className="mt-6 border-t border-gray-200 py-4 dark:border-gray-700">
+          <div className="mb-6 text-sm font-bold text-[#bfbfbf]">FRIENDS</div>
+          {FRIENDS.map((p) => {
+            return (
+              <a
+                key={p.name}
+                href={p.link}
+                target="__blank"
+                className="mb-2 mr-4  inline-block text-[#bfbfbf] hover:text-primary-600 hover:underline dark:text-gray-500"
+              >
+                {p.name}
+              </a>
+            )
+          })}
+        </div>
+      </div>
+    </div>
   )
 }

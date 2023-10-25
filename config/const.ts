@@ -1,4 +1,4 @@
-import type { Site, SocialObjects } from './types'
+import type { Site, SocialObjects, Friends } from './types'
 
 export const SITE: Site = {
   website: 'https://example.com/',
@@ -36,6 +36,21 @@ export const SOCIALS: SocialObjects = [
     href: 'https://twitter.com/liruifengv',
     linkTitle: `My Twitter`,
     active: true,
+  },
+]
+
+export const FRIENDS: Friends = [
+  {
+    name: 'antfu',
+    link: 'https://antfu.me',
+  },
+  {
+    name: 'hux',
+    link: 'https://huangxuan.me/',
+  },
+  {
+    name: 'liruifengv',
+    link: 'https://liruifengv.com',
   },
 ]
 
