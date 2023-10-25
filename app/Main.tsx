@@ -1,25 +1,9 @@
 import Link from '@/components/Link'
-import { SITE, FRIENDS } from 'config/const'
-import tagData from 'app/tag-data.json'
+import { SITE } from 'config/const'
 import SideBar from '@/components/SideBar'
 import CustomNav from '@/components/CustomNav'
 
 const MAX_DISPLAY = 5
-
-const CUSTOM_NAV = [
-  {
-    title: 'Blog',
-    href: '/blog',
-  },
-  {
-    title: 'About',
-    href: '/about',
-  },
-  {
-    title: 'Talks',
-    href: '/talks',
-  },
-]
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('zh-CN')

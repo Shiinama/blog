@@ -1,7 +1,8 @@
 'use client'
 
 import Link from '@/components/Link'
-import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 const CUSTOM_NAV = [
   {
@@ -18,20 +19,16 @@ const CUSTOM_NAV = [
   },
 ]
 export default function CustomNav({ className }) {
-  const [path, setPath] = useState('')
+  const pathName = usePathname()
 
   const classNames = `${className} custom-nav`
 
-  useEffect(() => {
-    const path = window.location.pathname
-    setPath(path)
-  }, [])
-
   function getClassNames(href) {
-    const active = href === path || (href === '/blog' && path === '/')
-    console.log('path', path)
-    console.log('href', href)
-    console.log(active)
+    const active =
+      href === pathName ||
+      (href === '/blog' && pathName === '/') ||
+      (href === '/blog' && pathName.startsWith('/blog/page/'))
+
     return `mr-4 text-3xl  ${
       active ? 'text-primary-700' : ''
     } text-gray-400 hover:text-primary-600 dark:hover:text-primary-400`

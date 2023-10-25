@@ -1,13 +1,13 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { slug } from 'github-slugger'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
 import Link from '@/components/Link'
-import Tag from '@/components/Tag'
+import { SITE } from 'config/const'
 import tagData from 'app/tag-data.json'
+import SideBar from '@/components/SideBar'
+import CustomNav from '@/components/CustomNav'
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('zh-CN')
@@ -65,100 +65,54 @@ function Pagination({ totalPages, currentPage }: PaginationProps) {
 
 export default function ListLayoutWithTags({
   posts,
-  title,
   initialDisplayPosts = [],
   pagination,
 }: ListLayoutProps) {
-  const pathname = usePathname()
   const tagCounts = tagData as Record<string, number>
   const tagKeys = Object.keys(tagCounts)
-  const sortedTags = tagKeys.sort((a, b) => tagCounts[b] - tagCounts[a])
 
   const displayPosts = initialDisplayPosts.length > 0 ? initialDisplayPosts : posts
 
   return (
-    <>
-      <div>
-        <div className="pb-6 pt-6">
-          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:hidden sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
-            {title}
-          </h1>
-        </div>
-        <div className="flex sm:space-x-24">
-          <div className="hidden h-full max-h-screen min-w-[280px] max-w-[280px] flex-wrap overflow-auto rounded bg-gray-50 pt-5 shadow-md dark:bg-gray-900/70 dark:shadow-gray-800/40 sm:flex">
-            <div className="px-6 py-4">
-              {pathname.startsWith('/blog') ? (
-                <h3 className="font-bold uppercase text-primary-500">All Posts</h3>
-              ) : (
-                <Link
-                  href={`/blog`}
-                  className="font-bold uppercase text-gray-700 hover:text-primary-500 dark:text-gray-300 dark:hover:text-primary-500"
-                >
-                  All Posts
-                </Link>
-              )}
-              <ul>
-                {sortedTags.map((t) => {
-                  return (
-                    <li key={t} className="my-3">
-                      {pathname.split('/tags/')[1] === slug(t) ? (
-                        <h3 className="inline px-3 py-2 text-sm font-bold uppercase text-primary-500">
-                          {`${t} (${tagCounts[t]})`}
-                        </h3>
-                      ) : (
+    <div className="flex w-full flex-col px-5 md:w-3/5">
+      <CustomNav className="mb-5 mt-10" />
+      <div className="flex w-full flex-col md:flex-row">
+        <div className="md:3/4 w-full">
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            {!posts.length && 'No posts found.'}
+            {displayPosts.map((post) => {
+              const { slug, date, title, summary, author } = post
+              return (
+                <li key={slug} className="py-6">
+                  <article className="hover:text-primary-600">
+                    <div>
+                      <h2 className="text-2xl font-bold leading-8 tracking-tight ">
                         <Link
-                          href={`/tags/${slug(t)}`}
-                          className="px-3 py-2 text-sm font-medium uppercase text-gray-500 hover:text-primary-500 dark:text-gray-300 dark:hover:text-primary-500"
-                          aria-label={`View posts tagged ${t}`}
+                          href={`/blog/${slug}`}
+                          className="text-gray-800 hover:text-primary-600 dark:text-gray-100 dark:hover:text-primary-600"
                         >
-                          {`${t} (${tagCounts[t]})`}
+                          {title}
                         </Link>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          </div>
-          <div>
-            <ul>
-              {displayPosts.map((post) => {
-                const { path, date, title, summary, tags } = post
-                return (
-                  <li key={path} className="py-5">
-                    <article className="flex flex-col space-y-2 xl:space-y-0">
-                      <dl>
-                        <dt className="sr-only">Published on</dt>
-                        <dd className="text-base font-medium leading-6 text-gray-500 dark:text-gray-400">
-                          <time dateTime={date}>{formatDate(date)}</time>
-                        </dd>
-                      </dl>
-                      <div className="space-y-3">
-                        <div>
-                          <h2 className="text-2xl font-bold leading-8 tracking-tight">
-                            <Link href={`/${path}`} className="text-gray-900 dark:text-gray-100">
-                              {title}
-                            </Link>
-                          </h2>
-                          <div className="flex flex-wrap">
-                            {tags?.map((tag) => <Tag key={tag} text={tag} />)}
-                          </div>
-                        </div>
-                        <div className="prose max-w-none text-gray-500 dark:text-gray-400">
-                          {summary}
-                        </div>
-                      </div>
-                    </article>
-                  </li>
-                )
-              })}
-            </ul>
-            {pagination && pagination.totalPages > 1 && (
-              <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
-            )}
-          </div>
+                      </h2>
+                    </div>
+                    <div className="prose mt-2 max-w-none text-gray-400 hover:text-primary-600">
+                      {summary}
+                    </div>
+                    <div className="prose mt-2 text-lg text-gray-400">
+                      Posted by {author ?? SITE.author} on{' '}
+                      <time dateTime={date}>{formatDate(date)}</time>
+                    </div>
+                  </article>
+                </li>
+              )
+            })}
+          </ul>
+          {pagination && pagination.totalPages > 1 && (
+            <Pagination currentPage={pagination.currentPage} totalPages={pagination.totalPages} />
+          )}
         </div>
+        <SideBar />
       </div>
-    </>
+    </div>
   )
 }
