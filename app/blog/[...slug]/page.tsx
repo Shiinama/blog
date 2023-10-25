@@ -47,7 +47,7 @@ export async function generateMetadata({
       modifiedTime: modifiedAt,
       url: './',
       images: ogImages,
-      authors: post.authors ?? SITE.author,
+      authors: post.author ?? SITE.author,
     },
     twitter: {
       card: 'summary_large_image',
@@ -87,7 +87,7 @@ export default async function Page({ params }: { params: { slug: string[] } }) {
   const post = allBlogs.find((p) => p.slug === slug) as Blog
   const mainContent = coreContent(post)
   const jsonLd = post.structuredData
-  const author = post.authors ?? SITE.author
+  const author = post.author ?? SITE.author
   jsonLd['author'] = author
 
   return (
