@@ -3,6 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
 
+function enableTransitions() {
+  return (
+    'startViewTransition' in document &&
+    window.matchMedia('(prefers-reduced-motion: no-preference)').matches
+  )
+}
+
 const ThemeSwitch = () => {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme, resolvedTheme } = useTheme()
@@ -10,15 +17,46 @@ const ThemeSwitch = () => {
   // When mounted on client, now we can show the UI
   useEffect(() => setMounted(true), [])
 
+  async function toSetTheme(e) {
+    {
+      if (!enableTransitions()) {
+        setTheme(theme === 'dark' || resolvedTheme === 'dark' ? 'light' : 'dark')
+        return
+      }
+
+      const x = e.clientX
+      const y = e.clientY
+
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${Math.hypot(
+          Math.max(x, innerWidth - x),
+          Math.max(y, innerHeight - y)
+        )}px at ${x}px ${y}px)`,
+      ]
+
+      const isDark = theme === 'light' || resolvedTheme === 'light'
+      // @ts-ignore
+      await document.startViewTransition(() => {
+        setTheme(theme === 'dark' || resolvedTheme === 'dark' ? 'light' : 'dark')
+      }).ready
+      document.documentElement.animate(
+        { clipPath: isDark ? clipPath.reverse() : clipPath },
+        {
+          duration: 300,
+          easing: 'ease-in',
+          pseudoElement: `::view-transition-${isDark ? 'old' : 'new'}(root)`,
+        }
+      )
+    }
+  }
+
   if (!mounted) {
     return null
   }
 
   return (
-    <button
-      aria-label="Toggle Dark Mode"
-      onClick={() => setTheme(theme === 'dark' || resolvedTheme === 'dark' ? 'light' : 'dark')}
-    >
+    <button aria-label="Toggle Dark Mode" onClick={async (e) => toSetTheme(e)}>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 20 20"
