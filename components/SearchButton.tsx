@@ -25,11 +25,10 @@ const SearchButton = () => {
     const SearchButtonWrapper = SITE.search.provider === 'algolia' ? AlgoliaButton : KBarButton
 
     return (
-      <SearchButtonWrapper className="mx-6 w-1/2">
+      <SearchButtonWrapper className="w-1/2">
         <chakra.button
           flex="1"
           type="button"
-          mx="6"
           lineHeight="1.2"
           bg="gray.400"
           whiteSpace="nowrap"
