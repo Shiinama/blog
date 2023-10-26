@@ -17,10 +17,16 @@ export default function Home({ posts }) {
         <div className="md:3/4 w-full">
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
             {!posts.length && 'No posts found.'}
-            {posts.slice(0, MAX_DISPLAY).map((post) => {
+            {posts.slice(0, MAX_DISPLAY).map((post, index) => {
               const { slug, date, title, summary, author } = post
               return (
-                <li key={slug} className="py-6">
+                <li
+                  key={slug}
+                  className="slide-enter py-6"
+                  data-animate
+                  // @ts-ignore
+                  style={{ '--stagger': index }}
+                >
                   <article className="hover:text-primary-600">
                     <div>
                       <h2 className="text-2xl font-bold leading-8 tracking-tight ">

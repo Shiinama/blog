@@ -15,7 +15,12 @@ export default async function Page() {
       <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl md:text-6xl">
         Tags
       </h1>
-      <div className="mt-4 flex flex-wrap">
+      <div
+        className="mt-4 flex flex-wrap"
+        data-animate
+        // @ts-ignore
+        style={{ '--stagger': 1 }}
+      >
         {tagKeys.length === 0 && 'No tags found.'}
         {sortedTags.map((t) => {
           return (

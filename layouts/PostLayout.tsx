@@ -45,7 +45,14 @@ export default function PostLayout({ content, author, next, prev, children }: La
               ))}
             </div>
           </header>
-          <div className="prose max-w-none pb-8 pt-10 text-lg dark:prose-invert">{children}</div>
+          <div
+            className="prose max-w-none pb-8 pt-10 text-lg dark:prose-invert"
+            data-animate
+            // @ts-ignore
+            style={{ '--stagger': 1 }}
+          >
+            {children}
+          </div>
         </div>
       </article>
     </SectionContainer>

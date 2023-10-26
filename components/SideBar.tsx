@@ -11,9 +11,13 @@ export default function SideBar({ className }: { className?: string }) {
 
   return (
     <div className={classNames}>
-      <div>
+      <div
+        data-animate
+        // @ts-ignore
+        style={{ '--stagger': 0 }}
+      >
         <div className="mb-6 text-sm font-bold text-[#bfbfbf]">FEATURED TAGS</div>
-        {sortedTags.map((t) => {
+        {sortedTags.map((t, index) => {
           return (
             <div key={t} className="mb-2 mr-2 inline-block">
               <Tag text={t} />
@@ -22,7 +26,12 @@ export default function SideBar({ className }: { className?: string }) {
         })}
       </div>
       {FRIENDS && FRIENDS.length > 0 && (
-        <div className="mt-6 border-t border-gray-200 py-4 dark:border-gray-700">
+        <div
+          className="mt-6 border-t border-gray-200 py-4 dark:border-gray-700"
+          data-animate
+          // @ts-ignore
+          style={{ '--stagger': 2 }}
+        >
           <div className="mb-6 text-sm font-bold text-[#bfbfbf]">FRIENDS</div>
           {FRIENDS.map((p) => {
             return (

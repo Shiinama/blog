@@ -21,7 +21,12 @@ export default function AboutLayout({ children, content }: Props) {
           </h1>
         </div>
         <div className="">
-          <div className="flex flex-col items-center space-x-2 pt-8">
+          <div
+            className="flex flex-col items-center space-x-2 pt-8"
+            data-animate
+            // @ts-ignore
+            style={{ '--stagger': 0 }}
+          >
             {avatar && (
               <Image
                 src={avatar}
@@ -38,7 +43,12 @@ export default function AboutLayout({ children, content }: Props) {
               <SocialIcon kind="twitter" href={twitter} />
             </div>
           </div>
-          <div className="prose max-w-none pb-8 pt-8 dark:prose-invert xl:col-span-2">
+          <div
+            className="prose max-w-none pb-8 pt-8 dark:prose-invert xl:col-span-2"
+            data-animate
+            // @ts-ignore
+            style={{ '--stagger': 1 }}
+          >
             {children}
           </div>
         </div>

@@ -14,7 +14,12 @@ export default function Projects() {
           </h1>
         </div>
         <div className="container py-12">
-          <div className="-m-4 flex flex-wrap">
+          <div
+            className="-m-4 flex flex-wrap"
+            data-animate
+            // @ts-ignore
+            style={{ '--stagger': 1 }}
+          >
             {projectsData.map((d) => (
               <Card
                 key={d.title}
