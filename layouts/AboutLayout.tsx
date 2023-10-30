@@ -3,6 +3,7 @@ import type { About } from 'contentlayer/generated'
 import SocialIcon from '@/components/social-icons'
 import Image from '@/components/Image'
 import SideBar from '@/components/SideBar'
+import { SITE, SOCIALS } from 'config/const'
 
 interface Props {
   children: ReactNode
@@ -38,9 +39,11 @@ export default function AboutLayout({ children, content }: Props) {
             )}
             <h3 className="pb-2 pt-4 text-2xl font-bold leading-8 tracking-tight">{name}</h3>
             <div className="flex space-x-3 pt-6">
-              <SocialIcon kind="mail" href={`mailto:${email}`} />
-              <SocialIcon kind="github" href={github} />
-              <SocialIcon kind="twitter" href={twitter} />
+              {SOCIALS &&
+                SOCIALS.length > 0 &&
+                SOCIALS.map((social, index) => (
+                  <SocialIcon kind={social.name} href={social.href} />
+                ))}
             </div>
           </div>
           <div

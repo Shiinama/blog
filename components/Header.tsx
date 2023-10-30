@@ -1,7 +1,8 @@
 import dynamic from 'next/dynamic'
 
 import Logo from '@/content/logo.svg'
-import { SITE } from 'config/const'
+import { SITE, SOCIALS } from 'config/const'
+import SocialIcon from '@/components/social-icons'
 
 import Link from './Link'
 import MobileNav from './MobileNav/Nav'
@@ -49,6 +50,13 @@ const Header = () => {
                 {link.title}
               </Link>
             ))}
+          <div className="flex space-x-4">
+            {SOCIALS &&
+              SOCIALS.length > 0 &&
+              SOCIALS.map((social, index) => (
+                <SocialIcon kind={social.name} href={social.href} size={5} />
+              ))}
+          </div>
           <ThemeSwitch />
         </div>
       </header>

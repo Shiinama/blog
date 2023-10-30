@@ -20,19 +20,19 @@ export const SITE: Site = {
 
 export const SOCIALS: SocialObjects = [
   {
-    name: 'Github',
+    name: 'github',
     href: 'https://github.com',
     linkTitle: `my Github`,
     active: true,
   },
   {
-    name: 'Mail',
+    name: 'mail',
     href: 'mailto:example@gmail.com',
     linkTitle: `Send an email to me`,
     active: true,
   },
   {
-    name: 'Twitter',
+    name: 'twitter',
     href: 'https://twitter.com/liruifengv',
     linkTitle: `My Twitter`,
     active: true,
