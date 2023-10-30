@@ -82,3 +82,7 @@ input:-webkit-autofill:focus {
 [data-animation-controller=false] [data-animate] {
   animation: none;
 }
+
+.progress-bar {
+  @apply fixed top-0 left-0 right-0 h-1 bg-primary-500 origin-left z-50;
+}

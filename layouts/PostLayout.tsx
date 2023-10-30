@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode } from 'react'
 import { CoreContent } from 'pliny/utils/contentlayer'
 import type { Blog } from 'contentlayer/generated'
@@ -5,6 +7,7 @@ import PageTitle from '@/components/PageTitle'
 import SectionContainer from '@/components/SectionContainer'
 import Tag from '@/components/Tag'
 import ScrollTop from '@/components/ScrollTop'
+import { motion, useScroll, useSpring } from 'framer-motion'
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('zh-CN')
@@ -21,9 +24,17 @@ interface LayoutProps {
 export default function PostLayout({ content, author, next, prev, children }: LayoutProps) {
   const { path, date, title, tags } = content
 
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  })
+
   return (
     <SectionContainer>
       <ScrollTop />
+      <motion.div className="progress-bar" style={{ scaleX }} />
       <article>
         <div className="w-full xl:divide-y xl:divide-gray-200 xl:dark:divide-gray-700">
           <header className="pt-6 text-center xl:pb-6">
