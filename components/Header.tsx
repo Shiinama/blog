@@ -19,7 +19,7 @@ const headerNavLinks = [
 const Header = () => {
   return (
     <>
-      <header className="mx-5 hidden items-center justify-between py-5 sm:flex">
+      <header className="mx-5 flex items-center justify-between py-5">
         <div>
           <Link href="/" aria-label={SITE.headerTitle}>
             <div className="flex items-center justify-between">
@@ -37,7 +37,7 @@ const Header = () => {
           </Link>
         </div>
         <SearchButton />
-        <div className="flex items-center space-x-4 leading-5 sm:space-x-6">
+        <div className="hidden items-center space-x-4 leading-5 sm:flex sm:space-x-6">
           {headerNavLinks
             .filter((link) => link.href !== '/')
             .map((link) => (
