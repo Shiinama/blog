@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useRef } from 'react'
 import { MenuToggle } from './MenuToggle'
 import { motion, useCycle } from 'framer-motion'
 import { useDimensions } from './use-dimensions'
 import { Navigation } from './Navigation'
 import Logo from '@/content/logo.svg'
-import { SOCIALS } from 'config/const'
-import SocialIcon from '@/components/social-icons'
 
 const sidebar = {
   open: (height = 1000) => ({
-    clipPath: `circle(${height * 2 + 200}px at calc(100vw - 25px) 37px)`,
+    clipPath: `circle(${height * 2 + 200}px at calc(100vw - 30px) 40px)`,
     transition: {
       type: 'spring',
       stiffness: 20,
@@ -19,7 +17,7 @@ const sidebar = {
     },
   }),
   closed: {
-    clipPath: 'circle(20px at calc(100vw - 25px) 37px)',
+    clipPath: 'circle(20px at calc(100vw - 30px) 40px)',
     transition: {
       delay: 0.5,
       type: 'spring',
@@ -30,7 +28,6 @@ const sidebar = {
 }
 
 const MobileNav = () => {
-  const [navShow, setNavShow] = useState(false)
   const [isOpen, toggleOpen] = useCycle(false, true)
   const containerRef = useRef(null)
   const { height } = useDimensions(containerRef)
