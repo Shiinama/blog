@@ -1,5 +1,3 @@
-import { components } from '@/components/social-icons'
-
 export type Site = {
   website: string
   author: string
@@ -18,8 +16,21 @@ export type Site = {
   }
 }
 
+export type SocialIcons = {
+  [social in SocialMedia]: string
+}
+
+export type SocialMedia =
+  | 'Mail'
+  | 'GitHub'
+  | 'Facebook'
+  | 'LinkedIn'
+  | 'YouTube'
+  | 'Twitter'
+  | 'Mastodon'
+
 export type SocialObjects = {
-  name: keyof typeof components
+  name: SocialMedia
   href: string
   active: boolean
   linkTitle: string

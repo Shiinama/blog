@@ -1,4 +1,5 @@
 import { Mail, Github, Facebook, Youtube, Linkedin, Twitter, Mastodon } from './icons'
+import type { SocialMedia } from '@/config/types'
 
 export const components = {
   mail: Mail,
@@ -11,16 +12,16 @@ export const components = {
 }
 
 type SocialIconProps = {
-  kind: keyof typeof components
+  kind: SocialMedia
   href: string | undefined
   size?: number
 }
 
 const SocialIcon = ({ kind, href, size = 8 }: SocialIconProps) => {
-  if (!href || (kind === 'mail' && !/^mailto:\w+([.-]?\w+)@\w+([.-]?\w+)(.\w{2,3})+$/.test(href)))
+  if (!href || (kind === 'Mail' && !/^mailto:\w+([.-]?\w+)@\w+([.-]?\w+)(.\w{2,3})+$/.test(href)))
     return null
 
-  const SocialSvg = components[kind]
+  const SocialSvg = components[kind.toLocaleLowerCase()]
 
   return (
     <a

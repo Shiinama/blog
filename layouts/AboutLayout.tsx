@@ -42,7 +42,7 @@ export default function AboutLayout({ children, content }: Props) {
               {SOCIALS &&
                 SOCIALS.length > 0 &&
                 SOCIALS.map((social, index) => (
-                  <SocialIcon kind={social.name} href={social.href} />
+                  <SocialIcon key={index} kind={social.name} href={social.href} />
                 ))}
             </div>
           </div>
