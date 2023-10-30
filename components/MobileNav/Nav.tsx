@@ -6,6 +6,8 @@ import { motion, useCycle } from 'framer-motion'
 import { useDimensions } from './use-dimensions'
 import { Navigation } from './Navigation'
 import Logo from '@/content/logo.svg'
+import { SOCIALS } from 'config/const'
+import SocialIcon from '@/components/social-icons'
 
 const sidebar = {
   open: (height = 1000) => ({

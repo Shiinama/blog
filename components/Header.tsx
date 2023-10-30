@@ -38,28 +38,31 @@ const Header = () => {
           </Link>
         </div>
         <SearchButton />
-        <div className="hidden items-center space-x-4 leading-5 sm:flex sm:space-x-6">
-          {headerNavLinks
-            .filter((link) => link.href !== '/')
-            .map((link) => (
-              <Link
-                key={link.title}
-                href={link.href}
-                className="font-medium text-slate-400 hover:text-gray-800 dark:text-slate-300"
-              >
-                {link.title}
-              </Link>
-            ))}
-          <div className="flex space-x-4">
+        <div className="flex">
+          <div className="mr-5 hidden items-center space-x-4 leading-5 sm:flex sm:space-x-6">
+            {headerNavLinks
+              .filter((link) => link.href !== '/')
+              .map((link) => (
+                <Link
+                  key={link.title}
+                  href={link.href}
+                  className="font-medium text-slate-400 hover:text-gray-800 dark:text-slate-300"
+                >
+                  {link.title}
+                </Link>
+              ))}
+          </div>
+          <div className="mr-10 flex items-center space-x-4 sm:mr-0">
             {SOCIALS &&
               SOCIALS.length > 0 &&
               SOCIALS.map((social, index) => (
                 <SocialIcon kind={social.name} href={social.href} size={5} />
               ))}
+            <ThemeSwitch />
           </div>
-          <ThemeSwitch />
         </div>
       </header>
+
       <MobileNav />
     </>
   )
