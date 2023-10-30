@@ -37,9 +37,8 @@ const Header = () => {
             </div>
           </Link>
         </div>
-        <div className="flex w-4/5">
-          <SearchButton />
-          <div className="flex">
+        <div className="flex w-4/5 flex-row-reverse">
+          <div className="flex ">
             <div className="mr-5 hidden items-center space-x-4 leading-5 sm:flex sm:space-x-6">
               {headerNavLinks
                 .filter((link) => link.href !== '/')
@@ -57,11 +56,12 @@ const Header = () => {
               {SOCIALS &&
                 SOCIALS.length > 0 &&
                 SOCIALS.map((social, index) => (
-                  <SocialIcon kind={social.name} href={social.href} size={5} />
+                  <SocialIcon key={index} kind={social.name} href={social.href} size={5} />
                 ))}
               <ThemeSwitch />
             </div>
           </div>
+          <SearchButton />
         </div>
       </header>
 

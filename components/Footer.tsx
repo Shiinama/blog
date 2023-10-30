@@ -10,7 +10,7 @@ export default function Footer() {
           {SOCIALS &&
             SOCIALS.length > 0 &&
             SOCIALS.map((social, index) => (
-              <SocialIcon kind={social.name} href={social.href} size={6} />
+              <SocialIcon key={index} kind={social.name} href={social.href} size={6} />
             ))}
         </div>
         <div className="mb-2 flex space-x-2 text-sm text-gray-500 dark:text-gray-400">
