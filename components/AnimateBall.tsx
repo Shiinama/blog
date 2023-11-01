@@ -17,6 +17,9 @@ export default function AnimateBall() {
       <motion.div
         drag
         dragConstraints={constraintsRef}
+        dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+        dragElastic={0.5}
+        whileTap={{ cursor: 'grabbing' }}
         className="fixed bottom-0 right-12 h-40 w-40 cursor-pointer md:h-80 md:w-80"
       >
         <Lottie animationData={animationData} loop={true} />
