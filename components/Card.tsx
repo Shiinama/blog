@@ -1,12 +1,16 @@
+'use client'
+
 import Image from './Image'
 import Link from './Link'
+import Ticker from 'framer-motion-ticker'
+const tickers = Array.from({ length: 6 })
 
 const Card = ({ title, description, imgSrc, href }) => (
   <div className="md p-4 sm:w-1/2 xl:w-1/3">
     <div
       className={`${
         imgSrc && 'h-full'
-      }  overflow-hidden rounded-xl border-2 border-gray-200 border-opacity-60 dark:border-gray-700`}
+      }  relative overflow-hidden rounded-xl border-2 border-gray-200 border-opacity-60 dark:border-gray-700`}
     >
       {imgSrc &&
         (href ? (
@@ -42,10 +46,16 @@ const Card = ({ title, description, imgSrc, href }) => (
         {href && (
           <Link
             href={href}
-            className="text-base font-medium leading-6 text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
+            className="absolute bottom-4 left-6 right-6 text-base font-medium leading-6 text-primary-500 hover:text-primary-600 dark:hover:text-primary-400"
             aria-label={`Link to ${title}`}
           >
-            Learn more &rarr;
+            <Ticker duration={3} direction={1}>
+              {tickers.map((item, index) => (
+                <div key={index} className="mr-4 text-2xl font-medium leading-6 text-primary-500 ">
+                  &rarr;
+                </div>
+              ))}
+            </Ticker>
           </Link>
         )}
       </div>

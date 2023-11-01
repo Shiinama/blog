@@ -5265,6 +5265,7 @@ __metadata:
     eslint-config-prettier: ^8.8.0
     eslint-plugin-prettier: ^5.0.0
     framer-motion: ^10.16.4
+    framer-motion-ticker: ^1.0.19
     github-slugger: ^1.4.0
     lottie-react: ^2.4.0
     next: 13.5.6
@@ -7110,7 +7111,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"framer-motion@npm:^10.16.4":
+"framer-motion-ticker@npm:^1.0.19":
+  version: 1.0.19
+  resolution: "framer-motion-ticker@npm:1.0.19"
+  dependencies:
+    framer-motion: ^10.9.1
+  checksum: 1b2156fb5b902dc4a617eadc898707b7bc16cacffdb2131ea58de5dd1bc38c13bd8c0956d86a7e0d8534b6b17d97e069354bf9dd5483a178b5f990d031cb1f97
+  languageName: node
+  linkType: hard
+
+"framer-motion@npm:^10.16.4, framer-motion@npm:^10.9.1":
   version: 10.16.4
   resolution: "framer-motion@npm:10.16.4"
   dependencies:

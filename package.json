@@ -21,6 +21,7 @@
     "autoprefixer": "^10.4.13",
     "contentlayer": "0.3.4",
     "framer-motion": "^10.16.4",
+    "framer-motion-ticker": "^1.0.19",
     "github-slugger": "^1.4.0",
     "lottie-react": "^2.4.0",
     "next": "13.5.6",
