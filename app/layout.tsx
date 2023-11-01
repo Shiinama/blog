@@ -9,6 +9,7 @@ import { SITE } from 'config/const'
 import { ThemeProviders } from './theme-providers'
 import { Metadata } from 'next'
 import { Providers as ChakraProvider } from '@/components/ChakraProvider'
+import AnimateBall from '@/components/AnimateBall'
 
 const space_grotesk = Space_Grotesk({
   subsets: ['latin'],
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Header />
                 <main className="mb-auto flex flex-col items-center">{children}</main>
               </SearchProvider>
+              <AnimateBall />
               <Footer />
             </div>
           </ChakraProvider>

@@ -22,6 +22,7 @@
       "@/config/*": ["config/*"],
       "@/layouts/*": ["layouts/*"],
       "@/styles/*": ["styles/*"],
+      "@/lotties/*": ["lotties/*"],
       "contentlayer/generated": ["./.contentlayer/generated"]
     },
     "plugins": [
