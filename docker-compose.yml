@@ -11,7 +11,7 @@ services:
     container_name: integration-prisma
     restart: unless-stopped
     ports:
-      - 5988:5432
+      - 5989:5432
     env_file:
       - .env
     volumes:
@@ -19,19 +19,19 @@ services:
     networks:
       - gpt_net
 
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - '80:3000'
-      - '443:3000'
-    depends_on:
-      - db
-    env_file:
-      - .env
-    networks:
-      - gpt_net
+  # web:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - '80:3000'
+  #     - '443:3000'
+  #   depends_on:
+  #     - db
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - gpt_net
 
 volumes:
   postgres_data:

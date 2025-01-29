@@ -13,7 +13,7 @@ declare module 'next-auth' {
   interface Session extends DefaultSession {
     user: {
       id: string
-      subscriptions: Subscription[]
+      subscription: Subscription
     } & DefaultSession['user']
   }
 }
@@ -37,14 +37,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           email: token.email
         },
         include: {
-          subscriptions: true
+          subscription: true
         }
       })
       if (trigger === 'signUp' && token.email) {
         await prisma.user.update({
           where: { email: token.email },
           data: {
-            subscriptions: {
+            subscription: {
               create: FreePlan
             }
           }
@@ -52,7 +52,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
       if (db_user) {
         token.id = db_user.id
-        token.subscriptions = db_user.subscriptions
+        token.subscription = db_user.subscription
       }
       return token
     },
@@ -65,7 +65,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           name: token.name,
           email: token.email ?? '',
           image: token.picture,
-          subscriptions: token.subscriptions as any
+          subscription: token.subscription as Subscription
         }
       }
 

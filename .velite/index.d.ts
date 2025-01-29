@@ -4,5 +4,8 @@ import type __vc from '../velite.config.ts'
 
 type Collections = typeof __vc.collections
 
-export type Docs = Collections['docs']['schema']['_output']
-export declare const docs: Docs[]
+export type Blog = Collections['blog']['schema']['_output']
+export declare const blog: Blog[]
+
+export type Seo = Collections['seo']['schema']['_output']
+export declare const seo: Seo[]

@@ -56,33 +56,27 @@ model User {
   emailVerified DateTime?
   image         String?
   accounts      Account[]
-  conversations Conversation[]
   sessions      Session[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  settings      Json     @default("{}")
-  subscriptions Subscription[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  subscription  Subscription?
 }
+
 
 model Subscription {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String   @unique
   user            User     @relation(fields: [userId], references: [id])
   planType        PlanType
   startDate       DateTime @default(now())
   endDate         DateTime
   status          SubscriptionStatus
-  totalTokens     Int
-  usedTokens      Int      @default(0)
   billingCycle    BillingCycle?
 }
 
 enum PlanType {
   FREE
-  ESSENTIAL
-  PRO
-  ULTIMATE
-  TOKEN_PACKAGE
+  MEMBER
 }
 
 enum BillingCycle {
@@ -96,31 +90,3 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
-enum MessageRole {
-  user
-  assistant
-}
-
-
-model Conversation {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@index([userId])
-}
-
-model Message {
-  id             String       @id @default(cuid())
-  role           MessageRole       
-  content        String
-  tokenCount     Int
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-
-  @@index([conversationId])
-}
