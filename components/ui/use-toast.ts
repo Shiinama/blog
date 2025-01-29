@@ -20,10 +20,10 @@ function genId() {
 }
 
 type ActionType = {
-  readonly ADD_TOAST: "ADD_TOAST";
-  readonly UPDATE_TOAST: "UPDATE_TOAST";
-  readonly DISMISS_TOAST: "DISMISS_TOAST";
-  readonly REMOVE_TOAST: "REMOVE_TOAST";
+  readonly ADD_TOAST: 'ADD_TOAST'
+  readonly UPDATE_TOAST: 'UPDATE_TOAST'
+  readonly DISMISS_TOAST: 'DISMISS_TOAST'
+  readonly REMOVE_TOAST: 'REMOVE_TOAST'
 }
 
 type Action =

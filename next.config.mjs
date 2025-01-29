@@ -1,3 +1,5 @@
+import createNextIntlPlugin from 'next-intl/plugin'
+
 class VeliteWebpackPlugin {
   static started = false
   apply(/** @type {import('webpack').Compiler} */ compiler) {
@@ -13,12 +15,13 @@ class VeliteWebpackPlugin {
   }
 }
 
-/** @type {import('next').NextConfig} */
+const withNextIntl = createNextIntlPlugin()
+
 const nextConfig = {
-  webpack: config => {
+  webpack: (config) => {
     config.plugins.push(new VeliteWebpackPlugin())
     return config
   }
 }
 
-export default nextConfig
+export default withNextIntl(nextConfig)

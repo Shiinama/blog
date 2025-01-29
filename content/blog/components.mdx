@@ -26,9 +26,7 @@ Here's an interactive accordion:
   </AccordionItem>
   <AccordionItem value="item-2">
     <AccordionTrigger>How do I use it?</AccordionTrigger>
-    <AccordionContent>
-      Just copy the code below and customize the content to your needs.
-    </AccordionContent>
+    <AccordionContent>Just copy the code below and customize the content to your needs.</AccordionContent>
   </AccordionItem>
 </Accordion>
 
@@ -44,9 +42,7 @@ Here's how to create the accordion above:
   </AccordionItem>
   <AccordionItem value="item-2">
     <AccordionTrigger>How do I use it?</AccordionTrigger>
-    <AccordionContent>
-      Just copy the code below and customize the content to your needs.
-    </AccordionContent>
+    <AccordionContent>Just copy the code below and customize the content to your needs.</AccordionContent>
   </AccordionItem>
 </Accordion>
 ```
@@ -80,6 +76,7 @@ Here's an example of tabs in action:
         </CardContent>
       </Card>
     </div>
+
   </TabsContent>
   <TabsContent value="code">
     ```tsx
@@ -101,6 +98,7 @@ Here's an example of tabs in action:
       </CardContent>
     </Card>
     ```
+
   </TabsContent>
 </Tabs>
 
@@ -112,12 +110,8 @@ Here's the code to create these tabs:
     <TabsTrigger value="preview">Preview</TabsTrigger>
     <TabsTrigger value="code">Code</TabsTrigger>
   </TabsList>
-  <TabsContent value="preview">
-    This is the preview content that appears in the first tab.
-  </TabsContent>
-  <TabsContent value="code">
-    This is where you might put code examples or documentation.
-  </TabsContent>
+  <TabsContent value="preview">This is the preview content that appears in the first tab.</TabsContent>
+  <TabsContent value="code">This is where you might put code examples or documentation.</TabsContent>
 </Tabs>
 ```
 
@@ -166,9 +160,7 @@ Here's a card component example:
     <CardTitle>Beautiful Cards</CardTitle>
     <CardDescription>Create structured content with cards</CardDescription>
   </CardHeader>
-  <CardContent>
-    This is the main content area of the card. You can put any content here.
-  </CardContent>
+  <CardContent>This is the main content area of the card. You can put any content here.</CardContent>
   <CardFooter>
     <p>Footer content goes here</p>
   </CardFooter>
@@ -182,9 +174,7 @@ Create cards using this code:
     <CardTitle>Beautiful Cards</CardTitle>
     <CardDescription>Create structured content with cards</CardDescription>
   </CardHeader>
-  <CardContent>
-    This is the main content area of the card. You can put any content here.
-  </CardContent>
+  <CardContent>This is the main content area of the card. You can put any content here.</CardContent>
   <CardFooter>
     <p>Footer content goes here</p>
   </CardFooter>
@@ -197,18 +187,14 @@ Here's an alert example:
 
 <Alert>
   <AlertTitle>Heads up!</AlertTitle>
-  <AlertDescription>
-    This is how an alert looks. Use it to show important messages to your users.
-  </AlertDescription>
+  <AlertDescription>This is how an alert looks. Use it to show important messages to your users.</AlertDescription>
 </Alert>
 
 Destructive variant:
 
 <Alert variant="destructive">
   <AlertTitle>Heads up!</AlertTitle>
-  <AlertDescription>
-    This is how an alert looks. Use it to show important messages to your users.
-  </AlertDescription>
+  <AlertDescription>This is how an alert looks. Use it to show important messages to your users.</AlertDescription>
 </Alert>
 
 Create alerts with:
@@ -216,9 +202,7 @@ Create alerts with:
 ```tsx
 <Alert>
   <AlertTitle>Heads up!</AlertTitle>
-  <AlertDescription>
-    This is how an alert looks. Use it to show important messages to your users.
-  </AlertDescription>
+  <AlertDescription>This is how an alert looks. Use it to show important messages to your users.</AlertDescription>
 </Alert>
 ```
 
@@ -243,7 +227,8 @@ Here's a callout example:
 <Callout type="danger">
   <CalloutTitle>Error</CalloutTitle>
   <CalloutDescription>
-    This is a danger callout. Use it to highlight critical errors or important warnings that require immediate attention.
+    This is a danger callout. Use it to highlight critical errors or important warnings that require immediate
+    attention.
   </CalloutDescription>
 </Callout>
 
@@ -253,7 +238,6 @@ Here's a callout example:
     This is an info callout. Use it to provide additional context or helpful information to your users.
   </CalloutDescription>
 </Callout>
-
 
 Create callouts using:
 
@@ -279,6 +263,7 @@ Clone the repository
 git clone https://github.com/rudrodip/mext15.git my-docs
 cd my-docs
 ```
+
 </Step>
 
 <Step>
@@ -287,6 +272,7 @@ Install dependencies
 ```bash
 bun install
 ```
+
 </Step>
 
 <Step>
@@ -295,6 +281,7 @@ Start the development server
 ```bash
 bun run dev
 ```
+
 </Step>
 
 </Steps>
@@ -315,14 +302,14 @@ Here's a code block with syntax highlighting:
 
 ```typescript
 interface User {
-  id: string;
-  name: string;
-  email: string;
+  id: string
+  name: string
+  email: string
 }
 
 const getUser = (id: string): User => {
   // Implementation here
-};
+}
 ```
 
 Wrap code blocks with additional styling:
@@ -332,33 +319,33 @@ Wrap code blocks with additional styling:
 // Perlin noise implementation in TypeScript
 
 class PerlinNoise {
-  private permutation: number[] = [];
-  private p: number[] = [];
+private permutation: number[] = [];
+private p: number[] = [];
 
-  constructor() {
-    this.permutation = Array.from({ length: 256 }, () => Math.floor(Math.random() * 256));
-    this.p = [...this.permutation, ...this.permutation];
-  }
+constructor() {
+this.permutation = Array.from({ length: 256 }, () => Math.floor(Math.random() \* 256));
+this.p = [...this.permutation, ...this.permutation];
+}
 
-  private fade(t: number): number {
-    return t * t * t * (t * (t * 6 - 15) + 10);
-  }
+private fade(t: number): number {
+return t _ t _ t _ (t _ (t \* 6 - 15) + 10);
+}
 
-  private lerp(t: number, a: number, b: number): number {
-    return a + t * (b - a);
-  }
+private lerp(t: number, a: number, b: number): number {
+return a + t \* (b - a);
+}
 
-  private grad(hash: number, x: number, y: number, z: number): number {
-    const h = hash & 15;
-    const u = h < 8 ? x : y;
-    const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
-    return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-  }
+private grad(hash: number, x: number, y: number, z: number): number {
+const h = hash & 15;
+const u = h < 8 ? x : y;
+const v = h < 4 ? y : h === 12 || h === 14 ? x : z;
+return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+}
 
-  public noise(x: number, y: number, z: number): number {
-    const X = Math.floor(x) & 255;
-    const Y = Math.floor(y) & 255;
-    const Z = Math.floor(z) & 255;
+public noise(x: number, y: number, z: number): number {
+const X = Math.floor(x) & 255;
+const Y = Math.floor(y) & 255;
+const Z = Math.floor(z) & 255;
 
     x -= Math.floor(x);
     y -= Math.floor(y);
@@ -379,13 +366,15 @@ class PerlinNoise {
       this.lerp(u, this.grad(this.p[AB], x, y - 1, z), this.grad(this.p[BB], x - 1, y - 1, z))),
       this.lerp(v, this.lerp(u, this.grad(this.p[AA + 1], x, y, z - 1), this.grad(this.p[BA + 1], x - 1, y, z - 1)),
       this.lerp(u, this.grad(this.p[AB + 1], x, y - 1, z - 1), this.grad(this.p[BB + 1], x - 1, y - 1, z - 1))));
-  }
+
+}
 }
 
 // Example usage
 const perlin = new PerlinNoise();
 console.log(perlin.noise(1.1, 2.2, 3.3));
-```
+
+````
 </CodeBlockWrapper>
 
 Example usage of Wrapped Code Block:
@@ -394,7 +383,7 @@ Example usage of Wrapped Code Block:
 <CodeBlockWrapper>
   your code here
 </CodeBlockWrapper>
-```
+````
 
 ## Utility Components
 
@@ -418,20 +407,10 @@ Create linked cards using:
 
 The `ZoomableMedia` component allows images to be clicked and zoomed in for better viewing:
 
-<ZoomableMedia 
-  src="/og.png"
-  alt="Example image"
-  width={1200}
-  height={630}
-/>
+<ZoomableMedia src="/og.png" alt="Example image" width={1200} height={630} />
 
 Create zoomable images using:
 
 ```tsx
-<ZoomableMedia 
-  src="/og.png"
-  alt="Example image"
-  width={1200}
-  height={630}
-/>
+<ZoomableMedia src="/og.png" alt="Example image" width={1200} height={630} />
 ```

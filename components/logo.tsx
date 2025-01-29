@@ -51,7 +51,7 @@ export function NamedLogoWithLink() {
   return (
     <Link href="/" className="flex flex-row items-center gap-3">
       <Logo height="24" width="24" />
-      <h3 className="text-lg font-semibold">LinkAI</h3>
+      <h3 className="text-lg font-semibold">Xibaoyu</h3>
     </Link>
   )
 }

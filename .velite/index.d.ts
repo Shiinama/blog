@@ -7,5 +7,8 @@ type Collections = typeof __vc.collections
 export type Blog = Collections['blog']['schema']['_output']
 export declare const blog: Blog[]
 
+export type EasyAiTechnology = Collections['easyAiTechnology']['schema']['_output']
+export declare const easyAiTechnology: EasyAiTechnology[]
+
 export type Seo = Collections['seo']['schema']['_output']
 export declare const seo: Seo[]

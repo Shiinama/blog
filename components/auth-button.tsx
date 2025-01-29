@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 
 import { DialogContent, DialogHeader, DialogTitle, Dialog, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -12,6 +13,7 @@ import { Button } from './ui/button'
 export function AuthButton() {
   const session = useSession()
   const router = useRouter()
+  const t = useTranslations()
 
   const handleSignInOrOut = () => {
     router.push('/login')
@@ -22,7 +24,7 @@ export function AuthButton() {
   if (session.status === 'unauthenticated')
     return (
       <Button onClick={handleSignInOrOut} variant="link" size="sm">
-        Log In
+        {t('common.loginIn')}
       </Button>
     )
   else
@@ -30,24 +32,24 @@ export function AuthButton() {
       <Dialog>
         <DialogTrigger asChild>
           <Button variant="link" size="sm">
-            My account
+            {t('common.myAccount')}
           </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>My account</DialogTitle>
+            <DialogTitle>{t('common.myAccount')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-6 pb-4 pt-8">
             <div className="gap-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('common.email')}</Label>
               <Input id="email" disabled value={user?.email ?? ''} />
             </div>
             <div className="gap-1.5">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">{t('common.username')}</Label>
               <Input disabled id="username" value={user?.name ?? ''} />
             </div>
             <div className="gap-1.5">
-              <Label>Current Tier</Label>
+              <Label>{t('common.currentTier')}</Label>
               <div className="ml-2 capitalize text-muted-foreground">{user?.subscription?.planType}</div>
             </div>
             <Button
@@ -57,7 +59,7 @@ export function AuthButton() {
                 signOut()
               }}
             >
-              Signout
+              {t('common.signout')}
             </Button>
           </div>
         </DialogContent>

@@ -7,10 +7,13 @@ import remarkMath from 'remark-math'
 import { visit } from 'unist-util-visit'
 import { defineConfig, defineCollection, s } from 'velite'
 
-const computedFields = <T extends { slug: string }>(data: T) => ({
-  ...data,
-  slugAsParams: data.slug.split('/').slice(1).join('/')
-})
+const computedFields = <T extends { slug: string }>(data: T) => {
+  return {
+    ...data,
+    slug: `/content/${data.slug}`,
+    slugAsParams: data.slug.split('/').slice(1).join('/')
+  }
+}
 
 export const blog = defineCollection({
   name: 'Blog',
@@ -52,6 +55,26 @@ export const seo = defineCollection({
     .transform(computedFields)
 })
 
+export const easyAiTechnology = defineCollection({
+  name: 'EasyAiTechnology',
+  pattern: 'easy-ai-technology/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+
 export default defineConfig({
   root: 'content',
   output: {
@@ -61,7 +84,7 @@ export default defineConfig({
     name: '[name]-[hash:6].[ext]',
     clean: true
   },
-  collections: { blog, seo },
+  collections: { blog, easyAiTechnology, seo },
   mdx: {
     rehypePlugins: [
       rehypeSlug,
