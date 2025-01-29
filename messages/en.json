@@ -1,0 +1,37 @@
+{
+  "about": {
+    "title": "About Me",
+    "intro": "You can call me River Fish or Felix. I'm a software developer from China. An adventurer/gambler who enjoys the journey.",
+    "workTitle": "Work",
+    "workDescription": "My overall work experience has been quite adventurous with a gambling flavor. I've joined early-stage Midjourney, early-stage MyShell, late-stage Li Yizhou's tech team, and so on. Currently, I'm co-founding a startup focused on overseas AI projects (profitable, no funding needed). My main responsibilities are: on the engineering side - driving the entire application and taking on some growth responsibilities; on the model side - implementing all image-related requirements.",
+    "lifeTitle": "Life",
+    "lifeDescription": "I'm married with a kid. But the main theme of my life is still opening my eyes to look at data and write code. For enjoyment, I like to drink good quality alcohol.",
+    "dreamsTitle": "Dreams",
+    "dreamsDescription": "Already realized~ Enjoying the fun of gambling and adventure, and the pleasure of immersion.",
+    "blogPurpose": "Why Write a Blog?",
+    "blogPurposeReason": "A gambler wants an audience to cheer, a creator needs recognition of the value of their content.",
+    "myTimeLine": "My Simple Timeline",
+    "timelinePart1Title": "Two and a Half Years Ago",
+    "timelinePart1Description": "I was more focused on engineering (bundling/dependencies/optimization/engineering scenarios), source code (Vue/React/tools), interview skills, and algorithms.",
+    "timelinePart2Title": "One and a Half Years Ago",
+    "timelinePart2Description": "Got in touch with overseas ecosystems, models (among audio, image, and text, I've only not been to a foundational text model company), App development, backend, and DevOps.",
+    "timelinePart3Title": "Last Year to Now",
+    "timelinePart3Description": "Directly dealing with technology, data, money, and people~ This should be the fastest growing period - in all senses.",
+    "contactMe": "Contact Me"
+  },
+  "common": {
+    "home": "Home",
+    "about": "About",
+    "myAccount": "My Account",
+    "email": "Email",
+    "username": "Username",
+    "currentTier": "Current Tier",
+    "loginIn": "Login",
+    "signout": "Sign Out"
+  },
+  "article": {
+    "life": "Life",
+    "seoArticle": "SEO",
+    "faqAndPath": "FAQ and Learning Path"
+  }
+}

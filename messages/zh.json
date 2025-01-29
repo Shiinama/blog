@@ -1,0 +1,37 @@
+{
+  "about": {
+    "title": "关于我",
+    "intro": "可以叫我溪抱鱼或者Felix，我是一名来自中国的软件开发工程师。享受旅程的探险家/赌徒。",
+    "workTitle": "工作",
+    "workDescription": "整体的工作经历都比较偏冒险带有赌博色彩，加入过早期Midjourney、早期MyShell、晚期李一舟的技术团队等等等。目前是在合伙创业，创业的方向是海外AI项目（盈利，不需要融资）。负责的主要部分是：工程侧-整个应用的推进以及承担部分增长职责，模型侧-图像类所有需求的实现。",
+    "lifeTitle": "生活",
+    "lifeDescription": "我结婚有子。但生活主旋律还是两眼一睁就是看数据，写代码。对于享受方面喜欢喝好一点的酒。",
+    "dreamsTitle": "梦想",
+    "dreamsDescription": "已经实现了~享受赌博和探险的乐趣、享受沉迷的快乐。",
+    "blogPurpose": "为什么写博客?",
+    "blogPurposeReason": "赌徒希望有观众喝彩、创作者需要内容的价值认定。",
+    "myTimeLine": "我的简单时间线",
+    "timelinePart1Title": "两年半前",
+    "timelinePart1Description": "我比较专注工程化（打包/依赖/加速/工程化场景）、源码（Vue/React/工具）、面试技巧、算法这些东西。",
+    "timelinePart2Title": "一年半前",
+    "timelinePart2Description": "接触海外生态、模型（音图文中我只有文字底层大模型公司没有去过）、App、后端、运维等。",
+    "timelinePart3Title": "去年到今年",
+    "timelinePart3Description": "直接跟技术、数据、钱、人打交道了~这应该是成长最快的时期-各种意义上来说。",
+    "contactMe": "联系我"
+  },
+  "common": {
+    "home": "首页",
+    "about": "关于",
+    "myAccount": "我的账号",
+    "email": "邮箱",
+    "username": "用户名",
+    "currentTier": "当前等级",
+    "signout": "退出",
+    "loginIn": "登录"
+  },
+  "article": {
+    "seoArticle": "Seo",
+    "life": "生活",
+    "faqAndPath": "学习路由以及答疑"
+  }
+}
