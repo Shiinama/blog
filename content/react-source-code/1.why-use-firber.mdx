@@ -1,0 +1,73 @@
+---
+title: 1. React源码启蒙、梦开始的地方
+description: 探讨React的Fiber架构，解析其核心原理，揭示如何实现高效的任务调度，以及对React性能的提升。
+published: true
+toc:
+  visible: true
+date: 2022-11-20
+---
+
+## 1. 前因后果
+
+为什么React要使用Fiber？它解决了什么问题？它是怎么解决的？它是怎样的一个思路？以及为什么我们要先从Fiber入手去理解源码？这些是我们在理解Fiber路上需要关注的核心问题。
+
+## 2. 为什么使用Fiber
+
+它能解决以往react的卡顿问题。
+
+### 2.1 解决的问题
+
+React 16之前，Virtual DOM的更新过程采用循环加递归实现。这种方式一旦开始就无法中断，导致大型应用中主线程长期被占用，影响用户交互和动画执行，造成页面卡顿。
+
+核心问题：递归无法中断，执行重任务耗时长。JavaScript又是单线程，无法同时执行其他任务，导致任务延迟、页面卡顿，用户体验差。
+
+### 2.2 Fiber的解决方案
+
+Fiber本质上是一种新的调度算法，具有以下特点：
+
+- 可中断的渲染过程
+- 利用浏览器空闲时间执行任务
+- 放弃递归，采用循环方式
+- 更细粒度的任务划分
+
+Fiber通过Scheduler来利用浏览器空闲时间执行任务，解决长期占用主线程的问题。这意味着要放弃递归（因为它不可终止），保留循环（因为需要中断）。为了支持中断和恢复，任务被拆分为更小的单位。
+
+### 2.3 为什么要从Fiber入手理解源码
+
+Fiber的构建过程以及最后的提交相当于源码的一条主线路。我们可以先理解这条主线，然后再拆解出支线去理解源码（例如Hooks、Suspense等）。
+
+## 3. Fiber的实现思路
+
+Fiber的工作过程可以分为两个主要阶段：
+
+1. **Render阶段**（可中断）：构建Fiber树，进行diff算法比较。
+2. **Commit阶段**（不可中断）：将更新提交到DOM。
+
+### 3.1 初始渲染vs更新渲染
+
+- **初始渲染**：JSX → React.createElement（或react/jsx-runtime） → VDOM对象 → 构建Fiber对象 → 提交到真实DOM
+- **更新渲染**：重新构建Fiber → 新旧Fiber对比 → 生成更新队列 → 提交到真实DOM
+
+## 4. 实现Fiber的关键步骤
+
+1. 创建任务队列
+2. 实现任务调度逻辑
+3. 创建Fiber对象
+4. 构建Effects数组
+5. 实现初始化提交
+6. 处理组件
+7. 处理Fiber更新
+
+## 5. React的启动模式
+
+React提供了三种启动模式：
+
+1. **Legacy模式**：`ReactDOM.render(<App />, rootNode)`
+2. **Blocking模式**：`ReactDOM.createBlockingRoot(rootNode).render(<App />)`
+3. **Concurrent模式**：`ReactDOM.createRoot(rootNode).render(<App />)`
+
+Concurrent模式（React 18默认）直接就是Fiber架构，去实现并发渲染、自动批处理等新特性。
+
+## 6. 总结
+
+`1.2节`是一块的，`3,4`节又是一块的。

@@ -1,0 +1,1266 @@
+---
+title: 2. React Fiber架构：深入解析任务队列、可中断渲染、调度、同步模式
+description: 在React Fiber架构中，任务队列是实现可中断渲染和优先级调度的核心组件。本文主要讲`React源码`的`任务队列`、`可中断渲染`、`调度`、`同步模式`。理解了这一整节，几乎就把 `react` 中最重要的东西和主线理解了，其余都是散散碎碎的小细节。
+published: true
+toc:
+  visible: true
+date: 2023-01-08
+---
+
+## 1. React Fiber架构：深入解析任务队列、可中断渲染、调度、同步模式
+
+在React Fiber架构中，任务队列是实现可中断渲染和优先级调度的核心组件。本文主要讲`React源码`的`任务队列`、`可中断渲染`、`调度`、`同步模式`。
+
+理解了这一整节，几乎就把 `react` 中最重要的东西和主线理解了，其余都是散散碎碎的小细节。
+
+## 2. 任务队列的概念和作用
+
+在深入源码之前，我们需要先理解任务队列在React Fiber架构中的重要性。
+
+### 2.1 什么是任务队列？
+
+任务队列是一种数据结构，用于存储和管理需要执行的任务。在React Fiber中，任务队列主要用于管理更新和渲染过程中的各种操作，如组件更新、DOM操作等。
+
+### 2.2 任务队列的作用
+
+1. **任务调度**：根据优先级对任务进行排序和调度。
+2. **中断与恢复**：支持任务的中断和恢复，实现可中断渲染。
+3. **优先级管理**：为不同类型的更新分配不同的优先级。
+4. **性能优化**：通过合理调度任务，提高渲染性能和用户体验。
+
+## 3. React源码中的任务队列实现
+
+首先我们看任务队列是如何实现的。
+
+### 3.1 数据结构
+
+React使用小顶堆（Min Heap）来实现任务队列。小顶堆是一种特殊的二叉树，其中每个节点的值都小于或等于其子节点的值。这种结构非常适合优先级队列的实现，因为它可以在O(log n)的时间复杂度内完成插入和删除操作。
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+var taskQueue = []
+var timerQueue = []
+
+// ... 其他代码
+
+function push(heap, node) {
+  var index = heap.length
+  heap.push(node)
+  siftUp(heap, node, index)
+}
+
+function peek(heap) {
+  return heap.length === 0 ? null : heap[0]
+}
+
+function pop(heap) {
+  if (heap.length === 0) {
+    return null
+  }
+  var first = heap[0]
+  var last = heap.pop()
+  if (last !== first) {
+    heap[0] = last
+    siftDown(heap, last, 0)
+  }
+  return first
+}
+```
+
+在这段代码中，我们可以看到任务队列（`taskQueue`）和定时器队列（`timerQueue`）的定义，以及用于操作堆的基本函数：`push`、`peek`和`pop`。
+
+### 3.2 任务的表示
+
+在React中，每个任务都被表示为一个对象，包含以下主要属性：
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+var newTask = {
+  id: taskIdCounter++,
+  callback,
+  priorityLevel,
+  startTime,
+  expirationTime,
+  sortIndex: -1
+}
+```
+
+- `id`：任务的唯一标识符。
+- `callback`：任务的回调函数。
+- `priorityLevel`：任务的优先级。
+- `startTime`：任务的开始时间。
+- `expirationTime`：任务的过期时间。
+- `sortIndex`：用于在队列中排序的索引。
+
+### 3.3 优先级的定义
+
+React定义了多个优先级级别，用于区分不同类型的任务：
+
+**File: packages/scheduler/src/SchedulerPriorities.js**
+
+```javascript
+export const NoPriority = 0
+export const ImmediatePriority = 1
+export const UserBlockingPriority = 2
+export const NormalPriority = 3
+export const LowPriority = 4
+export const IdlePriority = 5
+```
+
+这些优先级从高到低排列，用于决定任务的执行顺序。
+
+## 4. 任务队列的创建过程
+
+任务队列的创建是React Fiber架构的基础。
+
+### 4.1 初始化
+
+任务队列在React初始化时就会被创建。在`Scheduler.js`文件中，我们可以看到队列的初始化：
+
+```javascript
+var taskQueue = []
+var timerQueue = []
+```
+
+这里创建了两个队列：
+
+- `taskQueue`用于存储准备执行的任务
+- `timerQueue`用于存储延迟执行的任务
+
+### 4.2 添加任务
+
+当需要添加新任务时，React会调用`unstable_scheduleCallback`函数：
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+function unstable_scheduleCallback(priorityLevel, callback, options) {
+  var currentTime = getCurrentTime()
+
+  var startTime
+  if (typeof options === 'object' && options !== null) {
+    var delay = options.delay
+    if (typeof delay === 'number' && delay > 0) {
+      startTime = currentTime + delay
+    } else {
+      startTime = currentTime
+    }
+  } else {
+    startTime = currentTime
+  }
+
+  var timeout
+  switch (priorityLevel) {
+    case ImmediatePriority:
+      timeout = IMMEDIATE_PRIORITY_TIMEOUT
+      break
+    case UserBlockingPriority:
+      timeout = USER_BLOCKING_PRIORITY_TIMEOUT
+      break
+    case IdlePriority:
+      timeout = IDLE_PRIORITY_TIMEOUT
+      break
+    case LowPriority:
+      timeout = LOW_PRIORITY_TIMEOUT
+      break
+    case NormalPriority:
+    default:
+      timeout = NORMAL_PRIORITY_TIMEOUT
+      break
+  }
+
+  var expirationTime = startTime + timeout
+
+  var newTask = {
+    id: taskIdCounter++,
+    callback,
+    priorityLevel,
+    startTime,
+    expirationTime,
+    sortIndex: -1
+  }
+
+  if (startTime > currentTime) {
+    // This is a delayed task.
+    newTask.sortIndex = startTime
+    push(timerQueue, newTask)
+    if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
+      // All tasks are delayed, and this is the task with the earliest delay.
+      if (isHostTimeoutScheduled) {
+        // Cancel an existing timeout.
+        cancelHostTimeout()
+      } else {
+        isHostTimeoutScheduled = true
+      }
+      // Schedule a timeout.
+      requestHostTimeout(handleTimeout, startTime - currentTime)
+    }
+  } else {
+    newTask.sortIndex = expirationTime
+    push(taskQueue, newTask)
+    // Schedule a host callback, if needed. If we're already performing work,
+    // wait until the next time we yield.
+    if (!isHostCallbackScheduled && !isPerformingWork) {
+      isHostCallbackScheduled = true
+      requestHostCallback(flushWork)
+    }
+  }
+
+  return newTask
+}
+```
+
+这个函数完成了以下几个关键步骤：
+
+1. 计算任务的开始时间和过期时间。
+2. 根据优先级设置超时时间。
+3. 创建新的任务对象。
+4. 将任务添加到适当的队列（`taskQueue`或`timerQueue`）。
+5. 如果需要，调度主机回调或超时。
+
+### 4.3 任务排序
+
+任务在添加到队列时会进行排序。排序的关键在于`sortIndex`属性：
+
+- 对于延迟任务（`timerQueue`），`sortIndex`是任务的开始时间。
+- 对于立即执行的任务（`taskQueue`），`sortIndex`是任务的过期时间。
+
+排序过程通过`push`函数实现，该函数内部调用`siftUp`来维护小顶堆的性质：
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+function push(heap, node) {
+  var index = heap.length
+  heap.push(node)
+  siftUp(heap, node, index)
+}
+
+function siftUp(heap, node, i) {
+  var index = i
+  while (true) {
+    var parentIndex = (index - 1) >>> 1
+    var parent = heap[parentIndex]
+    if (parent !== undefined && compare(parent, node) > 0) {
+      // The parent is larger. Swap positions.
+      heap[parentIndex] = node
+      heap[index] = parent
+      index = parentIndex
+    } else {
+      // The parent is smaller. Exit.
+      return
+    }
+  }
+}
+```
+
+这个过程确保了队列中的任务始终按照正确的顺序排列，使得优先级最高的任务总是位于队列的顶部。
+
+## 5. 任务队列的调度过程
+
+创建任务队列后，React需要有效地调度这些任务。
+
+### 5.1 调度器的初始化
+
+React使用调度系统来管理任务的执行。这个系统的核心是Scheduler.js中的几个关键函数和机制。
+
+1. 调度器初始化:
+
+当我们调用`requestHostCallback`时,它会设置`scheduledHostCallback`并通过`MessageChannel`发送一个消息:
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+// 创建一个MessageChannel用于任务调度
+const channel = new MessageChannel()
+const port = channel.port2
+
+// 请求主机回调函数
+function requestHostCallback(callback) {
+  // 设置调度回调函数
+  scheduledHostCallback = callback
+  if (!isMessageLoopRunning) {
+    isMessageLoopRunning = true
+    // 通过MessageChannel发送消息,触发任务执行
+    port.postMessage(null)
+  }
+}
+
+// 消息事件处理函数
+channel.port1.onmessage = performWorkUntilDeadline
+```
+
+这段代码的工作原理如下:
+
+- 创建一个`MessageChannel`用于在主线程和调度器之间通信。
+- `requestHostCallback`函数用于设置要执行的回调函数。
+- 当设置了新的回调函数时,如果消息循环还没有运行,就发送一个消息来启动它。
+- `channel.port1.onmessage`设置为`performWorkUntilDeadline`函数,这个函数将在收到消息时被调用。
+
+2. 执行调度任务:
+
+`performWorkUntilDeadline`函数是调度器的核心,它负责执行任务并管理时间:
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+let scheduledHostCallback = null
+let isMessageLoopRunning = false
+let startTime = -1
+
+function performWorkUntilDeadline() {
+  if (scheduledHostCallback !== null) {
+    // 获取当前时间
+    const currentTime = getCurrentTime()
+    // 计算截止时间
+    deadline = currentTime + yieldInterval
+    // 标记开始时间
+    const hasTimeRemaining = true
+    try {
+      // 执行调度的回调函数
+      const hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime)
+      if (!hasMoreWork) {
+        // 如果没有更多工作,停止消息循环
+        isMessageLoopRunning = false
+        scheduledHostCallback = null
+      } else {
+        // 如果还有更多工作,继续发送消息
+        port.postMessage(null)
+      }
+    } catch (error) {
+      // 如果发生错误,继续发送消息并抛出错误
+      port.postMessage(null)
+      throw error
+    }
+  } else {
+    isMessageLoopRunning = false
+  }
+  // 重置开始时间
+  startTime = -1
+}
+```
+
+这个函数的工作流程如下:
+
+- 检查是否有调度的回调函数。
+- 如果有,执行这个回调函数,并传入时间信息。
+- 根据回调函数的返回值决定是否继续循环。
+- 如果发生错误,确保继续发送消息以保持循环,然后抛出错误。
+- 如果没有回调函数,停止消息循环。
+
+通过这种机制,React能够在主线程空闲时执行任务,并在需要时让出控制权,保证了页面的响应。
+
+### 5.2 任务执行
+
+任务的实际执行是在`workLoop`函数中完成的。这个函数是React调度器的核心,负责循环执行队列中的任务。
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+function workLoop(hasTimeRemaining, initialTime) {
+  let currentTime = initialTime
+  // 更新定时器队列中的任务
+  advanceTimers(currentTime)
+  // 获取任务队列中的第一个任务
+  currentTask = peek(taskQueue)
+
+  while (currentTask !== null && !(enableSchedulerDebugging && isSchedulerPaused)) {
+    // 检查任务是否过期,或者是否需要让出执行权
+    if (currentTask.expirationTime > currentTime && (!hasTimeRemaining || shouldYieldToHost())) {
+      // 当前任务还没过期,但已经到达时间限制,需要中断执行
+      break
+    }
+
+    const callback = currentTask.callback
+    if (typeof callback === 'function') {
+      // 重置任务的回调,防止重复执行
+      currentTask.callback = null
+      // 设置当前优先级
+      currentPriorityLevel = currentTask.priorityLevel
+      // 检查任务是否已超时
+      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime
+      // 执行任务回调
+      const continuationCallback = callback(didUserCallbackTimeout)
+      // 更新当前时间
+      currentTime = getCurrentTime()
+
+      if (typeof continuationCallback === 'function') {
+        // 如果回调返回一个函数,说明任务需要继续执行
+        currentTask.callback = continuationCallback
+      } else {
+        // 任务完成,将其从队列中移除
+        if (currentTask === peek(taskQueue)) {
+          pop(taskQueue)
+        }
+      }
+      // 再次更新定时器队列
+      advanceTimers(currentTime)
+    } else {
+      // 如果回调不是函数,直接将任务从队列中移除
+      pop(taskQueue)
+    }
+    // 获取下一个任务
+    currentTask = peek(taskQueue)
+  }
+
+  // 检查是否还有更多工作要做
+  if (currentTask !== null) {
+    return true
+  } else {
+    // 如果任务队列为空,检查定时器队列
+    const firstTimer = peek(timerQueue)
+    if (firstTimer !== null) {
+      // 如果有延迟任务,安排一个新的超时回调
+      requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime)
+    }
+    return false
+  }
+}
+```
+
+这个函数的工作流程如下:
+
+1. 首先更新定时器队列,将到期的定时器任务移到主任务队列中。
+
+2. 然后开始一个循环,不断从任务队列中取出任务执行:
+
+   - 检查任务是否过期或是否需要让出执行权。
+   - 如果任务还没过期但已达到时间限制,就中断执行。
+   - 执行任务的回调函数。
+   - 如果回调返回一个新的函数,说明任务需要继续执行,就将这个新函数设置为任务的回调。
+   - 如果任务执行完毕,就将其从队列中移除。
+
+3. 每执行完一个任务,都会再次更新定时器队列,确保及时处理到期的定时器任务。
+
+4. 循环结束后,如果任务队列中还有任务,就返回true,表示还有工作要做。
+
+5. 如果任务队列为空,但定时器队列中有任务,就安排一个新的超时回调,以便在定时器到期时继续执行。
+
+### 5.3 任务中断与恢复
+
+React Fiber的一个核心特性是可中断渲染，这允许React在长时间运行的任务中途暂停，将控制权交还给浏览器，从而保持UI的响应。这个机制主要通过任务调度和时间切片来实现，其中`shouldYieldToHost`函数扮演了关键角色。
+
+#### 5.3.1 shouldYieldToHost 函数
+
+`shouldYieldToHost`函数决定是否应该中断当前任务，将控制权交还给浏览器：
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+function shouldYieldToHost() {
+  // 计算从任务开始到现在经过的时间
+  var timeElapsed = getCurrentTime() - startTime
+
+  // 如果经过的时间小于一帧的时间，继续执行任务
+  if (timeElapsed < frameInterval) {
+    // 主线程被阻塞的时间很短，小于一帧的时间。
+    // 此时不需要让出控制权，继续执行当前任务。
+    return false
+  }
+
+  // 检查是否启用了isInputPending API
+  if (enableIsInputPending) {
+    // 检查是否有待处理的绘制任务
+    if (needsPaint) {
+      // 有待处理的绘制任务，立即让出控制权
+      return true
+    }
+
+    // 检查是否有待处理的离散输入事件（如点击）
+    if (timeElapsed < continuousInputInterval) {
+      // 如果阻塞时间不长，只在有待处理的离散输入时让出控制权
+      return isInputPending()
+    }
+
+    // 检查是否有任何类型的待处理输入事件
+    if (timeElapsed < maxInterval) {
+      // 已经阻塞了一段时间，但仍在可接受范围内
+      // 只在有待处理的输入（离散或连续）时让出控制权
+      return isInputPending(continuousOptions)
+    }
+
+    // 已经阻塞了很长时间，无条件让出控制权
+    return true
+  } else {
+    // 如果isInputPending API不可用，总是让出控制权
+    return true
+  }
+}
+```
+
+这个函数有这几个因素来决定是否中断任务：
+
+1. 任务执行时间
+2. 是否有待处理的绘制任务
+3. 是否有待处理的用户输入（区分离散输入和连续输入）
+4. 浏览器是否支持`isInputPending` API
+
+#### 5.3.2 任务中断和恢复的实现
+
+任务的中断和恢复主要在React的工作循环中实现：
+
+**File: packages/react-reconciler/src/ReactFiberWorkLoop.js**
+
+```javascript
+function workLoopConcurrent() {
+  while (workInProgress !== null && !shouldYield()) {
+    performUnitOfWork(workInProgress)
+  }
+}
+```
+
+在这个并发模式的工作循环中，React 会不断检查 `shouldYield()` 函数（内部会调用 `shouldYieldToHost()`）。如果需要让出控制权，React 会中断当前的渲染过程。
+
+任务的恢复由React的调度器负责：
+
+```javascript
+function performConcurrentWorkOnRoot(root, didTimeout) {
+  // ...
+  do {
+    try {
+      if (didTimeout) {
+        renderRootSync(root, lanes)
+      } else {
+        renderRootConcurrent(root, lanes)
+      }
+      break
+    } catch (thrownValue) {
+      handleError(root, thrownValue)
+    }
+  } while (true)
+
+  // ...
+  if (root.callbackNode === originalCallbackNode) {
+    // 如果当前执行的任务节点与调度的节点相同，
+    // 返回一个继续执行的回调函数
+    return performConcurrentWorkOnRoot.bind(null, root)
+  }
+  return null
+}
+```
+
+如果任务被中断，`performConcurrentWorkOnRoot` 函数会返回一个继续执行的回调，允许调度器在之后恢复这个任务。
+
+#### 5.3.3 优先级管理和任务切换
+
+React 还通过优先级管理来决定任务的执行顺序：
+
+```javascript
+function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+  // ...
+  const newCallbackPriority = getHighestPriorityLane(nextLanes);
+  const existingCallbackPriority = root.callbackPriority;
+
+  if (existingCallbackPriority === newCallbackPriority) {
+    // 优先级没有变化，可以复用现有任务
+    return;
+  }
+
+  if (existingCallbackNode != null) {
+    // 取消现有的回调，准备调度新的回调
+    cancelCallback(existingCallbackNode);
+  }
+
+  // 调度新的回调
+  let newCallbackNode;
+  if (newCallbackPriority === SyncLane) {
+    // 同步优先级使用特殊的内部队列
+    newCallbackNode = scheduleSyncCallback(
+      performSyncWorkOnRoot.bind(null, root)
+    );
+  } else {
+    const schedulerPriorityLevel = lanePriorityToSchedulerPriority(
+      newCallbackPriority
+    );
+    newCallbackNode = scheduleCallback(
+      schedulerPriorityLevel,
+      performConcurrentWorkOnRoot.bind(null, root)
+    );
+  }
+
+  root.callbackPriority = newCallbackPriority;
+  root.callbackNode = newCallbackNode;
+}
+```
+
+这个函数确保根节点被正确调度，它会根据任务的优先级来决定是否中断当前任务并调度新的高优先级任务。
+
+通过这种复杂的任务中断、恢复和优先级管理机制，React能够在执行长时间任务时保持对用户输入的响应，提供流畅的用户体验。
+
+在实际应用中，我们可以利用这一机制来优化性能，例如将大型计算任务拆分成小块，使用`React.useCallback`和`React.useMemo`来缓存计算结果，或者使用`React.lazy`和`Suspense`来延迟加载不急需的组件。
+
+1. React.useCallback 和 React.useMemo
+
+这两个hooks都是用于性能优化，通过缓存计算结果来避免不必要的重新计算，从而减少渲染时间，他们的本质其实是让出更多时间给高优先级任务。
+
+**File: packages/react-reconciler/src/ReactFiberHooks.js**
+
+```javascript
+function updateMemo<T>(
+  nextCreate: () => T,
+  deps: Array<mixed> | void | null,
+): T {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  const prevState = hook.memoizedState;
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps: Array<mixed> | null = prevState[1];
+      if (areHookInputsEqual(nextDeps, prevDeps)) {
+        return prevState[0];
+      }
+    }
+  }
+  const nextValue = nextCreate();
+  hook.memoizedState = [nextValue, nextDeps];
+  return nextValue;
+}
+```
+
+这是`useMemo`的实现。它会检查依赖是否变化，如果没有变化，直接返回缓存的值，避免重新计算。这样可以减少不必要的计算，为其他高优先级任务留出更多时间。
+
+2. React.lazy 和 Suspense
+
+这两个API允许我们延迟加载组件，减少初始加载时间，并在加载过程中显示fallback内容。
+
+**File: packages/react/src/ReactLazy.js**
+
+```javascript
+function lazy<T>(
+  ctor: () => Thenable<{default: T, ...}>,
+): LazyComponent<T, Payload<T>> {
+  const payload: Payload<T> = {
+    _status: Uninitialized,
+    _result: ctor,
+  };
+
+  const lazyType: LazyComponent<T, Payload<T>> = {
+    $$typeof: REACT_LAZY_TYPE,
+    _payload: payload,
+    _init: lazyInitializer,
+  };
+
+  return lazyType;
+}
+```
+
+这是`React.lazy`的实现。它创建一个特殊的组件类型，这个组件在渲染时会触发异步加载。
+
+**File: packages/react-reconciler/src/ReactFiberThrow.js**
+
+```javascript
+function throwException(
+  root: FiberRoot,
+  returnFiber: Fiber,
+  sourceFiber: Fiber,
+  value: mixed,
+  rootRenderLanes: Lanes,
+) {
+  // ...
+
+  if (value !== null && typeof value === 'object' && typeof value.then === 'function') {
+    // This is a wakeable.
+    const wakeable: Wakeable = (value: any);
+
+    // ...
+
+    // Schedule the nearest Suspense to re-render the timed out view.
+    const suspenseBoundary = getNearestSuspenseBoundaryToCapture(returnFiber);
+    if (suspenseBoundary !== null) {
+      suspenseBoundary.flags &= ~ForceClientRender;
+      markSuspenseBoundaryShouldCapture(
+        suspenseBoundary,
+        returnFiber,
+        sourceFiber,
+        root,
+        rootRenderLanes,
+      );
+      // We only attach ping listeners in concurrent mode.
+      if (suspenseBoundary.mode & ConcurrentMode) {
+        attachPingListener(root, wakeable, rootRenderLanes);
+      }
+      return;
+    }
+
+    // ...
+  }
+
+  // ...
+}
+```
+
+当遇到一个Promise时，React会寻找最近的Suspense边界，并让它重新渲染。这允许React在异步内容加载时显示fallback内容，而不会阻塞整个应用的渲染。
+
+就是说
+
+1. `useCallback`和`useMemo`通过减少不必要的计算和渲染，为其他可能被中断的高优先级任务留出更多时间。
+
+2. `React.lazy`和`Suspense`允许React在遇到尚未加载的组件时暂停渲染，显示fallback内容，然后在组件加载完成后恢复渲染。这整个过程都是可中断的，允许React在必要时处理更高优先级的任务。
+
+例如，考虑以下场景：
+
+```jsx
+const HeavyComponent = React.lazy(() => import('./HeavyComponent'))
+
+function App() {
+  const [showHeavy, setShowHeavy] = useState(false)
+  const heavyCalculation = useMemo(() => computeExpensiveValue(a, b), [a, b])
+
+  return (
+    <div>
+      <button onClick={() => setShowHeavy(true)}>Load Heavy Component</button>
+      <p>{heavyCalculation}</p>
+      <Suspense fallback={<div>Loading...</div>}>{showHeavy && <HeavyComponent />}</Suspense>
+    </div>
+  )
+}
+```
+
+在这个例子中：
+
+1. `useMemo`确保`heavyCalculation`只在`a`或`b`改变时重新计算，避免在每次渲染时都进行昂贵的计算。
+
+2. `React.lazy`和`Suspense`允许`HeavyComponent`延迟加载。当用户点击按钮时，React会开始加载组件，但不会阻塞UI，而是显示fallback内容。
+
+3. 整个过程中，如果有更高优先级的任务（如用户输入），React可以中断当前任务，处理高优先级任务，然后再恢复之前的渲染。
+
+这其实就是这些API如何与React的任务中断、恢复和优先级管理机制协同工作，也是我们真正在开发的时候会遇到的场景。
+
+### 5.4 优先级管理和饥饿问题的解决
+
+React的调度系统不仅要处理任务的执行，还需要解决由于持续的高优先级任务导致的低优先级任务饥饿问题（一直不执行）。
+
+1. **标记饥饿车道**
+
+在每次调度更新时，React都会调用`ensureRootIsScheduled`函数，该函数会调用`markStarvedLanesAsExpired`来检查是否有被其他工作"饿死"的车道。
+
+**File: packages/react-reconciler/src/ReactFiberWorkLoop.js**
+
+```javascript
+function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+  const existingCallbackNode = root.callbackNode;
+
+  // 检查是否有任何车道被其他工作饿死。如果有，将它们标记为过期。
+  markStarvedLanesAsExpired(root, currentTime);
+
+  // ... [rest of the function]
+}
+```
+
+2. **计算过期时间**
+
+对于每个待处理的车道，React会计算一个过期时间。这个过期时间根据车道的优先级而不同。
+
+**File: packages/react-reconciler/src/ReactFiberLane.js**
+
+```javascript
+function computeExpirationTime(lane: Lane, currentTime: number) {
+  switch (lane) {
+    case SyncLane:
+    case InputContinuousLane:
+      return currentTime + 250;
+    case DefaultLane:
+    case TransitionLane1:
+    case TransitionLane16:
+      return currentTime + 5000;
+    // ... [other cases]
+  }
+}
+```
+
+3. **标记过期车道**
+
+在后续的调度更新中，React会检查每个车道是否已经过期。如果过期，会在`root.expiredLanes`上标记该车道。
+
+**File: packages/react-reconciler/src/ReactFiberLane.js**
+
+```javascript
+export function markStarvedLanesAsExpired(
+  root: FiberRoot,
+  currentTime: number
+): void {
+  const pendingLanes = root.pendingLanes;
+  const expirationTimes = root.expirationTimes;
+
+  let lanes = pendingLanes;
+  while (lanes > 0) {
+    const index = pickArbitraryLaneIndex(lanes);
+    const lane = 1 << index;
+
+    const expirationTime = expirationTimes[index];
+    if (expirationTime === NoTimestamp) {
+      expirationTimes[index] = computeExpirationTime(lane, currentTime);
+    } else if (expirationTime <= currentTime) {
+      root.expiredLanes |= lane;
+    }
+
+    lanes &= ~lane;
+  }
+}
+```
+
+4. **处理过期车道**
+
+在执行更新时，React会检查是否有过期的车道。如果有，这些任务会被提升到同步优先级进行处理。
+
+**File: packages/react-reconciler/src/ReactFiberWorkLoop.js**
+
+```javascript
+function performConcurrentWorkOnRoot(root) {
+  // ...
+
+  const shouldTimeSlice =
+    !includesBlockingLane(root, lanes) &&
+    !includesExpiredLane(root, lanes) &&
+    (disableSchedulerTimeoutInWorkLoop || !didTimeout)
+
+  let exitStatus = shouldTimeSlice ? renderRootConcurrent(root, lanes) : renderRootSync(root, lanes)
+
+  // ...
+}
+```
+
+通过这种机制，React确保即使在有大量高优先级任务的情况下，低优先级任务最终也能得到执行，从而解决了饥饿问题。
+
+## 6. 任务队列与React的协调过程
+
+任务队列不仅仅是一个独立的调度系统，它与React的协调过程紧密相连。在这个过程中，React的车道优先级（Lane Priority）和调度器的优先级（Scheduler Priority）扮演着重要角色。这两种优先级系统在实际应用中有着不同的作用和表现。
+
+### 6.1 车道优先级（Lane Priority）的实际应用
+
+车道优先级主要用于React内部的更新调度。它允许React更细粒度地控制不同类型更新的优先级。例如：
+
+1. **用户交互**：如点击事件，通常被赋予高优先级车道。
+
+```jsx
+function Button() {
+  const [count, setCount] = useState(0)
+
+  const handleClick = () => {
+    // 这个更新会被分配高优先级车道
+    setCount(count + 1)
+  }
+
+  return <button onClick={handleClick}>Clicked {count} times</button>
+}
+```
+
+2. **数据获取**：通常被赋予默认优先级车道。
+
+```jsx
+function DataFetcher() {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    // 这个更新会被分配默认优先级车道
+    fetchData().then(setData)
+  }, [])
+
+  return data ? <div>{data}</div> : <div>Loading...</div>
+}
+```
+
+3. **后台计算**：可以使用低优先级车道。
+
+```jsx
+function ExpensiveComponent() {
+  const [result, setResult] = useState(null)
+
+  useEffect(() => {
+    // 使用 startTransition 将更新标记为低优先级
+    startTransition(() => {
+      const computedResult = expensiveComputation()
+      setResult(computedResult)
+    })
+  }, [])
+
+  return result ? <div>{result}</div> : <div>Computing...</div>
+}
+```
+
+### 6.2 调度器优先级（Scheduler Priority）的实际应用
+
+调度器优先级主要用于决定任务在JavaScript运行时中的执行顺序。它直接影响到任务何时被执行，我写一下伪代码。
+
+例如：
+
+1. **即时优先级**：用于需要立即执行的任务，如动画或拖拽。
+
+```jsx
+function AnimatedComponent() {
+  const [position, setPosition] = useState(0)
+
+  useEffect(() => {
+    const animate = () => {
+      Scheduler.unstable_runWithPriority(Scheduler.unstable_ImmediatePriority, () => {
+        setPosition((prev) => prev + 1)
+      })
+      requestAnimationFrame(animate)
+    }
+    animate()
+  }, [])
+
+  return <div style={{ transform: `translateX(${position}px)` }} />
+}
+```
+
+2. **用户阻塞优先级**：用于需要快速响应但不需要立即执行的任务，如文本输入。
+
+```jsx
+function SearchInput() {
+  const [query, setQuery] = useState('')
+
+  const handleChange = (e) => {
+    Scheduler.unstable_runWithPriority(Scheduler.unstable_UserBlockingPriority, () => {
+      setQuery(e.target.value)
+    })
+  }
+
+  return <input value={query} onChange={handleChange} />
+}
+```
+
+3. **普通优先级**：用于不需要立即响应的更新，如网络请求。
+
+```jsx
+function DataFetcher() {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    Scheduler.unstable_runWithPriority(Scheduler.unstable_NormalPriority, () => {
+      fetchData().then(setData)
+    })
+  }, [])
+
+  return data ? <div>{data}</div> : <div>Loading...</div>
+}
+```
+
+优先级在任务调度过程中起着关键作用。高优先级的任务（如用户输入）会中断低优先级的任务（如数据获取）。这是通过比较当前执行任务的优先级和新到来任务的优先级来实现的。
+
+**File: packages/scheduler/src/Scheduler.js**
+
+```javascript
+function unstable_runWithPriority(priorityLevel, eventHandler) {
+  switch (priorityLevel) {
+    case ImmediatePriority:
+    case UserBlockingPriority:
+    case NormalPriority:
+    case LowPriority:
+    case IdlePriority:
+      break
+    default:
+      priorityLevel = NormalPriority
+  }
+
+  var previousPriorityLevel = currentPriorityLevel
+  currentPriorityLevel = priorityLevel
+
+  try {
+    return eventHandler()
+  } finally {
+    currentPriorityLevel = previousPriorityLevel
+  }
+}
+```
+
+这个函数允许在特定优先级下运行一个事件处理器。它临时改变当前的优先级级别，执行处理器，然后恢复原来的优先级级别。这确保了高优先级的操作能够及时响应，而不会被低优先级的任务阻塞。
+
+### 6.3 混合优先级
+
+例子：
+
+```jsx
+function ComplexComponent() {
+  const [text, setText] = useState('')
+  const [list, setList] = useState([])
+  const [isPending, startTransition] = useTransition()
+
+  const handleInputChange = (e) => {
+    const newText = e.target.value
+
+    // 高优先级更新：立即更新输入框
+    setText(newText)
+
+    // 低优先级更新：在transition中更新列表
+    startTransition(() => {
+      const newList = generateLargeList(newText)
+      setList(newList)
+    })
+  }
+
+  return (
+    <div>
+      <input value={text} onChange={handleInputChange} />
+      {isPending ? <p>Updating list...</p> : null}
+      <ul>
+        {list.map((item) => (
+          <li key={item.id}>{item.text}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+在这个例子中：
+
+1. **车道优先级**：
+
+   - 输入框的更新（`setText`）被赋予高优先级车道，因为它直接响应用户输入。
+   - 列表的更新（`setList`）被包裹在 `startTransition` 中，被赋予低优先级车道，因为它是一个可能耗时的操作。
+
+2. **调度器优先级**：
+
+   - React 内部会将高优先级车道的更新（输入框）转换为调度器的高优先级（如 `UserBlockingPriority`）。
+   - 低优先级车道的更新（列表）会被转换为较低的调度器优先级（如 `NormalPriority`）。
+
+3. **优先级协同工作**：
+
+   - 当用户输入时，输入框会立即更新，提供即时反馈。
+   - 同时，列表更新被标记为低优先级，允许 React 在主线程空闲时才进行处理。
+   - 如果用户继续输入，新的高优先级更新（输入框）会中断正在进行的低优先级更新（列表），确保界面始终响应。
+   - 当输入停止，React 会完成被中断的列表更新。
+
+4. **状态管理**：
+
+   - `isPending` 状态允许我们在低优先级更新进行时显示加载指示器，提升用户体验。
+
+### 6.4 在源码实现中
+
+1. **车道优先级（Lane Priority）**:
+
+   - 在 React 的协调过程中使用。
+   - 用于标记更新的紧急程度和重要性。
+   - 决定了更新在 React 内部处理的顺序。
+
+2. **调度器优先级（Scheduler Priority）**:
+
+   - 在 React 的调度器中使用。
+   - 决定任务在 JavaScript 运行时中的执行顺序。
+   - 控制任务何时被执行。
+
+3. **任务管理**:
+
+   - 涉及车道优先级和调度器优先级。
+   - 使用车道优先级来标记任务的重要性。
+   - 将车道优先级转换为调度器优先级，以决定任务的执行顺序。
+
+4. **协调过程**:
+
+   - 主要使用车道优先级。
+   - 决定哪些更新应该被优先处理。
+   - 在构建和比较 Fiber 树时考虑车道优先级。
+
+5. **优先级转换**:
+   - 发生在任务被调度时。
+   - React 内部将车道优先级转换为调度器优先级。
+   - 这个转换确保了 React 的内部优先级系统与调度器的优先级系统能够协同工作。
+
+```javascript
+function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+  const existingCallbackNode = root.callbackNode;
+
+  // 检查是否有任何车道被其他工作饿死。如果有，将它们标记为过期，以便我们知道下一步要处理它们。
+  markStarvedLanesAsExpired(root, currentTime);
+
+  // 确定下一个要处理的车道，以及它们的优先级。
+  const nextLanes = getNextLanes(
+    root,
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
+  );
+
+  // 如果没有需要处理的车道，取消现有的回调并返回
+  if (nextLanes === NoLanes) {
+    if (existingCallbackNode !== null) {
+      cancelCallback(existingCallbackNode);
+    }
+    root.callbackNode = null;
+    root.callbackPriority = NoLane;
+    return;
+  }
+
+  // 使用最高优先级的车道来表示回调的优先级
+  const newCallbackPriority = getHighestPriorityLane(nextLanes);
+
+  // 检查是否存在现有任务。我们可能可以重用它。
+  const existingCallbackPriority = root.callbackPriority;
+  if (existingCallbackPriority === newCallbackPriority) {
+    // 优先级没有改变。我们可以重用现有的任务。
+    return;
+  }
+
+  // 如果存在现有的回调节点，取消它
+  if (existingCallbackNode != null) {
+    cancelCallback(existingCallbackNode);
+  }
+
+  // 调度一个新的回调
+  let newCallbackNode;
+  if (newCallbackPriority === SyncLane) {
+    // 特殊情况：同步React回调被调度在一个特殊的内部队列中
+    newCallbackNode = scheduleSyncCallback(
+      performSyncWorkOnRoot.bind(null, root),
+    );
+  } else {
+    // 将车道优先级转换为调度器优先级
+    const schedulerPriorityLevel = lanePriorityToSchedulerPriority(
+      newCallbackPriority,
+    );
+    // 使用调度器优先级调度新的回调
+    newCallbackNode = scheduleCallback(
+      schedulerPriorityLevel,
+      performConcurrentWorkOnRoot.bind(null, root),
+    );
+  }
+
+  // 更新根节点的回调优先级和回调节点
+  root.callbackPriority = newCallbackPriority;
+  root.callbackNode = newCallbackNode;
+}
+```
+
+这个函数负责确保根Fiber节点被正确调度。它会检查是否有新的工作需要执行，并根据优先级创建或重用任务。
+
+### 6.5 车道和优先级转换
+
+在理解源码前，我们要再次加深这两种优先级的意义，`枯燥`的理解源码`毫无意义`。
+
+1. 调度器优先级（Scheduler Priority）：
+
+   - 这是最终决定任务执行顺序的关键因素。
+   - 它直接与 JavaScript 运行时交互，决定哪些任务应该先执行，哪些可以稍后执行。
+   - `调度器优先级是 React 与底层 JavaScript 引擎通信的"语言"。`
+
+2. 车道优先级（Lane Priority）：
+
+   - 这是 React 内部使用的一个更细粒度的优先级系统。
+   - 它允许 React 更精确地表达不同类型更新的重要性和紧急程度。
+   - `车道优先级可以看作是 React 的内部"思考过程"，用于决定不同更新的相对重要性。`
+
+3. 优先级转换：
+
+   - React 需要将其内部的车道优先级转换为调度器可以理解的优先级。
+   - `这个转换过程可以看作是 React 的"决策过程"，将其内部的复杂优先级系统映射到调度器的相对简单的优先级系统上。`
+
+```javascript
+export function lanePriorityToSchedulerPriority(lanePriority: LanePriority): ReactPriorityLevel {
+  switch (lanePriority) {
+    case SyncLanePriority:
+    case SyncBatchedLanePriority:
+      return ImmediatePriority;
+    case InputDiscreteHydrationLanePriority:
+    case InputDiscreteLanePriority:
+    case InputContinuousHydrationLanePriority:
+    case InputContinuousLanePriority:
+      return UserBlockingPriority;
+    case DefaultHydrationLanePriority:
+    case DefaultLanePriority:
+    case TransitionHydrationPriority:
+    case TransitionPriority:
+    case SelectiveHydrationLanePriority:
+    case RetryLanePriority:
+      return NormalPriority;
+    case IdleHydrationLanePriority:
+    case IdleLanePriority:
+    case OffscreenLanePriority:
+      return IdlePriority;
+    case NoLanePriority:
+      return NoSchedulerPriority;
+    default:
+      invariant(
+        false,
+        'Invalid update priority: %s. This is a bug in React.',
+        lanePriority,
+      );
+  }
+}
+```
+
+这个函数负责将React的车道优先级转换为调度器的优先级。这种转换关系如下：
+
+1. 同步优先级（Sync）对应调度器的立即优先级（Immediate）
+2. 输入优先级（Input）对应用户阻塞优先级（UserBlocking）
+3. 默认优先级（Default）和过渡优先级（Transition）对应普通优先级（Normal）
+4. 空闲优先级（Idle）对应调度器的空闲优先级（Idle）
+
+这种转换确保了React内部的优先级系统能够与调度器的优先级系统协同工作，从而实现更精细的任务调度。
+
+## 7. 任务队列与React并发模式
+
+在我们上述讲的所有内容都是达成 `并发模式` 的拼图，首先我们需要抓住关键词 `并发模式`，而不是实现 `并发`，`JavaScript` 是单线程的，传统意义上的并发（如多线程）是同时处理多个任务。
+
+### 7.1 并发本质
+
+它的本质是：
+
+1. **交错执行**：在单一线程上交错执行多个任务。
+2. **优先级调度**：根据任务的优先级决定执行顺序。
+3. **可中断渲染**：允许高优先级任务打断低优先级任务。
+
+想象你正在做一个大型拼图（低优先级任务，如渲染一个复杂列表），突然电话响了（高优先级任务，如用户输入）。在 React 的并发模式下：
+
+1. 你可以暂停拼图（中断渲染）。
+2. 接听电话（处理高优先级任务）。
+3. 通话结束后，继续拼图（恢复渲染）。
+
+代码层面的实现：
+
+```javascript
+function workLoopConcurrent() {
+  while (workInProgress !== null && !shouldYield()) {
+    performUnitOfWork(workInProgress)
+  }
+}
+
+function shouldYield() {
+  return (
+    getCurrentTime() >= deadline || // 时间片用完
+    hasHigherPriorityWork() // 有更高优先级的工作
+  )
+}
+```
+
+这里的 `shouldYield()` 函数检查是否应该让出控制权。如果时间片用完或有更高优先级的工作，React 就会暂停当前任务。
+
+### 7.2 为什么这也算是"并发"？
+
+React的任务管理机制、任务中断恢复和车道协调共同构成了实现并发的核心框架。
+
+1. **多任务交错执行**：尽管在任何给定时刻只有一个任务在执行，但从宏观角度看，多个任务是交错进行的。这种交错执行创造了任务并行的错觉，类似于操作系统的时间片轮转调度。
+
+2. **非阻塞**：低优先级任务不会阻塞高优先级任务的执行。这确保了重要的用户交互和更新能够及时响应，提高了应用的整体响应性。
+
+3. **响应式**：系统能够快速响应用户交互，即使在处理大量后台工作时也是如此。这种能力模拟了真正并发系统的行为，多个处理单元同时处理不同的任务。
+
+4. **公平调度**：所有任务最终都会得到处理，只是执行顺序根据优先级动态调整。这种调度策略确保了资源的公平分配，避免了任务饥饿问题。
+
+5. **细粒度控制**：通过车道优先级系统，React能够对任务进行更细粒度的控制，实现了类似于抢占式多任务处理的效果。
+
+6. **异步渲染**：React的并发模式支持异步渲染，允许组件"暂停"渲染等待数据，这种能力进一步增强了并发的特性。
+
+7. **资源利用优化**：通过智能地分配CPU时间，React能够在保持UI响应性的同时，最大化利用可用的计算资源，这其实就是并发追求的东西。
+
+总的来说，虽然React的 `并发模式` 在技术实现上与传统的多线程并发有所不同，但它在功能和效果上实现了类似的目标：提高系统的响应性、优化资源利用、平衡多个任务的执行。
+
+这就是 `react` 的核心。
+
+## 8. 总结
+
+React Fiber架构中的任务队列是实现可中断渲染和优先级调度的核心组件。通过深入分析其创建和调度过程，我们可以得出以下几点结论：
+
+1. **灵活的优先级系统**：React使用多级优先级系统，能够精确控制不同类型任务的执行顺序，确保重要的更新能够及时响应。
+
+2. **高效的数据结构**：使用小顶堆实现的优先级队列，保证了任务的快速插入和获取，时间复杂度为O(log n)。
+
+3. **可中断的执行模型**：通过时间切片和yield机制，React能够在长任务执行过程中适时让出主线程，保证页面的响应性。
+
+4. **与React核心的紧密集成**：任务队列与React的协调过程、Lanes系统等核心概念紧密结合，支持了并发模式等高级特性。
+
+5. **性能优化**：通过批量更新、延迟任务处理等机制，任务队列在保证功能的同时也兼顾了性能。
+
+其实看这些源码，都是为了写出更高效、更流畅的React应用。
+
+平时大家是靠感觉来使用这些优化手段，那么在理解这个任务队列和调度之后，会让我们心里更有底，也是知其所也然了。
