@@ -32,6 +32,10 @@
   "article": {
     "seoArticle": "Seo",
     "life": "生活",
-    "faqAndPath": "学习路由以及答疑"
+    "faqAndPath": "学习路由以及答疑",
+    "timeline": "时间桩子",
+    "onPage": "大纲",
+    "reactSourceCode": "React源码",
+    "business": "商业"
   }
 }

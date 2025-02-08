@@ -1,15 +1,27 @@
-import { Space_Grotesk } from 'next/font/google'
+import { Manrope, Poppins } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 
 import NextAuthProvider from '@/components/session-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
+import { cn } from '@/lib/utils'
 
 import type { Metadata, Viewport } from 'next'
-import './globals.css'
 
-const font = Space_Grotesk({ subsets: ['latin'], weight: '400' })
+import '../styles/globals.css'
+import '../styles/code.css'
+
+const fontSans = Manrope({
+  subsets: ['latin'],
+  variable: '--font-sans'
+})
+
+const fontHeading = Poppins({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-heading'
+})
 
 export const metadata: Metadata = {
   title: 'LinkAI',
@@ -47,7 +59,10 @@ export default async function RootLayout({
   return (
     <NextAuthProvider>
       <html lang={locale} suppressHydrationWarning>
-        <body className={`${font.className} flex min-h-screen flex-col`} suppressHydrationWarning>
+        <body
+          className={cn('min-h-screen bg-background font-sans antialiased', fontSans.variable, fontHeading.variable)}
+          suppressHydrationWarning
+        >
           <NextIntlClientProvider messages={messages}>
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
               {children}

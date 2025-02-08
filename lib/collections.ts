@@ -1,12 +1,21 @@
-import { blog, seo, easyAiTechnology } from '@/.velite'
+import { reactSourceCode, blog, seo, easyAiTechnology, timeline, business } from '@/.velite'
 
-export type Collection = typeof blog | typeof seo | typeof easyAiTechnology
-export type CollectionName = 'blog' | 'seo' | 'easyAiTechnology'
+export type Collection =
+  | typeof blog
+  | typeof seo
+  | typeof easyAiTechnology
+  | typeof timeline
+  | typeof reactSourceCode
+  | typeof business
+export type CollectionName = 'blog' | 'seo' | 'easyAiTechnology' | 'timeline' | 'reactSourceCode' | 'business'
 
 export const collections: Record<CollectionName, Collection> = {
   blog,
   seo,
-  easyAiTechnology
+  easyAiTechnology,
+  timeline,
+  reactSourceCode,
+  business
 }
 
 export function getCollections() {

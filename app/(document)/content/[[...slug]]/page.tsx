@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
-import Balancer from 'react-wrap-balancer'
 
 import { ContentSidebar } from '@/components/content-sidebar'
 import { MDXContentRenderer } from '@/components/mdx/mdx-content-renderer'
 import { DashboardTableOfContents } from '@/components/mdx/toc'
+import Navbar from '@/components/navbar'
 import { siteConfig } from '@/config/site.config'
 import { getCollections } from '@/lib/collections'
-import { absoluteUrl, cn } from '@/lib/utils'
+import { absoluteUrl } from '@/lib/utils'
 
 import type { Metadata } from 'next'
 
@@ -72,28 +72,22 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   }
 
   return (
-    <div className="flex">
+    <div className="flex w-full">
       <ContentSidebar group={group} />
-      <article className="relative p-2 md:p-4 lg:gap-10 lg:px-8 lg:py-6 xl:grid xl:grid-cols-[1fr_200px]">
-        <div className="mx-auto w-full min-w-0">
-          <div className="space-y-2">
-            <h1 className={cn('scroll-m-20 text-3xl font-bold tracking-tight')}>{doc.title}</h1>
-            {doc && (
-              <p className="text-base text-muted-foreground">
-                <Balancer>{doc.description}</Balancer>
-              </p>
-            )}
-          </div>
-          <div className="pb-12 pt-8">
+
+      <div className="relative overflow-hidden pt-8 md:overflow-visible md:px-10 md:py-12">
+        <Navbar hideLogo className="right-4 top-8 z-20 hidden md:absolute md:right-10 md:top-8 md:flex" />
+        <article className="relative flex flex-1 px-4">
+          <div className="mx-auto w-full min-w-0">
             <MDXContentRenderer code={doc.body} />
           </div>
-        </div>
-        <div className="hidden text-sm xl:block">
-          <div className="sticky top-16 -mt-10 h-[calc(100vh-3.5rem)] pt-4">
-            {doc.toc.visible && <DashboardTableOfContents toc={doc.toc.content} />}
+          <div className="ml-10 hidden text-sm xl:block">
+            <div className="sticky top-24 -mt-10 h-[calc(100vh-3.5rem)] pt-4">
+              {doc.toc.visible && <DashboardTableOfContents toc={doc.toc.content} />}
+            </div>
           </div>
-        </div>
-      </article>
+        </article>
+      </div>
     </div>
   )
 }

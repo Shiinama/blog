@@ -32,6 +32,10 @@
   "article": {
     "life": "Life",
     "seoArticle": "SEO",
-    "faqAndPath": "FAQ and Learning Path"
+    "faqAndPath": "FAQ and Learning Path",
+    "timeline": "Timeline",
+    "onPage": "Outline",
+    "reactSourceCode": "React Source Code",
+    "business": "Business"
   }
 }

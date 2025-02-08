@@ -54,10 +54,68 @@ export const seo = defineCollection({
     })
     .transform(computedFields)
 })
+export const reactSourceCode = defineCollection({
+  name: 'ReactSourceCode',
+  pattern: 'react-source-code/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
 
 export const easyAiTechnology = defineCollection({
   name: 'EasyAiTechnology',
   pattern: 'easy-ai-technology/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+export const timeline = defineCollection({
+  name: 'Timeline',
+  pattern: 'timeline/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+
+export const business = defineCollection({
+  name: 'Business',
+  pattern: 'business/**/*.mdx',
   schema: s
     .object({
       slug: s.path(),
@@ -84,7 +142,7 @@ export default defineConfig({
     name: '[name]-[hash:6].[ext]',
     clean: true
   },
-  collections: { blog, easyAiTechnology, seo },
+  collections: { blog, easyAiTechnology, timeline, seo, reactSourceCode, business },
   mdx: {
     rehypePlugins: [
       rehypeSlug,

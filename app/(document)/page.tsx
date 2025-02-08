@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 
-import { blog, easyAiTechnology, seo } from '@/.velite'
+import { blog, business, easyAiTechnology, reactSourceCode, seo, timeline } from '@/.velite'
 import Navbar from '@/components/navbar'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -11,11 +11,14 @@ export const metadata = {
 }
 
 export default async function ContentPage() {
-  const t = await getTranslations()
+  const t = await getTranslations('article')
   const contentTypes = [
-    { title: t('article.life'), items: blog },
-    { title: t('article.seoArticle'), items: seo },
-    { title: t('article.faqAndPath'), items: easyAiTechnology }
+    { title: t('timeline'), items: timeline },
+    { title: t('life'), items: blog },
+    { title: t('seoArticle'), items: seo },
+    { title: t('faqAndPath'), items: easyAiTechnology },
+    { title: t('reactSourceCode'), items: reactSourceCode },
+    { title: t('business'), items: business }
   ]
 
   return (

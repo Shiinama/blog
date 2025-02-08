@@ -10,5 +10,14 @@ export declare const blog: Blog[]
 export type EasyAiTechnology = Collections['easyAiTechnology']['schema']['_output']
 export declare const easyAiTechnology: EasyAiTechnology[]
 
+export type Timeline = Collections['timeline']['schema']['_output']
+export declare const timeline: Timeline[]
+
 export type Seo = Collections['seo']['schema']['_output']
 export declare const seo: Seo[]
+
+export type ReactSourceCode = Collections['reactSourceCode']['schema']['_output']
+export declare const reactSourceCode: ReactSourceCode[]
+
+export type Business = Collections['business']['schema']['_output']
+export declare const business: Business[]

@@ -37,31 +37,61 @@ export const mdxComponents = {
   CalloutTitle,
   CalloutDescription,
   h1: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h1 className={cn('mt-2 scroll-m-20 text-4xl font-bold tracking-tight', className)} {...props} />
+    <h1
+      className={cn('mt-2 scroll-m-20 text-4xl font-bold tracking-tight text-blue-600 dark:text-blue-400', className)}
+      {...props}
+    />
   ),
   h2: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h2
-      className={cn('mdx-heading mt-10 scroll-m-20 pb-1 text-3xl font-semibold tracking-tight first:mt-0', className)}
+      className={cn(
+        'mdx-heading mt-10 scroll-m-20 pb-1 text-3xl font-semibold tracking-tight text-blue-600 first:mt-0 dark:text-blue-400',
+        className
+      )}
       {...props}
     />
   ),
   h3: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className={cn('mdx-heading mt-8 scroll-m-20 text-2xl font-semibold tracking-tight', className)} {...props} />
+    <h3
+      className={cn(
+        'mdx-heading mt-8 scroll-m-20 text-2xl font-semibold tracking-tight text-blue-600 dark:text-blue-400',
+        className
+      )}
+      {...props}
+    />
   ),
   h4: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h4 className={cn('mt-8 scroll-m-20 text-xl font-semibold tracking-tight', className)} {...props} />
+    <h4
+      className={cn(
+        'mt-8 scroll-m-20 text-xl font-semibold tracking-tight text-blue-600 dark:text-blue-400',
+        className
+      )}
+      {...props}
+    />
   ),
   h5: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h5 className={cn('mt-8 scroll-m-20 text-lg font-semibold tracking-tight', className)} {...props} />
+    <h5
+      className={cn(
+        'mt-8 scroll-m-20 text-lg font-semibold tracking-tight text-blue-600 dark:text-blue-400',
+        className
+      )}
+      {...props}
+    />
   ),
   h6: ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h6 className={cn('mt-8 scroll-m-20 text-base font-semibold tracking-tight', className)} {...props} />
+    <h6
+      className={cn(
+        'mt-8 scroll-m-20 text-base font-semibold tracking-tight text-blue-600 dark:text-blue-400',
+        className
+      )}
+      {...props}
+    />
   ),
   a: ({ className, ...props }: React.HTMLAttributes<HTMLAnchorElement>) => (
     <a className={cn('font-medium underline underline-offset-4', className)} {...props} />
   ),
   p: ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-    <p className={cn('leading-7 [&:not(:first-child)]:mt-6', className)} {...props} />
+    <div className={cn('leading-7 [&:not(:first-child)]:my-3', className)} {...props} />
   ),
   ul: ({ className, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
     <ul className={cn('my-2 ml-6 list-disc', className)} {...props} />
@@ -86,9 +116,8 @@ export const mdxComponents = {
       <div>{props.children}</div>
     </blockquote>
   ),
-  img: ({ className, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img className={cn('rounded-md border', className)} alt={alt} {...props} />
+  img: (props: React.ImgHTMLAttributes<HTMLImageElement> & { width: number; height: number }) => (
+    <ZoomableMedia {...props} />
   ),
   hr: ({ ...props }) => <hr className="my-4 md:my-8" {...props} />,
   table: ({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
@@ -116,11 +145,17 @@ export const mdxComponents = {
   ),
   pre: CodeBlock,
   code: ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
-    <code className={cn('relative rounded border px-[0.3rem] py-[0.2rem] font-mono text-sm', className)} {...props} />
+    <code
+      className={cn(
+        'text-primary-dark relative rounded border bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm',
+        className
+      )}
+      {...props}
+    />
   ),
   Image: (props: ImageProps) => <Image {...props} alt="blog image" />,
   Step: ({ className, ...props }: React.ComponentProps<'h3'>) => (
-    <h3 className={cn('font-heading mt-8 scroll-m-20 text-xl font-semibold tracking-tight', className)} {...props} />
+    <h3 className={cn('mt-8 scroll-m-20 font-heading text-xl font-semibold tracking-tight', className)} {...props} />
   ),
   Steps: ({ ...props }) => (
     <div className="[&>h3]:step steps mb-12 ml-4 border-l pl-8 [counter-reset:step]" {...props} />

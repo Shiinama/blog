@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 import {
   Sidebar,
@@ -21,6 +22,7 @@ type ContentSidebarProps = {
 
 export function ContentSidebar({ group }: ContentSidebarProps) {
   const { byName } = getCollections()
+  const t = useTranslations('article')
 
   const pathname = usePathname()
   const collection = byName[group]
@@ -29,7 +31,7 @@ export function ContentSidebar({ group }: ContentSidebarProps) {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{group.charAt(0).toUpperCase() + group.slice(1)}</SidebarGroupLabel>
+          <SidebarGroupLabel>{t(group as any)}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {collection.map((item) => (

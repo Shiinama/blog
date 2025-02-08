@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import * as React from 'react'
 
 import { useMounted } from '@/hooks/use-mounted'
@@ -16,23 +17,20 @@ interface TocProps {
 }
 
 export function DashboardTableOfContents({ toc }: TocProps) {
-  const itemIds = React.useMemo(
-    () =>
-      toc
-        ? toc
-            .flatMap((item) => [item.url, item?.items?.map((item) => item.url)])
-            .flat()
-            .filter(Boolean)
-            .map((id) => id?.split('#')[1])
-        : [],
-    [toc]
-  )
+  const t = useTranslations('article')
+  const itemIds = React.useMemo(() => {
+    const extractIds = (items: TocEntry[]): string[] => {
+      return items.flatMap((item) => [item.url.split('#')[1], ...(item.items ? extractIds(item.items) : [])])
+    }
+    return toc ? extractIds(toc) : []
+  }, [toc])
   const activeHeading = useActiveItem(itemIds)
+
   const mounted = useMounted()
 
   return mounted ? (
-    <div className="space-y-2">
-      <p className="font-medium">On this page</p>
+    <div className="space-y-2 whitespace-nowrap">
+      <p className="font-medium">{t('onPage')}</p>
       <Tree tree={toc} activeItem={activeHeading} />
     </div>
   ) : null
@@ -88,7 +86,7 @@ interface TreeProps {
 }
 
 function Tree({ tree, level = 1, activeItem }: TreeProps) {
-  return tree.length && level < 3 ? (
+  return tree.length && level < 5 ? (
     <ul className={cn('m-0 list-none text-sm', { 'pl-4': level !== 1 })}>
       {tree.map((item, index) => {
         return (

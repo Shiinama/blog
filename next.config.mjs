@@ -18,6 +18,16 @@ class VeliteWebpackPlugin {
 const withNextIntl = createNextIntlPlugin()
 
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+        port: '',
+        pathname: '/**'
+      }
+    ]
+  },
   webpack: (config) => {
     config.plugins.push(new VeliteWebpackPlugin())
     return config

@@ -1,19 +1,18 @@
 'use client'
 
 import { motion, AnimatePresence, MotionConfig } from 'motion/react'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 
 import { cn } from '@/lib/utils'
 
-type ZoomableMediaProps = {
-  src: string
-  alt: string
-  width: number
-  height: number
-  className?: string
-}
-
-export function ZoomableMedia({ src, alt, width, height, className }: ZoomableMediaProps) {
+export function ZoomableMedia({
+  src,
+  alt,
+  width = 1200,
+  height = 400,
+  className
+}: React.ImgHTMLAttributes<HTMLImageElement> & { width: number; height: number }) {
   const [isZoomed, setIsZoomed] = useState(false)
 
   const handleZoom = () => {
@@ -34,16 +33,17 @@ export function ZoomableMedia({ src, alt, width, height, className }: ZoomableMe
     }
   }, [isZoomed])
 
+  if (!src || !alt) return
+
   return (
     <MotionConfig transition={{ duration: 0.3, type: 'spring', bounce: 0 }}>
-      <motion.div id="media-container" className={cn('relative h-auto w-full border', className)}>
-        <motion.img
+      <motion.div id="media-container" className={cn('relative my-4 h-auto w-full border', className)}>
+        <Image
           src={src}
           alt={alt}
           width={width}
           height={height}
           className="h-full w-full cursor-zoom-in object-contain"
-          layoutId={`media-container-${src}`}
           onClick={handleZoom}
         />
       </motion.div>
@@ -64,13 +64,12 @@ export function ZoomableMedia({ src, alt, width, height, className }: ZoomableMe
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <motion.img
+              <Image
                 src={src}
                 alt={alt}
                 width={width}
                 height={height}
                 className="max-h-full max-w-full object-contain"
-                layoutId={`media-container-${src}`}
               />
             </motion.div>
           </motion.div>
