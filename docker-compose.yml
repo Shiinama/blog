@@ -23,8 +23,8 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '85:4130'
-      - '931:4130'
+      - '80:4130'
+      - '443:4130'
     depends_on:
       - db
     env_file:
