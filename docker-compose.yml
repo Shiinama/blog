@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   db:
     image: postgres:14.10
@@ -20,12 +18,13 @@ services:
       - gpt_net
 
   web:
+    container_name: craveu_web
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '80:3000'
-      - '443:3000'
+      - '85:4130'
+      - '931:4130'
     depends_on:
       - db
     env_file:
