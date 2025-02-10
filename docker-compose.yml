@@ -18,7 +18,7 @@ services:
       - gpt_net
 
   web:
-    container_name: craveu_web
+    container_name: blog
     build:
       context: .
       dockerfile: Dockerfile
