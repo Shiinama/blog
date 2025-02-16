@@ -15,35 +15,41 @@ export default async function ContentPage() {
   const contentTypes = [
     { title: t('timeline'), items: timeline },
     { title: t('life'), items: blog },
-    { title: t('seoArticle'), items: seo },
+    { title: t('seo'), items: seo },
     { title: t('faqAndPath'), items: easyAiTechnology },
     { title: t('reactSourceCode'), items: reactSourceCode },
     { title: t('business'), items: business }
   ]
 
   return (
-    <div className="flex-grow px-5 sm:px-10">
+    <div className="flex-grow">
       <Navbar />
-      <div className="container grid items-center gap-8">
+      <div className="container grid items-center gap-8 px-5 sm:px-10 md:mt-8">
         {contentTypes.map((contentType) => (
           <div key={contentType.title} className="my-4">
             <h2 className="mb-4 text-3xl font-bold">{contentType.title}</h2>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {contentType.items.map((doc) => (
-                <Link href={`${doc.slug}`} key={doc.slug}>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>
-                        {doc.title}
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          {new Date(doc.date).toLocaleDateString()}
-                        </span>
-                      </CardTitle>
-                      <CardDescription className="line-clamp-5">{doc.description}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              ))}
+              {contentType.items
+                .sort((a, b) => {
+                  const aNum = parseInt(a.title.split('.')[0])
+                  const bNum = parseInt(b.title.split('.')[0])
+                  return aNum - bNum
+                })
+                .map((doc) => (
+                  <Link href={`${doc.slug}`} key={doc.slug}>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>
+                          {doc.title}
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {new Date(doc.date).toLocaleDateString()}
+                          </span>
+                        </CardTitle>
+                        <CardDescription className="line-clamp-5">{doc.description}</CardDescription>
+                      </CardHeader>
+                    </Card>
+                  </Link>
+                ))}
             </div>
           </div>
         ))}

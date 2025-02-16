@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: serif, Arial, Helvetica, sans-serif;
 }
 
 @layer base {
@@ -143,7 +143,7 @@ body {
   --duration: 0.8s;
   --delay: 0.1s;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-block;
+  display: block;
   background: linear-gradient(hsl(var(--secondary-foreground)) 0 0) calc(100% - var(--p, 0%)) / 0 var(--p, 0%) no-repeat;
   transition:
     background-size var(--duration) var(--ease),
@@ -186,10 +186,6 @@ body {
 .sweep-hover-animation:hover {
   --p: 100%;
   color: hsl(var(--secondary));
-}
-
-*::-webkit-scrollbar {
-  width: 0.25rem;
 }
 
 ::-moz-selection {

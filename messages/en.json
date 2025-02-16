@@ -20,6 +20,7 @@
     "contactMe": "Contact Me"
   },
   "common": {
+    "navigation": "Navigation",
     "home": "Home",
     "about": "About",
     "myAccount": "My Account",
@@ -31,7 +32,7 @@
   },
   "article": {
     "life": "Life",
-    "seoArticle": "SEO",
+    "seo": "SEO",
     "faqAndPath": "FAQ and Learning Path",
     "timeline": "Timeline",
     "onPage": "Outline",

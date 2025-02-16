@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation'
 import { ContentSidebar } from '@/components/content-sidebar'
 import { MDXContentRenderer } from '@/components/mdx/mdx-content-renderer'
 import { DashboardTableOfContents } from '@/components/mdx/toc'
-import Navbar from '@/components/navbar'
 import { siteConfig } from '@/config/site.config'
 import { getCollections } from '@/lib/collections'
 import { absoluteUrl } from '@/lib/utils'
@@ -74,15 +73,13 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   return (
     <div className="flex w-full">
       <ContentSidebar group={group} />
-
-      <div className="relative overflow-hidden pt-8 md:overflow-visible md:px-10 md:py-12">
-        <Navbar hideLogo className="right-4 top-8 z-20 hidden md:absolute md:right-10 md:top-8 md:flex" />
+      <div className="relative overflow-hidden pt-4 md:overflow-visible md:px-10 md:py-4">
         <article className="relative flex flex-1 px-4">
           <div className="mx-auto w-full min-w-0">
             <MDXContentRenderer code={doc.body} />
           </div>
           <div className="ml-10 hidden text-sm xl:block">
-            <div className="sticky top-24 -mt-10 h-[calc(100vh-3.5rem)] pt-4">
+            <div className="sticky top-4 -mt-10 h-[calc(100vh-3.5rem)] overflow-scroll px-4 pt-4">
               {doc.toc.visible && <DashboardTableOfContents toc={doc.toc.content} />}
             </div>
           </div>

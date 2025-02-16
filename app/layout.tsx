@@ -1,4 +1,4 @@
-import { Manrope, Poppins } from 'next/font/google'
+import { Noto_Sans_SC } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 
@@ -12,22 +12,17 @@ import type { Metadata, Viewport } from 'next'
 import '../styles/globals.css'
 import '../styles/code.css'
 
-const fontSans = Manrope({
+const fontNoto = Noto_Sans_SC({
   subsets: ['latin'],
-  variable: '--font-sans'
-})
-
-const fontHeading = Poppins({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-heading'
+  weight: ['400', '700'],
+  variable: '--font-noto'
 })
 
 export const metadata: Metadata = {
-  title: 'LinkAI',
+  title: '鱼的杂记',
   description: 'An OpenAI based chat system',
   keywords: [
-    'LinkAI',
+    '鱼的杂记',
     'business AI',
     'AI chatbot',
     'chatbot templates',
@@ -59,10 +54,7 @@ export default async function RootLayout({
   return (
     <NextAuthProvider>
       <html lang={locale} suppressHydrationWarning>
-        <body
-          className={cn('min-h-screen bg-background font-sans antialiased', fontSans.variable, fontHeading.variable)}
-          suppressHydrationWarning
-        >
+        <body className={cn('min-h-screen bg-background', fontNoto.variable)} suppressHydrationWarning>
           <NextIntlClientProvider messages={messages}>
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
               {children}
