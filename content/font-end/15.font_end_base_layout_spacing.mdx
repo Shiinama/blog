@@ -1,0 +1,172 @@
+---
+title: 15. 前端基础-布局与间距
+description: 前端基础-布局与间距
+published: true
+toc:
+  visible: true
+date: 2024-01-22
+---
+
+# 前端基础-布局与间距
+
+这篇文章主要探讨前端基础中的布局与间距，包括空间分配（清爽与密集设计）、间距系统（合理定义与使用）、明确间距表示层次、屏幕设计（从小屏幕开始、注意空间利用）、栅格设计（利弊及响应式问题）、不正常缩放处理等方面，来自学境社群的研究分享。
+
+关联问题: 如何优化间距系统 栅格设计有何技巧 小屏幕设计注意啥
+
+
+
+## 往期回顾
+
+[设计风格](https://juejin.cn/post/7323767520165871628)
+
+[设计层次](https://juejin.cn/post/7324478279720206377)
+
+## 空间
+
+在提到间距和布局，它的本质就是对于空间的合理分配和理由，所以这一节也是直接从空间开始。
+
+### 清爽的空间
+
+一个设计最简单也最常用的方式就是给每一个元素之间都加上足够多的间距，然后慢慢调整和删除。有的时候我们不需要完美，这个间距应该是符合设计工程的就ok。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/1.jpeg?updatedAt=1739892578059)
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/2.jpeg?updatedAt=1739892578561)
+### 密集下的设计
+
+虽然有大量`space`的界面几乎总是让人感觉更干净、更简单。
+
+但在某些情况下，让设计变得更紧凑也是有意义的。例如，如果你正在设计某种仪表板，需要同时看到许多仪表板，那么将这些信息打包在一起，以便放在一个屏幕让`设计感`更充实。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/3.jpeg?updatedAt=1739892577917)
+## 间距系统
+
+很多时候一个糟糕的UI，就是没有一个合理的间距系统的设计，比如：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/4.jpeg?updatedAt=1739892577928)
+我们应该把间距设置在一组预先定义的值中。
+
+### 以什么为倍数并不是很靠谱
+
+创建一个间距和大小系统，并不是就是 `确保所有的东西都是4px的几倍`。
+
+这种方法不能让你在120px和125px之间更容易进行选择。
+
+为了使一个间距大小系统真正有用，它需要考虑`相邻值`之间的 `相对差异`。在比例的小一端（比如图标的大小，或按钮内部的填充物），`几个像素`可以产生很大的不同。从`12px`到 `16px`，增加了33%的大小。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/5.jpeg?updatedAt=1739892577872)
+但是在大的一端（卡片的宽度，或者登陆页面的垂直间距），几个像素基本上是无法察觉的。即使将一张卡的宽度从 `500px`增加到`520px`，也只有4%的差异。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/6.jpeg?updatedAt=1739892578043)
+在我们现在团队里的规范是不让2个值的差值超过20%。
+
+### 定义间距系统
+
+当我们不想费尽心力去想，间距和比例的时候。我们可以从一个基础值开始，然后构建一个公式。16px是一个很好的数字，主要web浏览器的默认字体大小。
+
+就像是这样：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/7.jpeg?updatedAt=1739892577619)
+### 使用系统
+
+其实可能是个人感觉，定好了之后在`figma`上面用数字输，和使用`autolayout`会比拖拖拽拽快一些。
+
+ok，可以看一下正确间距下的表现：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/8.jpeg?updatedAt=1739892577569)
+## 明确的间距表示层次
+
+当`元素`需要分隔时，通常是用边框或背景颜色时，来表示元素属于哪个块。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/9.jpeg?updatedAt=1739892573771)
+但有的时候不是很好用分隔符之类的，你就需要通过间距去做这种事情。
+
+假设你正在做一个带有标签和输入的表单。如果`label`下面的`间距`与 `输入`下面的`间距`相同，这样会很怪。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/10.jpeg?updatedAt=1739892573630)
+修复方法是增加每个`form-item`之间的间距，减少`Label-input`的间距这样可以清楚哪个标签属于哪个输入：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/11.jpeg?updatedAt=1739892573720)
+通过行高+间距有时候能有一个比较好的变现形式。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/12.jpeg?updatedAt=1739892573583)
+当然也不仅仅是垂直间距，水平间距也会有这个问题
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/13.jpeg?updatedAt=1739892573401)
+## 屏幕
+
+在现在可能我们的设计大多数都是`1920*1080`，我们可以拥有`1920或者1440`的宽度，但你有不意味着需要使用。
+
+就像这个例子：你觉得你的网页真的需要这么大的空间吗？
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/14.jpeg?updatedAt=1739892573473)
+我的理解是，如果只需要`600px`就只用 `600px`，莫名其妙去占用更大的空间并没有太多的意义，你把这些东西放在中间也不影响什么。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/15.jpeg?updatedAt=1739892573468)
+`只给每个元素它需要的空间`。
+
+### 从小屏幕上开始设计
+
+如果了解`twailwind`理念的人，应该知道它其实就是以小屏幕优先的，很多时候我们在设计一个响应式系统的时候就是从小的屏幕开始，先设计移动端的布局。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/16.jpeg?updatedAt=1739892573440)
+当我们有了一个比较满意的移动端设计的时候，把它带到一个较大画布上去设计，并调整任何在小屏幕上`奇怪`的东西。这确实很简单，如果你设计的移动端和PC端有很大差异去修改，那一定是`产品`出了问题，或者你的设计有问题。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/17.jpeg?updatedAt=1739892573513)
+### 更窄的地方
+
+下面两张图哪张要好看一些？
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/18.jpeg?updatedAt=1739892573323)
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/19.jpeg?updatedAt=1739892567143)
+很显然是第二张图，如果我们正在开发的东西在较窄的宽度能工作得很好的话，我们就可以尝试是否可以将它分割到列中，而不是仅仅使它更宽。
+
+就像图二中：为了更好地利用可用空间，同时不使表单更难使用，我们可以将支持文本分解成一个列。
+
+这使得设计感觉更加平衡和一致，而不妥协于表单本身的宽度。
+
+## 栅格设计：
+
+像使用栅格这样的系统是简化布局决策的好方法，并且可以为我们的设计带来一种`秩序感`。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/20.jpeg?updatedAt=1739892567276)
+但是，即使网格很有用，将所有的布局决策交给栅格还是弊大于利。
+
+### 栅格的响应式？
+
+栅格是基于百分比的宽度，将一个整体的宽度分成很多列。例如，在一个12列的栅格中，每列的宽度为8.33%。只要一个元素的宽度是8.33%的倍数（包括间距），该元素是就是“在那一格上”。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/21.jpeg?updatedAt=1739892567095)
+但问题是，在很多情况下，一个元素固定宽度比起相对宽度更有意义。例如，考虑一个传统的侧边栏布局。使用12列网格系统，可以使侧边栏宽度为3列（25%），主题内容区域宽度为9列（75%）。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/22.jpeg?updatedAt=1739892567078)
+这一开始看起来不错，但是想想当我们调整屏幕时会发生什么。如果你让屏幕变宽，侧边栏也会变宽，占据了主内容的区域本可以更好地利用的空间。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/23.jpeg?updatedAt=1739892567249)
+同理缩小会导致内容截断或者换行，在这种情况下，给侧边栏一个为其内容而进行设计的固定宽度更有意义。然后，主要内容区域可以填充剩余空间，使用自己的`内部网格布局`其`子空间`。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/24.jpeg?updatedAt=1739892567246)
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/25.jpeg?updatedAt=1739892567290)
+网格真正的运用场景是在于强流动性的展现和样式，这一点和 `flex`填充伸缩其实是一样的道理。组件有一个`min-width`和`max-width`这些属性有时候会更好。
+
+## 不正常的缩放
+
+常识里如果是一些`block`里面的元素，如果元素A需要在较小的屏幕上缩小25%，那么元素B也应该缩小25%。
+
+例如，假设你正在设计一篇大屏幕尺寸的文章。如果你的正文是18px，你的标题是45px，你很容易通过定义标题大小为2.5em来定义这种关系：也就是当前字体的2.5倍。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/26.jpeg?updatedAt=1739892567289)
+这确实也是我们经常的做法，他在web端上看起来也很正常，但其实这并不保证在移动端上的是合适大小。
+
+假设你在小屏幕上把你的正文字体尺寸缩小14px。把你的标题保持在2.5em，意味着一个35px的渲染字体大小，这显然太大了对于移动端。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/27.jpeg?updatedAt=1739892567185)
+小屏幕上的更好的标题尺寸可能在20px到24px之间：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/28.jpeg?updatedAt=1739892567229)
+但这对于开发者来说实在是太琐碎和工作量巨大了如果每一个都去看，实际上只需要保证A、B元素之间的差异不是过于极端就Ok的。
+
+如果确实对于UI的要求比较高，那么你就直接放弃掉 `这个东西会按照比例缩放`，你确实需要为多个端有不同的设计，它就是独立的在细节上。
+
+## End
+
+`本文是来自学境的研究分享`，学境是一个小社群，里面主要以研究技术分享技术为主，欢迎志同道合的小伙伴加入社区来一起贡献，这里有`Ai`、`前后端`、`产品`、`设计`、`市场`等。

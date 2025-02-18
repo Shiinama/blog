@@ -1,0 +1,531 @@
+---
+title: 16.React源码阅读(4)-支线(函数式组件)-构建细节以及更新（下）
+description: React源码阅读(4)-支线(函数式组件)-构建细节以及更新（下）
+published: true
+toc:
+  visible: true
+date: 2022-12-08
+---
+
+# React源码阅读(4)-支线(函数式组件)-构建细节以及更新（下）
+
+文章主要围绕 React 源码中函数式组件的支线内容展开，详细分析了 Effect Hook 的构建细节及更新，包括 `useEffect` 和 `useLayoutEffect` 的入参、创建与更新逻辑，以及在提交阶段的处理。还介绍了 `ref hook`、`useMemo` 和 `useCallback` 的挂载与更新，最后作者表示对 `hook` 的研究还不够深入，需进一步分析。
+
+关联问题: useEffect更新如何实现 ref hook的作用是什么 useMemo的性能优势在哪
+
+AI智能总结首次生成速度较慢, 请耐心等待
+
+# 开篇
+
+上一节中我们讲到了两个标准的`State Hook`(状态Hook),而这一节我们就去详细分析一下`Effect Hook`(副作用hook)
+
+# Effect Hook
+
+前面我们已经对状态`hook`有了一定的了解，而对于`effect hook`最标准的就是`useEffect`和`useLayoutEffect`。
+
+## 1.useEffect和useLayoutEffect
+
+我们先简单分析`useEffect`和`useLayoutEffect`的入参,他们基本是相同的唯一的不同仅有`hook`标示符`HookPassive`和`HookLayout`,最后都是调用`mountEffectImpl`。
+
+`create`：传入`useEffect`函数，即回调函数。
+
+`deps`：依赖项，用来控制该Effect包裹的函数执不执行。如果依赖项为空数组`[]`，则该Effect在每次组件挂载时执行，且仅执行一次,没有第二个参数则一直执行。
+
+```js
+function mountEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  return mountEffectImpl(
+    UpdateEffect | PassiveEffect, 
+    HookPassive, 
+    create,
+    deps,
+  );
+}
+
+function mountLayoutEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  return mountEffectImpl(
+    UpdateEffect, 
+    HookLayout, 
+    create,
+    deps,
+  );
+}
+
+// Represents the phase in which the effect (not the clean-up) fires.
+export const Layout = /*    */ 0b010;
+export const Passive = /*   */ 0b100;
+
+```
+
+关于创建`hook`我们前面有提到，状态`hook.memoizedState`绑定的是状态，而副作用`hook.memoizedState`绑定的则是一个[effect对象](https://juejin.cn/editor/drafts/7168235835324628999)。这里去确立`fiber`的`flag`是为了后续渲染`fiber树`使用的。
+
+```js
+function mountEffectImpl(fiberFlags, hookFlags, create, deps): void {
+  // 创建hook，确定在fiber.memoizedState链表中的位置
+  const hook = mountWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  // 确定fiber的flag
+  currentlyRenderingFiber.flags |= fiberFlags;
+  // 挂载在hook.memoizedState上，state hook中挂载的是state状态，而effect hook中挂载的是effect链表
+  hook.memoizedState = pushEffect(
+    HookHasEffect | hookFlags,
+    create,
+    undefined,
+    nextDeps,
+  );
+}
+
+```
+
+在这个`effect hook`中，我们以一个`hook`的视角讲一下指向,`hook.memoizedState`指向`effct`,`effct`是一个环形链表，他同时被挂载在`fiber.updateQueue.lastEffect`和`hook.memoizedState`上。这里的逻辑也很简单就是处理创建`effct`，指向`effct`到链尾，返回`effct`。
+
+```js
+function pushEffect(tag, create, destroy, deps) {
+  //  创建effect节点
+  const effect: Effect = {
+    tag,
+    create,
+    destroy,
+    deps,
+    next: (null: any),
+  };
+  // 把effect节点指向链尾
+  let componentUpdateQueue: null | FunctionComponentUpdateQueue = (currentlyRenderingFiber.updateQueue: any);
+  if (componentUpdateQueue === null) {
+    // 新建 currentlyRenderingFiber.updateQueue = workInProgress.updateQueue 用于挂载effect对象
+    componentUpdateQueue = createFunctionComponentUpdateQueue();
+    currentlyRenderingFiber.updateQueue = (componentUpdateQueue: any);
+    // updateQueue.lastEffect是一个环形链表
+    componentUpdateQueue.lastEffect = effect.next = effect;
+  } else {
+    const lastEffect = componentUpdateQueue.lastEffect;
+    if (lastEffect === null) {
+      componentUpdateQueue.lastEffect = effect.next = effect;
+    } else {
+      const firstEffect = lastEffect.next;
+      lastEffect.next = effect;
+      effect.next = firstEffect;
+      componentUpdateQueue.lastEffect = effect;
+    }
+  }
+  // 返回effect
+  return effect;
+}
+
+```
+
+紧接着我们就应该是去处理`Effect`的回调了，而`Effect`的回调是在`commitRootImpl`中的`提交阶段`去执行的，我们回顾一下一下提交阶段的三个子阶段：`dom`更新前[commitBeforeMutationEffects](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberWorkLoop.old.js%23L2256-L2300 "https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js#L2256-L2300")、`dom`更新 [commitMutationEffects](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberWorkLoop.old.js%23L2302-L2383 "https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js#L2302-L2383")、`dom`变更后 [commitLayoutEffects](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberWorkLoop.old.js%23L2385-L2432 "https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js#L2385-L2432")。`fiber`的提交我们可以回顾一下[前文](https://juejin.cn/editor/drafts/7171426580060160030),我们这里只关注对`hook`的处理。
+
+## 1.1.dom更新之前
+
+[提交子阶段1](https://juejin.cn/editor/drafts/7171426580060160030)中有提到,在这我们以一个`effct hook`视角来观察这个过程，在这里我们只关心一件事情，就是在变更之前将`flushPassiveEffects`交给了调度中心，去异步调用，而我们的整个`commit`在17.2中是同步的，而`flushPassiveEffects`是处理`useEffect`的，我们的后面几个阶段会为`flushPassiveEffects`处理`useEffect`先做一些准备工作，当准备工作做完后，我们再来分析`flushPassiveEffects`。
+
+```js
+function commitBeforeMutationEffects() {
+  while (nextEffect !== null) {
+    if ((flags & Passive) !== NoFlags) {
+      if (!rootDoesHavePassiveEffects) {
+        rootDoesHavePassiveEffects = true;
+        scheduleCallback(NormalSchedulerPriority, () => {
+          flushPassiveEffects();
+          return null;
+        });
+      }
+    }
+  }
+}
+
+```
+
+## 1.2.dom变更
+
+在前文中我们提到了，如果需要更新节点，会执行`commitWork`，运算后`useEffect`,`useLayoutEffect`的值为`Update`，进去`Update`将内存中的`fiber`用于提交操作
+
+```js
+function commitMutationEffects(
+  root: FiberRoot,
+  renderPriorityLevel: ReactPriorityLevel,
+) {
+  while (nextEffect !== null) {
+    const flags = nextEffect.flags;
+    // 运算后实际useEffect,useLayoutEffect的值为Update
+    const primaryFlags = flags & (Placement | Update | Deletion | Hydrating);
+    switch (primaryFlags) {
+      case Update: {
+        // 将内存的中的fiber指向当前，进行更新节点操作
+        const current = nextEffect.alternate;
+        commitWork(current, nextEffect);
+        break;
+      }
+    }
+    nextEffect = nextEffect.nextEffect;
+  }
+}
+
+```
+
+`commitWork`在`dom`变更阶段对于`effect hook`会处理销毁处理上一次的`effectLayout`来保证这一次阶段`dom`变更之后`effectLayout`的执行。
+
+```javascript
+function commitWork(current: Fiber | null, finishedWork: Fiber): void {
+    switch (finishedWork.tag) {
+        case FunctionComponent:
+        case ForwardRef:
+        case MemoComponent:
+        case SimpleMemoComponent:
+        case Block: {
+          if (
+            enableProfilerTimer &&
+            enableProfilerCommitHooks &&
+            finishedWork.mode & ProfileMode
+          ) {
+            try {
+              startLayoutEffectTimer();
+              // 销毁effectLayout函数
+              commitHookEffectListUnmount(HookLayout | HookHasEffect, finishedWork);
+            } finally {
+              recordLayoutEffectDuration(finishedWork);
+            }
+          } else {
+            commitHookEffectListUnmount(HookLayout | HookHasEffect, finishedWork);
+          }
+          return;
+        }
+        case ClassComponent: {
+          return;
+        }
+ }
+function commitHookEffectListUnmount(tag: number, finishedWork: Fiber) {
+  const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    do {
+      // 这里只销毁effectLayout，对比的时候effct.tag如果为0不变更即不执行
+      if ((effect.tag & tag) === tag) {
+        // Unmount
+        const destroy = effect.destroy;
+        effect.destroy = undefined;
+        if (destroy !== undefined) {
+          destroy();
+        }
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect);
+  }
+}
+
+
+```
+
+## 1.3 变更后
+
+`commitLayoutEffects`这里我们在前面的构建章已经讲过，我们回顾一下，在这里的`schedulePassiveEffects`,为我们`flushPassiveEffects`提供了能够脱离`fiber节点`直接去访问`effects`的条件，因为它为我们保存了两个全局`销毁挂载useEffect`的数组。。
+
+```js
+function schedulePassiveEffects(finishedWork: Fiber) {
+  const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    do {
+      const { next, tag } = effect;
+      //  筛选出由useEffect()创建的effect
+      if (
+        (tag & HookPassive) !== NoHookEffect &&
+        (tag & HookHasEffect) !== NoHookEffect
+      ) {
+        // 把effect添加到全局数组, 等待flushPassiveEffectsImpl处理
+        enqueuePendingPassiveHookEffectUnmount(finishedWork, effect);
+        enqueuePendingPassiveHookEffectMount(finishedWork, effect);
+      }
+      effect = next;
+    } while (effect !== firstEffect);
+  }
+}
+
+```
+
+此时我们的准备工作已经做好了，来到处理`useEffect`的阶段。
+
+```arduino
+export function flushPassiveEffects(): boolean {
+  // Returns whether passive effects were flushed.
+  if (pendingPassiveEffectsRenderPriority !== NoSchedulerPriority) {
+    const priorityLevel =
+      pendingPassiveEffectsRenderPriority > NormalSchedulerPriority
+        ? NormalSchedulerPriority
+        : pendingPassiveEffectsRenderPriority;
+    pendingPassiveEffectsRenderPriority = NoSchedulerPriority;
+    // `runWithPriority`设置Schedule中的调度优先级, 如果在flushPassiveEffectsImpl中处理effect时又发起了新的更新, 那么新的update.lane将会受到这个priorityLevel影响.
+    return runWithPriority(priorityLevel, flushPassiveEffectsImpl);
+  }
+  return false;
+}
+
+```
+
+```js
+function flushPassiveEffectsImpl() {
+  if (rootWithPendingPassiveEffects === null) {
+    return false;
+  }
+  rootWithPendingPassiveEffects = null;
+  pendingPassiveEffectsLanes = NoLanes;
+
+  // 执行所有的useEffect销毁函数，调用useEffect在上一次的渲染的销毁函数
+  const unmountEffects = pendingPassiveHookEffectsUnmount;
+  pendingPassiveHookEffectsUnmount = [];
+  for (let i = 0; i < unmountEffects.length; i += 2) {
+    const effect = ((unmountEffects[i]: any): HookEffect);
+    const fiber = ((unmountEffects[i + 1]: any): Fiber);
+    const destroy = effect.destroy;
+    effect.destroy = undefined;
+    if (typeof destroy === 'function') {
+      destroy();
+    }
+  }
+
+  // 执行所有的useEffect回调函数, 调用useEffect这次render的回调函数，重新赋值到 effect.destroy
+  const mountEffects = pendingPassiveHookEffectsMount;
+  pendingPassiveHookEffectsMount = [];
+  for (let i = 0; i < mountEffects.length; i += 2) {
+    const effect = ((mountEffects[i]: any): HookEffect);
+    const fiber = ((mountEffects[i + 1]: any): Fiber);
+    effect.destroy = create();
+  }
+}
+
+```
+
+到这我们分析`mount Effct`的过程已经告于段落。
+
+## 1.4 更新effect
+
+这里的逻辑和前面挂载effect几乎一样，多了最主要的内容是依赖比较（浅比较），如果依赖相同传`hookFlags`保证顺序，如果不同传`HookHasEffect | hookFlags`，`HookHasEffect`表示commit阶段需要重新执行。
+
+```js
+function updateEffectImpl(fiberFlags, hookFlags, create, deps): void {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  let destroy = undefined;
+
+  if (currentHook !== null) {
+    const prevEffect = currentHook.memoizedState;
+    // 继续使用先前effect.destroy
+    destroy = prevEffect.destroy;
+    if (nextDeps !== null) {
+      const prevDeps = prevEffect.deps;
+      if (areHookInputsEqual(nextDeps, prevDeps)) {
+        pushEffect(hookFlags, create, destroy, nextDeps);
+        return;
+      }
+    }
+  }
+
+  currentlyRenderingFiber.flags |= fiberFlags;
+
+  hook.memoizedState = pushEffect(
+    HookHasEffect | hookFlags,
+    create,
+    destroy,
+    nextDeps,
+  );
+}
+// 浅比较
+function areHookInputsEqual(
+  nextDeps: Array<mixed>,
+  prevDeps: Array<mixed> | null,
+) {
+  if (prevDeps === null) {
+    return false;
+  }
+  
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (is(nextDeps[i], prevDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+  
+  return true;
+}
+
+function is(x: any, y: any) {
+  return (
+    (x === y && (x !== 0 || 1 / x === 1 / y)) || (x !== x && y !== y) // eslint-disable-line no-self-compare
+  );
+}
+
+```
+
+然后剩下的就和前面逻辑保持一致,`commit`会判断`effect.tag`决定是否执行。
+
+# ref hook
+
+这里`ref hook`确实比较简单，相信如果有能力读懂上面写的，几乎`ref`是一看就懂的
+
+```js
+export function useRef<T>(initialValue: T): {|current: T|} {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useRef(initialValue);
+}
+function mountRef<T>(initialValue: T): {|current: T|} {
+  const hook = mountWorkInProgressHook();//获取useRef
+  const ref = {current: initialValue};//ref初始化
+  hook.memoizedState = ref;
+  return ref;
+}
+// update时调用updateRef获取获取当前useRef，然后返回hook链表
+function updateRef<T>(initialValue: T): {|current: T|} {
+  const hook = updateWorkInProgressHook();
+  return hook.memoizedState;
+}
+
+```
+
+构建`fiber`阶段探寻，回溯处理
+
+```js
+//beginWork中
+function markRef(current: Fiber | null, workInProgress: Fiber) {
+  const ref = workInProgress.ref;
+  if (
+    (current === null && ref !== null) ||
+    (current !== null && current.ref !== ref)
+  ) {
+    workInProgress.effectTag |= Ref;
+  }
+}
+//completeWork中
+function markRef(workInProgress: Fiber) {
+  workInProgress.effectTag |= Ref;
+}
+
+```
+
+提交阶段二，子阶段二`commitMutationEffects`dom变更，如果ref改变了，先删除.
+
+```js
+function commitMutationEffects(root: FiberRoot, renderPriorityLevel) {
+  while (nextEffect !== null) {
+    const effectTag = nextEffect.effectTag;
+    // ...
+    
+    if (effectTag & Ref) {
+      const current = nextEffect.alternate;
+      if (current !== null) {
+        commitDetachRef(current);//移除ref
+      }
+    }
+  }
+
+```
+
+提交阶段二，子阶段三`commitLayoutEffect`，重新设置`ref`
+
+```js
+function commitLayoutEffects(root: FiberRoot, committedLanes: Lanes) {
+  // 忽略代码
+  while (nextEffect !== null) {
+   
+    const flags = nextEffect.flags;
+    // 处理标记
+    if (flags & (Update | Callback)) {
+      const current = nextEffect.alternate;
+      commitLayoutEffectOnFiber(root, current, nextEffect, committedLanes);
+    }
+    
+    if (flags & Ref) {
+      // 重新设置ref
+      commitAttachRef(nextEffect);
+    }
+
+    // 忽略代码
+    nextEffect = nextEffect.nextEffect;
+  }
+
+  // 忽略代码
+}
+
+```
+
+# useMemo和useCallback
+
+`mount`挂载
+
+```js
+function mountMemo<T>(
+  nextCreate: () => T,
+  deps: Array<mixed> | void | null,
+): T {
+  const hook = mountWorkInProgressHook();//创建hook
+  const nextDeps = deps === undefined ? null : deps;
+  const nextValue = nextCreate();//计算value
+  hook.memoizedState = [nextValue, nextDeps];//把value和依赖保存在memoizedState中
+  return nextValue;
+}
+
+function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+  const hook = mountWorkInProgressHook();//创建hook
+  const nextDeps = deps === undefined ? null : deps;
+  hook.memoizedState = [callback, nextDeps];//把callback和依赖保存在memoizedState中
+  return callback;
+}
+
+```
+
+`update`更新
+
+```js
+function updateMemo<T>(
+  nextCreate: () => T,
+  deps: Array<mixed> | void | null,
+): T {
+  const hook = updateWorkInProgressHook();//获取hook
+  const nextDeps = deps === undefined ? null : deps;
+  const prevState = hook.memoizedState;
+
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps: Array<mixed> | null = prevState[1];
+      if (areHookInputsEqual(nextDeps, prevDeps)) {//浅比较依赖
+        return prevState[0];//没变 返回之前的状态
+      }
+    }
+  }
+  const nextValue = nextCreate();//有变化重新调用callback
+  hook.memoizedState = [nextValue, nextDeps];
+  return nextValue;
+}
+
+function updateCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+  const hook = updateWorkInProgressHook();//获取hook
+  const nextDeps = deps === undefined ? null : deps;
+  const prevState = hook.memoizedState;
+
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps: Array<mixed> | null = prevState[1];
+      if (areHookInputsEqual(nextDeps, prevDeps)) {//浅比较依赖
+        return prevState[0];//没变 返回之前的状态
+      }
+    }
+  }
+
+  hook.memoizedState = [callback, nextDeps];//变了重新将[callback, nextDeps]赋值给memoizedState
+  return callback;
+}
+
+```
+
+# 总结
+
+`hook`这一块这几天，感觉还是不够深入，这段时间先打打断点，深入分析一下，调用时机，算法，再重新修一下这整个大章节。

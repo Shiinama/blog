@@ -1,0 +1,87 @@
+---
+title: 2. vue3+ElInput无法输入的问题
+description: vue3+ElInput无法输入的问题
+published: true
+toc:
+  visible: true
+date: 2022-12-02
+---
+
+# vue3+ElInput无法输入的问题
+
+
+
+# 开篇
+
+写业务的时候发现，因为想偷懒嘛，直接就在想在外部去定义一个变量，然后写个弹窗里（tsx）的el-input，而不是又去写个vue页面，但发现就输入不了了，而且跟着文档写textarea没有字数统计。就两个问题嘛
+
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/1.jpeg)
+## 1.el-input无法输入
+
+TSX的写法嘛，最开始我是这么写的
+
+```ts
+  const auditText = ref('');
+  // 忽略代码
+  <ElInput
+    model-value={auditText.value}
+    autosize={{ minRows: 5, maxRows: 10 }}
+    max-length={50}
+    placeholder="请填写审核不通过原因（最少五个字）"
+    show-word-limit
+    type="textarea"
+  />
+
+```
+
+然后发现真是一点反应没有啊，然后看了下文档上面的这句话
+
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/2.jpeg)
+```ts
+const auditText = ref<string>('');
+function test(value) {
+    console.log(value);
+    auditText.value = value;
+}
+//忽略代码
+<ElInput
+    model-value={auditText.value}
+    onInput={test}
+    autosize={{ minRows: 5, maxRows: 10 }}
+    max-length={50}
+    placeholder="请填写审核不通过原因（最少五个字）"
+    show-word-limit
+    type="textarea"
+/>
+
+```
+
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/3.jpeg)
+但是那其实也不用这么麻烦人文档里也写得很清楚了`v-model`就行
+
+```ts
+<ElInput
+    v-model={auditText.value}
+    autosize={{ minRows: 5, maxRows: 10 }}
+    max-length={50}
+    placeholder="请填写审核不通过原因（最少五个字）"
+    show-word-limit
+    type="textarea"
+/>
+
+```
+
+## 2.字数统计不见了
+
+先看看官网的写法，定义个maxlength再定义个show-word-limit就有字数统计了
+
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/4.jpeg) 可是如果我在tsx里按官网这么写会发生什么那
+
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/5.jpeg)
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/6.jpeg)
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/7.jpeg)
+果然吗,不是props的属性就不用写了,原生事件是直接绑定在attrs上给input标签的，所以写在tsx里会报错，写在模版里不会。暂时就忽略这一行检查把~~~。
+
+# 总结
+
+平时会记录一些简单但好玩的问题，水一篇vue，每天一篇vue一篇react。

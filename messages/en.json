@@ -36,6 +36,11 @@
     "timeline": "Timeline",
     "onPage": "Outline",
     "reactSourceCode": "React Source Code",
-    "business": "Business"
+    "business": "Business",
+    "independentDevelopment":"independentDevelopment",
+    "vue":"Vue",
+    "sdk":"Sdk",
+    "fontEnd":"fontEnd",
+    "interview":"interview"
   }
 }

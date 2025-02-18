@@ -1,0 +1,134 @@
+---
+title: 17.Sora又一个风口
+description: 看我母猪上天
+published: true
+toc:
+  visible: true
+date: 2024-02-17
+---
+# Sora又一个风口
+
+文章主要介绍了 OpenAI 的 Sora 项目，它能将文本转换为视频，具有逼真、连贯等优势。适用多种场景，工作原理基于 DALL·E、GPT 等模型技术。还提供了代码实现，最后邀请有兴趣者关注公众号或加入社群。目前 Sora 是 Beta 版，谨防知识付费诈骗。
+
+关联问题: Sora 何时正式版 Sora 能生成动画吗 Sora 怎样保持连贯
+
+
+## 闲谈一下
+
+从去年的大模型开始其实，文生视频的 `Ai项目` 已经层出不穷，像 `Runway`、 `Pika`、 `Leonordo` 从巨头到各种各样的初创公司。 因为我本身从去年到今年以来也本身一直在做一些Ai方面的工作（Midjourney、MyShell、Character Ai等），我大多数时候觉得很多的模型和产品都是在抬高自己（全世界的Ai产品都这样~），但实际体验比较 `一般` 甚至称得上 `粗糙`。
+
+而为什么 `Sora` 值得一讲，因为我在 `Openai` 的宣传中，看到对于视频渲染的 `真实性` 和 `物理世界引擎` `连贯性（不得不吐槽一些还几帧几帧的文生图产品）`简直对于其他的文生图模型是降维打击（这是在`Gpt`之后的第二波了）。
+
+然后现在是在 `Beta` 版，但我已经想提前做点事情，去承接一下了。
+
+重要的事情讲三遍！！！它是 `Beta`版！！！谨防知识付费/诈骗。
+
+`Sora`只有内部能用，现在这个阶段的知识付费全是割韭菜！！！比如这个 
+![image.png](https://ik.imagekit.io/leiakito/font-end-base-layout-%20spacing/sora.jpeg?updatedAt=1739893788694)
+
+## 什么是Sora?
+
+`Sora` 是 `OpenAI` 的技术，可以将文本转换成视频，就像是魔术一样，将你的故事或描述的文字以视频的形式呈现。它可以为各种各样的场景创造视觉效果，从日常场景到富有想象力的奇幻场景，可以参考 `Dall-e-3`的 `vivid` 和 `natural`。
+
+## 它的使用场景
+
+首先是最基础的一点，`Ai`的出现在某种程度上来说是对于个人和小型团队和工作室的巨大利好，所有的`Ai`工具都是效率工具。
+
+其次它是`创造力` 和 `认知` 的延伸。
+
+Sora适用于那些希望从文本中生成 `逼真` 和 `想象力` 视频的用户。它面向需要生成 `复杂` 场景、角色和动作的个人或组织，比如讲故事、娱乐、教育或内容创作等。可以想象这对于 `视频内容创作` 的大洗牌。
+
+## 代码实现
+
+看起来它跟其他的`Api`用法差别不大。
+
+```python
+import openai
+import requests
+import time
+
+# Set OpenAI API key
+openai.api_key = 'your-api-key'
+
+# Define a function to generate video using Sora
+def generate_video(description, engine="sora-beta", max_tokens=150):
+    try:
+        # Generate video using Sora
+        response = openai.Completion.create(
+            engine=engine,
+            prompt=description,
+            max_tokens=max_tokens
+        )
+
+        # Retrieve the generated video URL
+        video_url = response['choices'][0]['video']
+        return video_url
+
+    except Exception as e:
+        print("An error occurred:", e)
+        return None
+
+# Define a function to download the generated video
+def download_video(video_url, output_file):
+    try:
+        # Send request to download video
+        with requests.get(video_url, stream=True) as r:
+            r.raise_for_status()
+            with open(output_file, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        
+        print("Video downloaded successfully!")
+        return output_file
+
+    except Exception as e:
+        print("An error occurred:", e)
+        return None
+
+# Define the main function
+def main():
+    # Define a short description for the desired video
+    description = "A bustling futuristic cityscape with flying cars and neon lights."
+
+    # Generate video using Sora
+    video_url = generate_video(description)
+
+    if video_url:
+        # Define output file path
+        output_file = "generated_video.mp4"
+
+        # Download the generated video
+        downloaded_file = download_video(video_url, output_file)
+
+        if downloaded_file:
+            # Display the generated video URL and path
+            print("Generated Video URL:", video_url)
+            print("Downloaded Video Path:", downloaded_file)
+
+# Call the main function
+if __name__ == "__main__":
+    main()
+
+```
+
+## 它是如何工作的？
+
+`Sora` 是基于以前的 `DALL·E` 和 `GPT`模型研究的一个强大的AI模型。它利用了在 `DALL·E 3`模型中采用的重新标题（`re-captioning`）技术，这种技术能够为视觉训练数据生成高度描述的字幕。
+
+扩展一下，`re-captioning` 是一种语义标注方法，通过AI技术生成内容丰富、准确度高的描述，为模型训练提供更具描述性的信息。这种方法在视觉和文本信息之间建立强链接，因此可以更好地训练模型理解和生成图像。
+
+与此同时 `Sora` 也是一个 `扩散模型` (扩散模型是从噪声开始，然后逐步消除噪声生成数据。它首先从看似静态噪声的视频开始，然后慢慢地消去噪声，让视频变得越来越清晰。这种过程可以看作是从一个模糊不清的图像开始，随着时间的推移，图像变得越来越清晰和锐利，就像照片从模糊逐渐对焦直至清晰一样) ，它使用的是类似于 `GPT` 模型的 `变形器架构`。变形器架构是一种深度学习模型架构，它使用了位置编码和自注意力机制，能够处理顺序数据，并从全局内容中选择关键信息。
+
+而在处理视频和图像时，`Sora` 将其分解为多个较小的单元，称为补丁，类似于语言人工智能中的标记拆分单词的方式。每一个补丁都包含了部分图像的信息，这样处理可以方便模型处理和理解视觉数据。
+
+Sora可以一次创建完整的视频，或者使已有的视频变得更长。它可以跟踪视频中发生的情况，并在多个帧中持续追踪，所以即使某些东西暂时离开画面，它仍然知道它的存在。
+
+这个模型最牛逼的就是保持主体的一致性，即使它离开了画面。使用过 `DALL-E`并试图创建保持一致的角色的人都知道，当角色不断变化时，它们永远不会看起来相同是多么困难。因此，创造一个不仅仅是文本到视频转换，还保持角色一致的模型，这也就是我上面提到的`连贯性` 非常的牛逼了。
+
+另外Sora可以根据书面指导制作视频，将静态图像变得生动，或者为现有视频添加内容。它注意细节，以使动画更加准确。
+
+## 最后
+
+有兴趣的小伙伴可以来一起做一些有趣的事情和副业，不管是 `Ai`、`区块链`、`金融`等。我恰恰好有非常多的想法和同行者。
+
+言归正传，可以关注一下公众号 `Ai Sora`，也可以加入我们的社群 `学境`。

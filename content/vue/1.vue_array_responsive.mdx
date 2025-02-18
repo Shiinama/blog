@@ -1,0 +1,181 @@
+---
+title: 1. vue2究竟对数组做响应式了吗
+description: 一部分是对属性的响应式，一部分是下标的效应式
+published: true
+toc:
+  visible: true
+date: 2022-12-01
+---
+
+# vue2究竟对数组做响应式了吗
+
+
+
+# 开始
+
+经常呀有面试官问，vue2的数组响应式的问题，但其实我觉得这个问题可以拆分成2部分，一部分是对属性的响应式，一部分是下标的效应式。我们那还是直接看源码把，对应版本2.7。
+
+# 源码实现
+
+Observe实现
+
+```js
+//路径src\core\observer\index.ts
+export class Observer {
+  dep: Dep
+  vmCount: number // number of vms that have this object as root $data
+
+  constructor(public value: any, public shallow = false, public mock = false) {
+    // this.value = value
+    this.dep = mock ? mockDep : new Dep()
+    this.vmCount = 0
+    def(value, '__ob__', this)
+    //处理数组
+    if (isArray(value)) {
+      if (!mock) {
+        if (hasProto) {
+          // 重写数组原型方法
+          /* eslint-disable no-proto */
+          ;(value as any).__proto__ = arrayMethods
+          /* eslint-enable no-proto */
+        } else {
+          for (let i = 0, l = arrayKeys.length; i < l; i++) {
+            const key = arrayKeys[i]
+            def(value, key, arrayMethods[key])
+          }
+        }
+      }
+      if (!shallow) {
+        // 对数组里的元素的值监听，却不监听下标
+        this.observeArray(value)
+      }
+    } else {
+      /**
+       * Walk through all properties and convert them into
+       * getter/setters. This method should only be called when
+       * value type is Object.
+       */
+      // 对对象遍历所有键值
+      const keys = Object.keys(value)
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i]
+        defineReactive(value, key, NO_INIITIAL_VALUE, undefined, shallow, mock)
+      }
+    }
+  }
+
+  /**
+   * Observe a list of Array items.
+   */
+  // 对应到这
+  observeArray(value: any[]) {
+    for (let i = 0, l = value.length; i < l; i++) {
+      observe(value[i], false, this.mock)
+    }
+  }
+}
+
+```
+
+这里告诉我们什么那，就是比如你this.arr = xxx的时候，他就会直接给数组里每一项元素添加监听，但并不会给下标添加监听，而对象就直接遍历所有的属性去添加监听了，接下来我们看看重写操作做了点啥。
+
+```js
+const arrayProto = Array.prototype
+export const arrayMethods = Object.create(arrayProto)
+
+const methodsToPatch = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+
+/**
+ * Intercept mutating methods and emit events
+ */
+methodsToPatch.forEach(function (method) {
+  // cache original method
+  const original = arrayProto[method]
+  def(arrayMethods, method, function mutator(...args) {
+    const result = original.apply(this, args)
+    const ob = this.__ob__
+    let inserted
+    switch (method) {
+      case 'push':
+      case 'unshift':
+        inserted = args
+        break
+      case 'splice':
+        inserted = args.slice(2)
+        break
+    }
+    //关注这里就行
+    if (inserted) ob.observeArray(inserted)
+    // notify change
+    if (__DEV__) {
+      ob.dep.notify({
+        type: TriggerOpTypes.ARRAY_MUTATION,
+        target: this,
+        key: method
+      })
+    } else {
+      ob.dep.notify()
+    }
+    return result
+  })
+})
+
+```
+
+这段代码也很简单，就是给每个新增的元素添加一个响应式，def去重新defineProperty最后重新返回的是一个writable,configurable都为true的对象。
+
+emm,有点跑题，问题的关键应该还是为啥不给数组下标做响应式，要做肯定是可以做的，犹大的解释性能问题，这里我们可以曲线救国从一个方面来解释他。
+
+```js
+function defineReactive(data, key, value) {
+	 Object.defineProperty(data, key, {
+		 enumerable: true,
+		 configurable: true,
+		 get: function defineGet() {
+			 console.log(`get key: ${key} value: ${value}`)
+			 return value
+		 },
+		 set: function defineSet(newVal) {
+			 console.log(`set key: ${key} value: ${newVal}`)
+			 value = newVal
+		 }
+	 })
+}
+ 
+function observe(data) {
+	Object.keys(data).forEach(function(key) {
+		defineReactive(data, key, data[key])
+	})
+}
+ 
+let arr = [1, 2, 3]
+observe(arr)
+arr.shift();
+//打印结果
+VM183:6 get key: 0 value: 1
+VM183:6 get key: 1 value: 2
+VM183:10 set key: 0 value: 2
+VM183:6 get key: 2 value: 3
+VM183:10 set key: 1 value: 3
+arr.unshift(7)
+//打印结果
+VM183:6 get key: 1 value: 3
+VM183:6 get key: 0 value: 2
+VM183:10 set key: 1 value: 2
+VM183:10 set key: 0 value: 7
+
+```
+
+简单明了把,O(n)的复杂度了，我感觉犹大说的性能问题，可能就是一些会操作到索引的操作造成的把，当然他也把那些会操作到索引的数组方法重写了一下，也就是说O(1)的复杂度。
+
+# 总结
+
+最近在看和写react的源码，以后react一篇，vue一篇，主要是vue感觉大伙都挺熟的了，不知道写啥，这两个底层工具框架确实react更有难度一些。

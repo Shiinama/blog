@@ -1,0 +1,85 @@
+---
+title: 7.React源码阅读开篇之Fiber
+description: 为什么React要使用Fiber?
+published: true
+toc:
+  visible: true
+date: 2022-11-20
+---
+
+# React源码阅读开篇之Fiber
+
+## 1.前因后果
+
+为什么React要使用Fiber那？它解决了什么问题那？它是怎么解决的那？它是怎样的一个思路？以及为什么我们要先从fiber入手去理解源码那？我觉得这是我们在理解Fiber路上要关注的问题。
+
+## 2.为什么使用Fiber
+
+### 2.1.解决的问题
+
+React 16 之前的版本比对更新 VirtualDOM 的过程是采用循环加递归实现的，这种比对方式有一个问题，就是一旦任务开始进行就无法中断，如果应用中组件数量庞大，主线程被长期占用，直到整棵 VirtualDOM 树比对更新完成之后主线程才能被释放。主线程才能执行其他任务。这就会导致一些用户交互，动画等任务无法立即得到执行，页面就会产生卡顿,非常的影响用户体验。
+
+核心问题:递归无法中断，执行重任务耗时长。Javacript 又是单线程，无法同时执行其他任务，导致任务延迟页面卡顿，用户体验差。
+
+### 2.2.怎么解决的
+
+这时候Fiber就因此诞生了，Fiber是什么？本质上他就是一种新算法，新的比对机制，字面翻译一下，纤维，也就是更细的，颗粒化更小的。那么问题又来了，为什么它要更细？首先Fiber是采用**scheduler**来通过调度，来利用浏览器空闲时间去执行，来解决长期占用主线程的问题，那么这就意味着要放弃递归（因为它是一个不可终止的），也正是如此就只保留了循环（因为需要一个中断），下一次循环从上一次循环的结束（保留变量）继续，那这里因为会有一个终止和再执行的操作（这个操作都是指的VirtualDom）就必须要保证粒度的小就需要把大任务拆分（16前是把整个Vdom的树的对比视为一个任务，但现在是把每个节点视为一个任务）。
+
+### 2.3 为什么要从fiber去入手理解源码
+
+因为在实际上，fiber整个的构建过程以及最后的提交相当于源码的一条主线路，我们可以在先理解主线的情况下，去拆解出支线去理解源码（例如`hooks`、`suspense`等）。
+
+## 3.实现思路
+
+在Fiber中，我觉得我们理解也可以分成两个部分，一部分是**render**阶段，一部分是**commit**阶段，也就是说render阶段的时候fiber是可中断的，但commit阶段也就是真实更新是不可中断的（17.2中，18已经实现渲染中断）。但在这里协调器（Reconciler）给Fiber打副作用标签来决定后面fiber到底进行什么操作就不深入讨论了，调度器、协调器、渲染器的问题了后面有机会单独开一个专栏讲一下。
+
+然后那这两部分我们同样可以细分为2个部分就是**初始渲染**，和**更新渲染**。
+
+**初始渲染**：jsx => react.creatElement（17以前）或者react/jsx-runtime（17以后） => vdom对象然后开始循环找到每个内部vdom，为每个vdom构建fiber对象，然后存在数组中，然后循环fiber数组，然后根据当前节点的操作类型，将操作提交到真实dom中去(commit)。
+
+**dom更新**：重新构建所有fiber,旧fiber VS 新fiber对比 => 形成最后的fiber数组 =》 将fiber对象到真实dom中（commit）。
+
+接下来我们需要手写并理解源码的地方就是：1.创建任务队列。2.实现任务队列调度逻辑。3.创建Fiber对象。4.构建Effects数组。5.实现初始化commit。6.处理组件。7.处理fiber更新。
+
+## 4.关于启动模式
+
+在正式分析源码之前, 先了解一下`react`应用的`启动模式`:
+
+在当前稳定版`react@17.0.2`源码中, 有 3 种启动方式. 先引出官网上对于[这 3 种模式的介绍](https://link.juejin.cn?target=https%3A%2F%2Fzh-hans.reactjs.org%2Fdocs%2Fconcurrent-mode-adoption.html%23why-so-many-modes "https://zh-hans.reactjs.org/docs/concurrent-mode-adoption.html#why-so-many-modes"), 其基本说明如下:
+
+1.  `legacy` 模式: `ReactDOM.render(<App />, rootNode)`. 这是当前 React app 使用的方式. 这个模式可能不支持[这些新功能(concurrent 支持的所有功能)](https://link.juejin.cn?target=https%3A%2F%2Fzh-hans.reactjs.org%2Fdocs%2Fconcurrent-mode-patterns.html%23the-three-steps "https://zh-hans.reactjs.org/docs/concurrent-mode-patterns.html#the-three-steps").
+    
+    ```javascript
+    // LegacyRoot
+    ReactDOM.render(<App />, document.getElementById('root'), dom => {}); // 支持callback回调, 参数是一个dom对象
+    
+    ```
+    
+2.  [Blocking 模式](https://link.juejin.cn?target=https%3A%2F%2Fzh-hans.reactjs.org%2Fdocs%2Fconcurrent-mode-adoption.html%23migration-step-blocking-mode "https://zh-hans.reactjs.org/docs/concurrent-mode-adoption.html#migration-step-blocking-mode"): `ReactDOM.createBlockingRoot(rootNode).render(<App />)`. 目前正在实验中, 它仅提供了 `concurrent` 模式的小部分功能, 作为迁移到 `concurrent` 模式的第一个步骤.
+    
+    ```javascript
+    // BlockingRoot
+    // 1. 创建ReactDOMRoot对象
+    const reactDOMBlockingRoot = ReactDOM.createBlockingRoot(
+      document.getElementById('root'),
+    );
+    // 2. 调用render
+    reactDOMBlockingRoot.render(<App />); // 不支持回调
+    
+    ```
+    
+3.  [Concurrent 模式](https://link.juejin.cn?target=https%3A%2F%2Fzh-hans.reactjs.org%2Fdocs%2Fconcurrent-mode-adoption.html%23enabling-concurrent-mode "https://zh-hans.reactjs.org/docs/concurrent-mode-adoption.html#enabling-concurrent-mode"): `ReactDOM.createRoot(rootNode).render(<App />)`. 也就是现在18的默认版本[并发](https://link.juejin.cn?target=https%3A%2F%2Fso.csdn.net%2Fso%2Fsearch%3Fq%3D%25E5%25B9%25B6%25E5%258F%2591%26spm%3D1001.2101.3001.7020 "https://so.csdn.net/so/search?q=%E5%B9%B6%E5%8F%91&spm=1001.2101.3001.7020")渲染、自动批处理和 `transitions`
+    
+    ```javascript
+    // ConcurrentRoot
+    // 1. 创建ReactDOMRoot对象
+    const reactDOMRoot = ReactDOM.createRoot(document.getElementById('root'));
+    // 2. 调用render
+    reactDOMRoot.render(<App />); // 不支持回调
+    
+    ```
+    
+
+## 5.总结
+
+当前这块我们先主要分析17.2的fiber的实现思路和源码，当我们已经能够站在巨人的肩膀上熟悉并看懂源码，我们可以跟进18的源码，实际上在17.2的源码中已经有非常多的concurrent预装的功能，只是在18以后才实装了。

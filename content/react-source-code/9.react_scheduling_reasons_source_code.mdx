@@ -1,0 +1,112 @@
+---
+title: 9.究竟为什么React不使用requestIdleCallback实现调度
+description: React不使用requestIdleCallback实现调度
+published: true
+toc:
+  visible: true
+date: 2022-11-26
+---
+# 究竟为什么React不使用requestIdleCallback实现调度
+
+2022-11-26 3,168 阅读3分钟
+
+# 1.起因
+
+最近在一边啃源码，一边手写fiber嘛，然后也看了很多博客和资料，基本上大伙好像都是说用requestIdleCallback来模拟react实现一个空闲时间调度。但我自己手写的时候把怎么用怎么怪，老是感觉有什么地方不对劲而且是在调度过程中，可能是因为我是想写出来来一个相对健全一点的模版方便我以后写源码的其他部分把，然后分析了一下所以有了这篇博客。
+
+# 2.查找问题
+
+1.requestIdleCallback是利用帧之间空闲时间来执行JS，它是一个低优先级的处理策略它给我的感觉就是做一些类似上报之类的操作，但实际上Fiber的构建以及渲染内容，并不算是一个低优先级任务。
+
+2.兼容性这个就总所周知了，这个api并不适合在生产环境上。
+
+3.requestIdleCallback实际上是在布局和绘制之后,那意味在也许你在里面做的事情（可能是通过数据修改触发dom修改）会重排。[可以看看这个试验](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2FLinjiayu6%2FFE-RequestIdleCallback-demo "https://github.com/Linjiayu6/FE-RequestIdleCallback-demo")
+
+# 3.解决问题
+
+所以这时候我们就可以回到源码中去看,react是怎么实现的，[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Fscheduler%2Fsrc%2Fforks%2FSchedulerHostConfig.default.js "https://github.com/facebook/react/blob/v17.0.2/packages/scheduler/src/forks/SchedulerHostConfig.default.js")。
+
+核心调度实现
+
+```typescript
+    // 有执行任务
+    if (scheduledHostCallback !== null) {
+      const currentTime = getCurrentTime();
+      // 计算一帧的过期时间点
+      deadline = currentTime + yieldInterval;
+      const hasTimeRemaining = true;
+      try {
+        // 执行c回调
+        const hasMoreWork = scheduledHostCallback(
+          hasTimeRemaining,
+          currentTime,
+        );
+        // 执行完该回调后, 判断后续是否还有其他任务
+        if (!hasMoreWork) {
+          isMessageLoopRunning = false;
+          scheduledHostCallback = null;
+        } else {
+          // 还有其他任务, 推进进入下一个宏任务队列中
+          port.postMessage(null);
+        }
+      } catch (error) {
+        // If a scheduler task throws, exit the current browser task so the
+        // error can be observed.
+        port.postMessage(null);
+        throw error;
+      }
+    } else {
+      isMessageLoopRunning = false;
+    }
+    // Yielding to the browser will give it a chance to paint, so we can
+    // reset this.
+    // 重置状态
+    needsPaint = false;
+  };
+
+  const channel = new MessageChannel();
+  // port2 发送
+  const port = channel.port2;
+  // port1 接收
+  channel.port1.onmessage = performWorkUntilDeadline;
+  // 在每一帧中执行任务
+  requestHostCallback = function(callback) {
+    // 回调注册
+    scheduledHostCallback = callback;
+    if (!isMessageLoopRunning) {
+      isMessageLoopRunning = true;
+      // 进入宏任务队列
+      port.postMessage(null);
+    }
+  };
+  // 取消回调
+  cancelHostCallback = function() {
+    scheduledHostCallback = null;
+  };
+  // 设置超时回调
+  requestHostTimeout = function(callback, ms) {
+    taskTimeoutID = setTimeout(() => {
+      callback(getCurrentTime());
+    }, ms);
+  };
+  // 取消超时
+  cancelHostTimeout = function() {
+    clearTimeout(taskTimeoutID);
+    taskTimeoutID = -1;
+  };
+
+```
+
+代码里的注释写得很清楚了把，但有几个点可以说一下。
+
+1.首先选择宏任务，因为我们需要去及时的让出主线程（微任务并不会让出主线程也是在更新页面前去执行）。
+
+2.其次是宏任务中的选择，MessageChannel，setTimeout，requestAnimationFrame,都是宏任务，setTimeout会浪费4ms(这个大伙可以去看看)，requestAnimationFrame的触发时间是不稳定的（可以看看浏览器的更新页面机制）,所以我猜想最后就选了MessageChannel把。
+
+# 4.总结
+
+其实到这思路也比较明了了，把React中为什么不使用requestIdleCallback理清楚，还顺便把React的核心调度原理看了一下。
+
+# 5.吐槽
+
+唉，其实看源码和手写源码完全是两种感觉，更多的是体现在实现细节和代码耦合性健壮性的问题，写是怎么写都行，但如何写优雅的方便人迭代的代码就好烧脑。比如你就想实现一个fiber的大体思路就不难，但是如果想你在fiber上加hook，难度几何飙升，基础构建和细节实现就很重要了，手写肯定是不等于抄，还需要在里面加写自己的想法和如何简化的方案。

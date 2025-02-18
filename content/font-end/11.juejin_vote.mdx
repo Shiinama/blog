@@ -1,0 +1,98 @@
+---
+title: 11. 掘金投票小脚本
+description: 掘金投票小脚本
+published: true
+toc:
+  visible: true
+date: 2023-12-23
+---
+
+# 掘金投票小脚本
+
+# Think
+
+然后小伙伴们太tm懒了，就让我写个脚本投票。
+
+然后我就想了三种实现方案
+
+* 写 `Puppteer` 无头浏览器，然后包裹成容器，当小伙伴们点我发出去的链接的时候，自动执行投票。
+* 劫持掉掘金的`cookie`，然后搞个`ip`池，自己每天刷接口（但这个要考虑的东西太多了）。
+* 写个脚本，小伙伴们自己跑在浏览器挂着就行。
+
+然后我选第三种，简单有轻松10分钟搞定，然后挂在浏览器就就行.
+
+# 实现
+
+```javascript
+// 每天的投票限额
+var dailyVoteLimit = 2;
+
+// 已经投票的次数
+var voteCount = 0;
+
+// 最后一次投票的日期
+var lastVoteDate = null;
+
+function delay(time) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, time);
+  });
+}
+
+async function checkButtonAndClick() {
+  var today = new Date().getDate();
+
+  // 如果今天还没有投票，或者最后一次投票不是今天，重置投票次数
+  if (!lastVoteDate || lastVoteDate !== today) {
+    voteCount = 0;
+    lastVoteDate = today;
+  }
+
+  // 如果已经达到了每天的投票限额，就不再投票
+  if (voteCount >= dailyVoteLimit) {
+    console.log('已经达到今天的投票次数限额');
+    return;
+  }
+
+  var buttons = document.querySelectorAll('.RankWriter_body-btn__XSKSF');
+
+  // 定义要查找的文本
+  var targetText = '给TA投票';
+
+  // 遍历按钮
+  for (var i = 0; i < buttons.length; i++) {
+    // 检查按钮文本是否为 "我要投票"
+    if (buttons[i].textContent === targetText) {
+      // 如果找到了正确的按钮
+      while (voteCount < dailyVoteLimit) {
+        // 模拟点击它
+        buttons[i].click();
+        voteCount++; // 跟踪投票次数
+        console.log('已经投票了' + voteCount + '次');
+
+        // 等待一秒
+        await delay(1000);
+
+        // 检查是否出现了弹窗，如果出现了，就点击它一次
+        var maskElement = document.querySelector('.arco-icon-hover.arco-modal-close-icon');
+        if (maskElement) {
+          // 如果出现了弹窗
+          maskElement.click();
+        }
+      }
+      break;
+    }
+  }
+}
+
+// 立即投票
+checkButtonAndClick();
+
+// 设置在24小时后再投票
+setInterval(checkButtonAndClick, 24 * 60 * 60 * 1000);
+
+```
+
+![image.png](https://ik.imagekit.io/leiakito/remote_promote/10.jpeg?updatedAt=1739881497359) Ok，来试试？
+
+[activity.juejin.cn/rank/2023/w…](https://activity.juejin.cn/rank/2023/writer/400646714977431?utm_campaign=annual_2023)
