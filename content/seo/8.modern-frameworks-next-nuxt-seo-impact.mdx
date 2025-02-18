@@ -1,0 +1,194 @@
+---
+title: 8.现代框架对SEO的深度影响
+description: 全面介绍SEO的定义、重要性、搜索引擎工作原理、发展历史、白帽vs黑帽SEO以及未来趋势
+published: true
+toc:
+  visible: true
+date: 2025-02-16
+---
+
+# 第8章：现代框架对SEO的深度影响
+
+## 1. 引言
+
+Next和Nuxt是两个热度和使用度都最高的现代Web开发框架，它们分别基于React和Vue构建，也代表了这两个生态的全栈框架。Next是由Vercel公司开发的React框架，而Nuxt则是Vue的服务器端渲染框架。它们都致力于简化开发流程，提高应用性能，并为SEO优化提供了许多内置功能。
+
+## 2. Next和Nuxt页面渲染机制
+
+Next和Nuxt都提供了常见的四种渲染方式，SSR、SSG、IRR、SCR。但在细节上有非常大的区别。
+
+1. 服务器端渲染（SSR）：
+
+   - 优点：搜索引擎可以直接抓取完整的HTML内容，有利于SEO快速建立索引。
+   - 实现：
+     - Next (App Router)：默认所有组件都是服务器组件，自动SSR。
+     - Nuxt：通过`asyncData`或`fetch`。
+
+2. 静态站点生成（SSG）：
+
+   - 优点：预渲染页面，加载速度快，对SEO非常有利。
+   - 实现：
+     - Next (App Router)：使用`generateStaticParams`函数进行静态生成。
+     - Nuxt：在nuxt.config.ts中的 `routeRules` 可直接配置。
+
+3. 增量静态再生（ISR）：
+
+   - 优点：结合了SSG的性能优势和动态内容的新鲜度，有利于SEO。
+   - 实现：
+     - Next (App Router)：通过在页面文件中导出`revalidate`变量实现。
+     - Nuxt：在nuxt.config.ts中的 `routeRules` 可直接配置。
+
+4. 客户端渲染（CSR）：
+   - 缺点：不利于SEO，因为初始HTML内容较少。
+   - 实现：
+     - Next (App Router)：使用'use client'指令将组件标记为客户端组件。
+     - Nuxt：默认支持。
+
+最终来看两个框架在实际编写的时候都是混合渲染，可以一部分服务端一部分客户端，但纯粹的讨论开发体验的话Nuxt是更自然的写法，不需要特意去处理服务端和客户端边界问题
+在页面中只要使用await useFetch + Lazy的属性配置，而哪些组件在客户端渲染，哪些组件在服务端渲染是自动处理的，我们只需要想往常往下写就可以。
+
+这确实也是Vue生态的传统艺能，简单易用强DX，但也会在某些更复杂和特殊场景下这种高度化的封装会带来一些从根本上无法解决的问题。
+
+Next相比之下，写法上会难受不少，一个原因是边界的写法，另外一个是有时候要手动处理水合问题。
+
+## 3. 两个框架的体验以及Seo问题大合集
+
+### 3.1. Next App SSR路由跳转缓慢
+
+在整个Next进行路由跳转的时候是会经历这样一个流程
+
+1. 触发路由变更：用户点击链接或通过编程方式触发路由变更。
+
+2. 请求RSC Payload：Next.js首先请求新路由的RSC（React Server Components）payload。这个payload包含了服务器组件的结构和数据。
+
+3. 显示加载状态：在RSC payload请求完成，如果存在`loading.js`文件，Next.js会显示其中定义的加载UI。
+
+4. 处理RSC Payload：客户端接收RSC payload并开始处理。
+
+5. 流式渲染：如果使用了流式渲染（例如通过React Suspense），部分内容可能开始显示。
+
+6. 客户端组件加载：开始加载和执行标记为 'use client' 的客户端组件。
+
+7. 水合（Hydration）：客户端React开始水合过程，使静态HTML变为可交互的组件。
+
+8. 数据获取：如果有任何客户端数据获取（例如在useEffect中），这些操作会在此时执行。
+
+9. 路由更新完成：新页面完全加载并可交互，`loading.js`中的UI被新页面内容完全替换。
+
+这就会导致一个非常严重的问题，因为RSC Payload是直接来自服务端，在Rsc Payload完成前是不会有Loading的，就会导致页面停滞一会，尤其是第一次渲染，且prefetch在这种场景也没用，而这段时间是对于用户是没有任何反馈的（如果没有加进度条之类的过度效果），也就是说`路由反应晦涩`（点一下需要反应）。
+
+如图（3G网速）：
+![next loading xibaoyu](https://ik.imagekit.io/ixou4q6nu/next-loading-cash.png)
+
+### 3.2 Next SSR动态路由时的TDK问题
+
+在使用 `generateMetadata` 的时候，在目前的正式版本中（15canary有了）会导致 `loading` 直接不加载（因为会提前完全准备完页面），那么在之前我是怎么解决的那？
+
+```ts
+import { Metadata } from 'next'
+import { headers } from 'next/headers'
+
+function isSSR() {
+  return headers().get('accept')?.includes('text/html') // for RSC navigations, it uses either `Accept: text/x-component` or `Accept: */*`, for SSR browsers and other client use `Accept: text/html`
+}
+
+const fallback: Metadata = {
+  title: 'Loading...'
+}
+
+type GenerateMetadata<T> = (params: T) => Promise<Metadata>
+
+const getMetadataWithFallback =
+  <Params>(generateMetadata: GenerateMetadata<Params>, staticMetadata?: Partial<Metadata>) =>
+  (params: Params) => {
+    return isSSR() ? generateMetadata(params) : Promise.resolve({ ...fallback, ...staticMetadata })
+  }
+
+export default getMetadataWithFallback
+```
+
+这是种非常丑陋的写法把源数据的更新放在客户端去更新，还是不会让loading加载出来。那么更好的解决方案是什么那？
+
+是通过 `experimental.streamingMetadata` 流式Meta选项，这个实验性选项，会让`generateMetadata`流式生成，让loading可以加载出来。但同样也有个问题了。
+
+![streaming metaData](https://ik.imagekit.io/ixou4q6nu/stream-metadata.png)
+
+显然Meta源数据标签被放在了Body里，就是比较靠后的位置，但是seo应该是只会分析head里的meta标签（这里我有点不太确定）。
+
+这是一个大问题，解决的方式同样是实验属性中的`htmlLimitedBots`它传入一个正则去匹配爬虫的UserAgent，当爬虫的时候就不进行这种源数据流式传输了。
+
+### 3.3 Nuxt如何绕过这两个问题的，以及造成的新问题
+
+Nuxt的框架非常的爽，它的客户端组件和服务端组件并不会分开，而是绑定在一起的。
+
+```typescript
+const { data: SeoData } = await useFetch('/api/seo', {
+  query: { url: path, ...query },
+  lazy: true
+})
+```
+
+在组件和页面中，仅仅通过这种方式就可以了，当是在服务端请求渲染（刷新、新打开）就自动await请求，而当是客户端导航，则直接是异步执行请求，直接避免了在客户端进行导航或操作
+的时候组件等待问题，是没有延迟感的，也不会从服务端加载结构性文件。
+
+可代价是什么那？就是当在客户端导航的时候，因为是异步，会导致meta标签里如果有接口的数据，就会`undefined`（但这并不影响爬虫和Seo，因为爬虫并不用Nuxt的客户端导航）,如果想要有正确的`meta`标签就必须选择一些`hack`的手段，或者把`lazy`去掉
+不管什么情况都等待（但这样会比Next的做法更糟糕）。
+
+### 3.4 Nuxt的首屏问题
+
+因为Nuxt在首屏实在是加载太多东西了（框架基础文件），就会导致他的首屏和服务端渲染慢，导致LCP的指标很难达到标准。
+
+另外一个方面来说，它的文档流也不是像Next一样流式的。
+
+### 3.5 Nuxt的致命问题
+
+Nuxt有2个致命问题，导致了它在Seo这方面掉大分(我直接迁移成Next了，Seo没法做)。
+
+#### 3.5.1 NUXT_DATA JSON化
+
+首先服务端渲染，不管是Next还是Nuxt都会把服务端的数据添加到HTML Document里,但他们放的方式区别很大，Next是放序列化字符串，Nuxt是放JSON格式。
+
+![nuxt data](https://ik.imagekit.io/ixou4q6nu/nuxt-data.png)
+
+大家可能觉得放JSON还更好一些（JSON会有性能优势 https://v8.dev/blog/cost-of-javascript-2019#json ）。
+
+但JSON也会导致这些内容会被爬虫爬取，并且这还是更利于爬虫爬取的内容。而后端的接口，其实爬虫不需要的信息会特别多，比如id、用户信息、ip信息这种。
+当这些不需要内容太多了的时候，本身要突出的内容和关键词都无法突出了，这是个压倒性的错误。
+
+另外一方面是有数据安全的问题（这意味着把数据往互联网公开了），另外一方面是
+
+当然可以设置`payloadExtraction`为false，也会变成序列化字符串，但却会造成更多的问题（除非在一开始就是false，而默认值为true这个选项）。
+
+### 3.5.2 秘钥暴露
+
+它把环境变量会直接暴露出来，使用NUXT_PUBLIC的，还会暴露打包的设备信息。
+
+![nuxt data](https://ik.imagekit.io/ixou4q6nu/nuxt-secret.png)
+
+可能这也是压垮我的最后一根稻草吧，即使Nuxt的用户体验、DX、客户端性能都是远大于Next的，但为了流量和长期考虑不得不重构应用换成`Next`，实际上在重构后整个应用的SEO流量几乎翻倍了。
+
+## 结论
+
+以下是Nuxt和Next.js在多个关键方面的详细对比表：
+
+| 特性                 | Nuxt   | Next.js |
+| -------------------- | ------ | ------- |
+| SEO 优化             | 极差   | 上等    |
+| 框架提供基础用户体验 | 上等   | 中等    |
+| 开发体验 (DX)        | 上等   | 中等    |
+| 服务器端渲染 (SSR)   | 支持   | 支持    |
+| 静态站点生成 (SSG)   | 支持   | 支持    |
+| 增量静态再生 (ISR)   | 支持   | 支持    |
+| 客户端渲染 (CSR)     | 支持   | 支持    |
+| 首屏加载速度         | 中等   | 上等    |
+| 数据安全性           | 差     | 好      |
+| 学习曲线             | 较平缓 | 较陡峭  |
+| 大型应用扩展性       | 中等   | 上等    |
+
+尽管Nuxt在用户体验、开发体验和某些性能方面表现出色，但其在SEO和数据安全性方面的严重缺陷是不容忽视的。Next.js虽然在某些方面的体验略逊于Nuxt，但其优秀的SEO表现、更好的数据安全性和更强的大型应用扩展性使其成为需要强大搜索引擎优化和长期可维护性的项目的更佳选择。
+
+选择框架时，需要根据项目的具体需求和优先级来权衡。如果SEO、数据安全和应用扩展性是项目的关键考虑因素，Next.js可能是更好的选择。但如果开发速度、用户体验和较平缓的学习曲线是首要考虑，且SEO不是主要关注点，那么Nuxt仍然是一个有竞争力的选项。
+
+此外，选择框架时还需要考虑团队的技术栈偏好。如果团队更熟悉Vue生态系统，Nuxt可能更容易上手；而如果团队擅长React，Next.js可能是更自然的选择。
+
+无论选择哪个框架，深入理解其工作原理和潜在问题都是至关重要的，这样才能在开发过程中做出正确的优化决策，并在必要时采取适当的措施来弥补框架的不足。最终，成功的项目不仅取决于所选择的工具，还取决于如何巧妙地运用这些工具来满足特定的项目需求。

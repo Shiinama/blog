@@ -1,0 +1,955 @@
+---
+title: 10.Next的Seo实践
+description: 全面介绍SEO的定义、重要性、搜索引擎工作原理、发展历史、白帽vs黑帽SEO以及未来趋势
+published: true
+toc:
+  visible: true
+date: 2025-02-16
+---
+
+# 第10章：Next的Seo实践
+
+## 1. Meta标签
+
+Next App Router比较主流的有两种定义源数据标签的方式，一种是通过在布局或者页面上导出一个 `metadata` 的对象，会自动生成对应的Meta源数据标签，这是静态的。
+
+而另外一种则是动态生成`meta`标签，这种场景通常需要先请求接口得到一些信息的`动态源数据`页面，在这种情况下我们采用`generateMetadata`函数。
+
+### 1.1. 静态Meta标签
+
+仅仅只需要在页面或者布局中添加这一段。
+
+```typescript
+export const metadata: Metadata = {
+  metadataBase: new URL(APP_ORIGIN),
+  title: APP_TITLE,
+  description: APP_DESCRIPTION,
+  creator: APP_NAME,
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico'
+  },
+  openGraph: {
+    title: APP_TITLE,
+    description: APP_DESCRIPTION,
+    url: APP_ORIGIN,
+    siteName: APP_NAME,
+    images: [
+      {
+        url: OG_URL,
+        width: 2880,
+        height: 1800,
+        alt: APP_NAME
+      }
+    ],
+    type: 'website',
+    locale: 'en_US'
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: TWITTER_SOCIAL_URL,
+    title: APP_TITLE,
+    description: APP_DESCRIPTION,
+    images: {
+      url: '/og.jpg',
+      width: 2880,
+      height: 1800,
+      alt: APP_NAME
+    }
+  }
+}
+```
+
+### 1.2. 生成的HTML Meta标签
+
+上面的 `metadata` 对象会被 Next.js 自动转换为相应的 HTML meta 标签。假设我们的应用配置如下：
+
+```javascript
+const APP_ORIGIN = 'https://example.com'
+const APP_TITLE = 'My Awesome App'
+const APP_DESCRIPTION = 'This is an awesome app built with Next.js'
+const APP_NAME = 'AwesomeApp'
+const OG_URL = 'https://example.com/og-image.jpg'
+const TWITTER_SOCIAL_URL = '@awesome_app'
+```
+
+那么，生成的 HTML head 部分可能会包含以下 meta 标签：
+
+```html
+<head>
+  <title>My Awesome App</title>
+  <meta name="description" content="This is an awesome app built with Next.js" />
+  <meta name="creator" content="AwesomeApp" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+
+  <!-- Open Graph tags -->
+  <meta property="og:title" content="My Awesome App" />
+  <meta property="og:description" content="This is an awesome app built with Next.js" />
+  <meta property="og:url" content="https://example.com" />
+  <meta property="og:site_name" content="AwesomeApp" />
+  <meta property="og:image" content="https://example.com/og-image.jpg" />
+  <meta property="og:image:width" content="2880" />
+  <meta property="og:image:height" content="1800" />
+  <meta property="og:image:alt" content="AwesomeApp" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter Card tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@awesome_app" />
+  <meta name="twitter:title" content="My Awesome App" />
+  <meta name="twitter:description" content="This is an awesome app built with Next.js" />
+  <meta name="twitter:image" content="https://example.com/og.jpg" />
+  <meta name="twitter:image:width" content="2880" />
+  <meta name="twitter:image:height" content="1800" />
+  <meta name="twitter:image:alt" content="AwesomeApp" />
+</head>
+```
+
+这些生成的 meta 标签包含了我们在 `metadata` 对象中定义的所有信息，包括基本的页面信息、Open Graph 标签和 Twitter Card 标签。这些标签可以极大地提升我们的网页在搜索引擎结果中的展示效果，以及在社交媒体平台上的分享效果。
+
+### 1.3. 动态Meta标签
+
+对于需要根据动态数据生成元数据的页面，我们可以使用`generateMetadata`函数。这种方法特别适用于博客文章、产品页面等内容随时间或用户输入变化的场景。
+
+示例代码：
+
+```typescript
+import type { Metadata } from 'next'
+
+type Props = {
+  params: { id: string }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  // 从API获取数据
+  const product = await fetch(`https://api.acme.com/products/${params.id}`).then((res) => res.json())
+
+  return {
+    title: product.name,
+    description: product.description,
+    openGraph: {
+      title: `${product.name} - Acme Products`,
+      description: product.description,
+      images: [{ url: product.image }]
+    }
+  }
+}
+
+export default function Page({ params }: Props) {
+  // ...
+}
+```
+
+这个函数允许我们基于动态数据（如API响应）生成元数据，确保每个页面都有独特且相关的SEO信息。
+
+### 1.4 generateMetadata的流式渲染
+
+`generateMetadata` 函数不会触发 Suspense，我的猜测这是由于其设计和实现方式导致的。以下是几个主要原因：
+
+1. **服务器端执行**：`generateMetadata` 主要在服务器端执行，而 Suspense 主要用于客户端渲染中处理异步操作。
+
+2. **元数据的关键性**：元数据对于SEO非常重要，Next优先考虑确保元数据在初始 HTML 中可用，而不是延迟加载。
+
+3. **渲染顺序**：元数据通常需要在页面内容之前生成，因为它们位于 HTML 的 `<head>` 部分。这使得难以将其纳入 Suspense 的流式渲染模型中。
+
+4. **兼容性考虑**：不是所有的客户端（如搜索引擎爬虫）都能处理通过 JavaScript 动态插入的元数据。
+
+这种设计导致了一些潜在的性能问题：
+
+- **阻塞渲染**：如果 `generateMetadata` 函数执行时间较长，它会延迟整个页面的渲染。
+- **无法并行加载**：元数据生成和页面内容加载无法并行进行，可能会增加总体加载时间。
+- **客户端导航延迟**：在客户端导航时，新页面的渲染可能会因为等待元数据生成而被延迟。
+
+为了解决这些问题，Next引入了"流式元数据"（Streaming Metadata）功能。这个新特性旨在提高页面加载速度，特别是在处理慢速元数据生成时，但只能在canary中使用。
+
+#### 流式元数据的主要优势：
+
+1. **非阻塞渲染**：`generateMetadata` 返回的元数据被视为可挂起的数据，允许页面内容立即渲染。
+2. **异步注入**：元数据在解析完成后，会在客户端异步注入到页面中。
+3. **SEO友好**：对于搜索引擎爬虫，仍然会在HTML中接收完全渲染的元数据。
+4. **用户体验优先**：对于人类用户，他们主要关心页面内容，元数据可以稍后添加而不影响他们的体验。
+
+#### 如何使用：
+
+要启用流式元数据功能，你需要在 `next.config.js` 中添加以下配置：
+
+```javascript
+module.exports = {
+  experimental: {
+    streamingMetadata: true
+  }
+}
+```
+
+#### 注意事项：
+
+1. 这个功能默认是禁用的，需要手动开启。
+2. 对于某些有限的机器人（如不能处理JavaScript的爬虫），你可以使用 `experimental.htmlLimitedBots` 选项来指定它们应该接收完全阻塞的元数据，但我目前的做法是用正则匹配了市面主流的所有爬虫。
+3. 默认情况下，只有能够像无头浏览器一样运行的Google机器人会在启用此功能时接收流式元数据。
+
+#### 为什么这个解决方案很重要：
+
+1. **性能提升**：通过允许页面内容先渲染，然后异步加载元数据，可以显著提高感知加载速度。
+2. **更好的用户体验**：用户可以更快地看到和交互页面内容，而不必等待所有元数据加载完成。
+3. **SEO和用户体验的平衡**：通过为搜索引擎爬虫提供完整的元数据，同时为人类用户优化加载速度，实现了SEO和用户体验的完美平衡。
+
+### 1.5 generateMetadata和页面组件的请求优化
+
+在使用 `generateMetadata` 和页面组件时，一个常见的担忧是可能会导致重复的数据请求。这是一个合理的顾虑，因为 `generateMetadata` 和页面组件可能需要相同的数据。然而，Next.js 已经为此提供了优化方案。
+
+#### 请求重复问题
+
+考虑以下场景：
+
+```typescript
+import type { Metadata } from 'next'
+
+async function getData(id: string) {
+  const res = await fetch(`https://api.example.com/product/${id}`)
+  return res.json()
+}
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const product = await getData(params.id)
+  return { title: product.name }
+}
+
+export default async function Page({ params }: { params: { id: string } }) {
+  const product = await getData(params.id)
+  return <h1>{product.name}</h1>
+}
+```
+
+乍看之下，似乎 `getData` 函数会被调用两次：一次在 `generateMetadata` 中，另一次在页面组件中。
+
+#### Next.js 的请求去重优化
+
+但Next.js 已经内置了请求去重优化。在同一个路由段（route segment）内，具有相同参数的重复请求会被自动去重。这意味着：
+
+1. `getData` 函数实际上只会被调用一次。
+2. 第一次调用（通常是在 `generateMetadata` 中）的结果会被缓存。
+3. 后续的调用（在页面组件中）会直接使用缓存的结果，而不会触发新的网络请求。
+
+## 2. robots.txt
+
+### 2.1. robots.txt 的重要性和基本概念
+
+robots.txt 文件是网站与搜索引擎爬虫之间的一种通信机制。它位于网站的根目录，作为网站管理员向搜索引擎爬虫传达爬取指令的第一道关卡。正确配置 robots.txt 可以：
+
+1. 指导爬虫如何爬取网站内容
+2. 防止敏感或不必要的页面被索引
+3. 优化网站的爬取效率
+4. 间接影响网站的 SEO 表现
+
+在 Next.js 应用中，我们有两种方式来实现 robots.txt：静态文件方法和动态生成方法。每种方法都有其特定的使用场景和优势。
+
+### 2.2. 静态Robots.txt
+
+静态文件方法是最直观的实现方式。你只需在`public/`目录下创建一个名为 `robots.txt` 的文件。
+
+例如，一个基本的 robots.txt 文件可能如下所示：
+
+```txt
+User-Agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /private/
+Sitemap: https://www.yourwebsite.com/sitemap.xml
+```
+
+让我们逐行解析这个文件：
+
+- `User-Agent: *`：这一行表示以下规则适用于所有的搜索引擎爬虫。
+- `Allow: /`：允许爬虫访问网站的所有页面（除非被后续规则覆盖）。
+- `Disallow: /admin/`：禁止爬虫访问 `/admin/` 目录及其子目录。
+- `Disallow: /private/`：同样禁止爬虫访问 `/private/` 目录及其子目录。
+- `Sitemap: https://www.yourwebsite.com/sitemap.xml`：指明网站 Sitemap 的位置，帮助搜索引擎更好地了解网站结构。
+
+静态文件方法的优点是简单直接，适合网站结构相对固定、不需要频繁更新 robots.txt 内容的情况。
+
+### 2.3. 动态生成
+
+Next.js 提供了一种通过代码动态生成 robots.txt 的方法
+
+在 `app/` 目录下创建一个 `robots.ts` 文件:
+
+```typescript
+import { MetadataRoute } from 'next'
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      {
+        userAgent: '*',
+        allow: '/',
+        disallow: ['/admin/', '/private/']
+      },
+      {
+        userAgent: 'Googlebot',
+        allow: '/admin/public-reports/',
+        disallow: '/admin/'
+      }
+    ],
+    sitemap: 'https://www.yourwebsite.com/sitemap.xml',
+    host: 'https://www.yourwebsite.com'
+  }
+}
+```
+
+这个例子展示了动态生成方法的强大之处：
+
+1. 我们可以为不同的 User-Agent 设置不同的规则。
+2. 可以轻松地添加多个 allow 和 disallow 规则。
+3. 除了 sitemap，我们还可以指定 host。
+
+动态生成的结果将类似于：
+
+```txt
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /private/
+
+User-agent: Googlebot
+Allow: /admin/public-reports/
+Disallow: /admin/
+
+Sitemap: https://www.yourwebsite.com/sitemap.xml
+Host: https://www.yourwebsite.com
+```
+
+### 2.4. 从类型定义理解Robot
+
+如果你使用 TypeScript，了解 `Robots` 对象的详细类型定义会很有帮助：
+
+```typescript
+type RobotsFile = {
+  rules:
+    | {
+        userAgent?: string | string[] | undefined
+        allow?: string | string[] | undefined
+        disallow?: string | string[] | undefined
+        crawlDelay?: number | undefined
+      }
+    | Array<{
+        userAgent: string | string[]
+        allow?: string | string[] | undefined
+        disallow?: string | string[] | undefined
+        crawlDelay?: number | undefined
+      }>
+  sitemap?: string | string[] | undefined
+  host?: string | undefined
+}
+```
+
+这个类型定义告诉我们：
+
+- `rules` 可以是一个对象或对象数组，允许你为不同的 User-Agent 设置不同的规则。
+- `userAgent`、`allow` 和 `disallow` 都可以是字符串或字符串数组，方便设置多个值。
+- `crawlDelay` 是一个可选的数字，用于指定爬虫在两次请求之间应该等待的秒数。
+- `sitemap` 可以是单个 URL 或 URL 数组，允许指定多个 Sitemap。
+- `host` 是一个可选字段，用于指定网站的首选域名。
+
+### 2.5. 动态生成方法的高级应用
+
+动态生成 robots.txt 的方法不仅灵活，还允许我们根据不同的条件生成不同的内容。例如：
+
+```typescript
+import { MetadataRoute } from 'next'
+
+export default function robots(): MetadataRoute.Robots {
+  const isProduction = process.env.NODE_ENV === 'production'
+
+  return {
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      disallow: isProduction ? [] : ['/']
+    },
+    sitemap: 'https://www.yourwebsite.com/sitemap.xml',
+    host: 'https://www.yourwebsite.com'
+  }
+}
+```
+
+在这个例子中，我们根据环境变量动态决定是否允许搜索引擎爬取网站。在生产环境中，我们允许爬取所有内容；而在非生产环境中，我们禁止爬取任何内容。这种方法特别适用于防止测试或开发环境的网站被搜索引擎索引。
+
+### 2.6. robots.txt 的最佳实践和注意事项
+
+1. **定期审查和更新**：
+   随着网站结构和内容的变化，定期检查和更新你的 robots.txt 文件是很重要的。确保它始终反映你当前的需求和网站结构。
+
+2. **使用搜索引擎的测试工具**：
+   大多数主要的搜索引擎都提供了 robots.txt 测试工具。例如，Google 搜索控制台就有一个这样的工具。定期使用这些工具来验证你的 robots.txt 文件是否正确无误。
+
+3. **不要过度依赖 robots.txt 来保护敏感信息**：
+   记住，robots.txt 文件是公开可访问的。不要用它来隐藏敏感信息或重要的目录。对于真正需要保护的内容，应该使用密码保护或其他安全措施。
+
+4. **考虑移动端爬虫**：
+   随着移动搜索的普及，一些搜索引擎使用特定的移动爬虫。你可能需要为这些爬虫设置特定的规则。例如：
+
+   ```txt
+   User-agent: Googlebot-Mobile
+   Allow: /mobile/
+   ```
+
+5. **使用通配符谨慎**：
+   robots.txt 支持使用通配符，但要谨慎使用。错误的通配符可能会意外地阻止重要页面被索引。例如：
+
+   ```txt
+   User-agent: *
+   Disallow: /*.pdf
+   ```
+
+   这会阻止所有 PDF 文件被索引。
+
+6. **指定正确的 Sitemap 位置**：
+   始终在 robots.txt 中包含你的 Sitemap 位置。这有助于搜索引擎更全面地发现和索引你的网站页面。
+
+7. **考虑爬虫预算**：
+   对于大型网站，可以使用 `Crawl-delay` 指令来控制爬虫的爬取频率，以防止服务器过载：
+
+   ```txt
+   User-agent: *
+   Crawl-delay: 10
+   ```
+
+   这告诉爬虫在每次请求之间等待 10 秒。
+
+## 3. Sitemaps
+
+Sitemap 是一个 XML 文件，其中包含了网站上所有重要页面的列表。它的主要目的是帮助搜索引擎更好地了解和索引网站的结构。正确配置和使用 Sitemap 可以：
+
+1. 提高网站的索引效率
+2. 确保重要页面被搜索引擎发现和收录
+3. 为大型或复杂的网站提供清晰的结构指引
+4. 间接提升网站的 SEO 表现
+
+在 Next.js 应用中，我们同样有两种方式来实现 Sitemap：静态文件方法和动态生成方法。
+
+### 3.1. 静态 Sitemap
+
+静态 Sitemap 方法适用于内容相对固定的小型网站。你只需在 `public/` 目录下创建一个名为 `sitemap.xml` 的文件。
+
+一个基本的 sitemap.xml 文件可能如下所示：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.yourwebsite.com/</loc>
+    <lastmod>2025-06-01</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.yourwebsite.com/about</loc>
+    <lastmod>2023-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
+```
+
+让我们解析这个文件的结构：
+
+- `<urlset>`: 这是 Sitemap 的根元素，包含了命名空间声明。
+- `<url>`: 每个 URL 条目都包含在这个标签内。
+- `<loc>`: 页面的完整 URL。
+- `<lastmod>`: 页面最后修改的日期。
+- `<changefreq>`: 页面内容更新的频率（可选）。
+- `<priority>`: 相对于网站其他页面的优先级（可选，范围 0.0 到 1.0）。
+
+### 3.2. 动态生成 Sitemap
+
+Next.js 提供了一种通过代码动态生成 Sitemap 的方法，这对于大型或经常更新内容的网站特别有用。
+
+在 `app/` 目录下创建一个 `sitemap.ts` 文件:
+
+```typescript
+import { MetadataRoute } from 'next'
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [
+    {
+      url: 'https://www.yourwebsite.com',
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 1
+    },
+    {
+      url: 'https://www.yourwebsite.com/about',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8
+    },
+    {
+      url: 'https://www.yourwebsite.com/blog',
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.5
+    }
+  ]
+}
+```
+
+这个方法的优势在于：
+
+1. 可以动态生成 URL 列表，特别适合内容经常变化的网站。
+2. 可以轻松地从数据库或 API 获取最新的页面信息。
+3. 可以根据不同的条件设置不同的优先级和更新频率。
+
+当然，我会根据我们的要求重新组织这部分内容，从类型定义的角度来解释 Sitemap。
+
+### 3.3. 从类型定义理解 Sitemap
+
+通过分析 `SitemapFile` 的 TypeScript 类型定义，我们可以深入理解 Sitemap 的结构和功能：
+
+```typescript
+type SitemapFile = Array<{
+  url: string
+  lastModified?: string | Date | undefined
+  changeFrequency?: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never' | undefined
+  priority?: number | undefined
+  alternates?:
+    | {
+        languages?: Languages<string> | undefined
+      }
+    | undefined
+  images?: string[] | undefined
+  videos?: Videos[] | undefined
+}>
+```
+
+1. **Sitemap 的基本结构**
+
+   - `SitemapFile` 是一个数组类型，表明一个 Sitemap 可以包含多个 URL 条目。
+   - 每个条目都是一个对象，代表网站中的一个页面。
+
+2. **必需信息**
+
+   - `url: string`: 这是唯一的必需字段。每个条目必须包含一个 URL，指向网站的特定页面。
+
+3. **时间相关信息**
+
+   - `lastModified?: string | Date | undefined`: 可选字段，表示页面的最后修改时间。可以是字符串（如 ISO 8601 格式）或 JavaScript Date 对象。
+
+4. **更新频率**
+
+   - `changeFrequency?: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never' | undefined`:
+     可选字段，指示页面内容更新的预期频率。这有助于搜索引擎决定多久重新爬取一次页面。
+
+5. **页面重要性**
+
+   - `priority?: number | undefined`: 可选字段，表示页面相对于网站其他页面的重要性。值范围通常在 0.0 到 1.0 之间。
+
+6. **多语言支持**
+
+   - `alternates?: { languages?: Languages<string> | undefined } | undefined`:
+     可选字段，用于指定页面的其他语言版本。这对于国际化网站特别有用。
+
+7. **多媒体支持**
+   - `images?: string[] | undefined`: 可选字段，允许指定与页面相关的图片 URL。
+   - `videos?: Videos[] | undefined`: 可选字段，允许包含与页面相关的视频信息。
+
+通过这个类型定义，我们可以看出 Sitemap 不仅仅是简单的 URL 列表，而是可以包含丰富的元数据信息。这些信息可以帮助搜索引擎更好地理解和索引网站内容：
+
+- 它可以指导搜索引擎何时重新爬取页面（通过 `lastModified` 和 `changeFrequency`）。
+- 它可以提示搜索引擎页面的相对重要性（通过 `priority`）。
+- 它支持多语言网站的 SEO 优化（通过 `alternates`）。
+- 它允许为图片和视频内容提供额外的 SEO 信息（通过 `images` 和 `videos`）。
+
+这种结构化的 Sitemap 格式使得网站管理员可以为搜索引擎提供详细的网站结构和内容信息，从而潜在地提高网站在搜索结果中的可见性和排名。同时，它也为大型和复杂网站提供了一种有效的方式来组织和呈现其内容结构。
+
+### 3.4. 动态生成方法的高级应用
+
+动态生成 Sitemap 的方法允许我们根据不同的条件生成不同的内容。例如：
+
+```typescript
+import { MetadataRoute } from 'next'
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // 从数据库或 API 获取博客文章列表
+  const posts = await fetchBlogPosts()
+
+  const blogUrls = posts.map((post) => ({
+    url: `https://www.yourwebsite.com/blog/${post.slug}`,
+    lastModified: post.updatedAt,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7
+  }))
+
+  return [
+    {
+      url: 'https://www.yourwebsite.com',
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 1
+    },
+    ...blogUrls
+  ]
+}
+```
+
+但值得注意的是高版本默认静态渲染,如果要退出静态渲染可以这样:
+
+```typescript
+import { MetadataRoute } from 'next'
+import { unstable_noStore as noStore } from 'next/cache'
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  noStore()
+  // 从数据库或 API 获取博客文章列表
+  const posts = await fetchBlogPosts()
+
+  const blogUrls = posts.map((post) => ({
+    url: `https://www.yourwebsite.com/blog/${post.slug}`,
+    lastModified: post.updatedAt,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7
+  }))
+
+  return [
+    {
+      url: 'https://www.yourwebsite.com',
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 1
+    },
+    ...blogUrls
+  ]
+}
+```
+
+### 3.5. 使用 generateSitemaps 处理大型网站
+
+对于拥有成千上万个页面的大型网站来说，使用单一的 sitemap 文件可能不够用。Next.js 提供了 `generateSitemaps` 函数来创建多个 sitemap 文件，这在我们的网站超过 50,000 个 URL（单个 sitemap 文件的限制）时特别有用。
+
+以下是如何使用 `generateSitemaps` 的示例：
+
+```typescript
+import { MetadataRoute } from 'next'
+
+export async function generateSitemaps() {
+  // 获取产品总数
+  const totalProducts = await getTotalProductCount()
+
+  // 计算需要的 sitemap 数量（假设每个 sitemap 包含 50,000 个 URL）
+  const sitemapCount = Math.ceil(totalProducts / 50000)
+
+  // 返回一个包含 sitemap id 的数组
+  return Array.from({ length: sitemapCount }, (_, i) => ({ id: i }))
+}
+
+export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
+  // 计算这个 sitemap 的范围
+  const start = id * 50000
+  const end = start + 50000
+
+  // 获取这个范围内的产品
+  const products = await getProducts(start, end)
+
+  // 生成 sitemap 条目
+  return products.map((product) => ({
+    url: `https://www.yourwebsite.com/product/${product.id}`,
+    lastModified: product.updatedAt,
+    changeFrequency: 'daily',
+    priority: 0.7
+  }))
+}
+```
+
+在这个例子中：
+
+1. `generateSitemaps` 函数根据产品总数计算需要多少个 sitemap 文件。
+2. 它返回一个对象数组，每个对象都有一个 `id` 属性，代表一个 sitemap。
+3. `sitemap` 函数然后使用这个 `id` 来生成特定范围内产品的 sitemap。
+
+生成的 sitemap 文件将可以通过类似 `/sitemap/[id].xml` 的 URL 访问（例如，`/sitemap/0.xml`、`/sitemap/1.xml` 等）。
+
+这种方法允许我们通过将 URL 分割到多个 sitemap 文件中来高效地管理大量 URL。它特别适用于电子商务网站、大型博客或任何具有大量动态生成页面的网站。
+
+记得还要创建一个 sitemap 索引文件，列出所有这些单独的 sitemap 文件，这样可以让搜索引擎更容易发现和爬取我们的所有内容。
+
+使用 `generateSitemaps` 可以帮助我们克服单个 sitemap 文件的 URL 数量限制，确保我们的大型网站能够被搜索引擎完全索引，从而提高网站的可见性和搜索引擎优化效果。
+
+### 3.6. Sitemap 的最佳实践和注意事项
+
+1. **保持更新**：
+   确保你的 Sitemap 始终反映网站的最新结构和内容。对于动态生成的 Sitemap，考虑设置定期重新生成的机制。
+
+2. **遵守大小限制**：
+   单个 Sitemap 文件不应超过 50,000 个 URL。如果你的网站超过这个限制，考虑使用 generateSitemaps 索引文件。
+
+3. **提交到搜索引擎**：
+   主动将你的 Sitemap 提交到主要搜索引擎的网站管理员工具中，如 Google Search Console。
+
+4. **使用正确的 URL**：
+   确保 Sitemap 中的 URL 是规范的、可访问的，并且与你网站上实际使用的 URL 一致。
+
+5. **不设置权重和更新频率**：
+   最好的方式就是不设置，google会自动计算频率和权重
+
+6. **考虑多语言网站**：
+   如果你的网站支持多种语言，考虑为每种语言版本创建单独的 Sitemap，或使用 hreflang 标签。
+
+7. **包含图片和视频信息**：
+   对于图片和视频内容丰富的网站，考虑在 Sitemap 中包含这些媒体资源的信息，以帮助它们在图片和视频搜索结果中出现。
+
+## 4. ld+json
+
+在 Next.js 项目中，我们可以直接使用 `schema-dts` 库来保证类型。
+
+### 4.1 使用 schema-dts 定义 ld+json
+
+首先，确保已经安装了 `schema-dts`：
+
+```bash
+npm install schema-dts
+```
+
+然后，在我们的组件或布局文件中，可以这样使用：
+
+```typescript
+import { Organization, WithContext } from 'schema-dts'
+import { APP_NAME, APP_ORIGIN } from '@/constants'
+
+const jsonLd: WithContext<Organization> = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: APP_NAME,
+  url: APP_ORIGIN,
+  logo: `${APP_ORIGIN}/opengraph.jpg`,
+  sameAs: [
+    // 可以根据需要添加更多社交媒体链接
+  ]
+}
+```
+
+### 4.2 在页面中嵌入 ld+json
+
+在我们的页面或布局组件中，可以这样嵌入 JSON-LD：
+
+```typescript
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+当然，我可以为我们介绍一些常用的 JSON-LD 结构化数据类型。这些结构化数据可以帮助搜索引擎更好地理解我们的网页内容，从而可能提高我们的搜索结果展示效果。以下是一些常见的 JSON-LD 类型及其示例：
+
+### 4.3 常用的 ld+json 富文本类型
+
+#### 4.3.1 Organization（组织）
+
+适用于公司、机构或组织的网站。
+
+**File: /app/layout.tsx**
+
+```typescript
+import { Organization, WithContext } from 'schema-dts'
+
+const organizationJsonLd: WithContext<Organization> = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Your Company Name',
+  url: 'https://www.yourcompany.com',
+  logo: 'https://www.yourcompany.com/logo.png',
+  sameAs: [
+    'https://www.facebook.com/yourcompany',
+    'https://www.twitter.com/yourcompany',
+    'https://www.linkedin.com/company/yourcompany'
+  ]
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+#### 4.3.2 LocalBusiness（本地商业）
+
+适用于有实体店面的本地商业。
+
+**File: /app/about/page.tsx**
+
+```typescript
+import { LocalBusiness, WithContext } from 'schema-dts'
+
+const localBusinessJsonLd: WithContext<LocalBusiness> = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: 'Your Local Business Name',
+  image: 'https://example.com/photo-of-business.jpg',
+  '@id': 'https://example.com',
+  url: 'https://www.example.com',
+  telephone: '+1-401-555-1212',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: '123 Main St',
+    addressLocality: 'Anytown',
+    addressRegion: 'ST',
+    postalCode: '12345',
+    addressCountry: 'US'
+  },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: 40.75,
+    longitude: -73.98
+  },
+  openingHoursSpecification: [
+    {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      opens: '09:00',
+      closes: '17:00'
+    }
+  ]
+}
+
+export default function AboutPage() {
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+      />
+      <h1>About Our Business</h1>
+      {/* 其他页面内容 */}
+    </>
+  )
+}
+```
+
+#### 4.3.3 Article（文章）
+
+适用于博客文章或新闻报道。
+
+**File: /app/blog/[slug]/page.tsx**
+
+```typescript
+import { Article, WithContext } from 'schema-dts'
+
+const articleJsonLd: WithContext<Article> = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: 'Article Title',
+  image: 'https://example.com/article-image.jpg',
+  author: {
+    '@type': 'Person',
+    name: 'John Doe'
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'Example Publisher',
+    logo: {
+      '@type': 'ImageObject',
+      url: 'https://example.com/publisher-logo.jpg'
+    }
+  },
+  datePublished: '2025-06-12',
+  dateModified: '2025-06-13'
+}
+
+export default function BlogPost() {
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <h1>Article Title</h1>
+      {/* 文章内容 */}
+    </>
+  )
+}
+```
+
+#### 4.3.4 Product（产品）
+
+适用于电子商务网站的产品页面。
+
+**File: /app/products/[id]/page.tsx**
+
+```typescript
+import { Product, WithContext } from 'schema-dts'
+
+const productJsonLd: WithContext<Product> = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: 'Executive Anvil',
+  image: 'https://example.com/photos/1x1/photo.jpg',
+  description: 'Sleeker than ACME\'s Classic Anvil, the Executive Anvil is perfect for the business traveler looking for something to drop from a height.',
+  sku: '0446310786',
+  mpn: '925872',
+  brand: {
+    '@type': 'Brand',
+    name: 'ACME'
+  },
+  review: {
+    '@type': 'Review',
+    reviewRating: {
+      '@type': 'Rating',
+      ratingValue: '4',
+      bestRating: '5'
+    },
+    author: {
+      '@type': 'Person',
+      name: 'Fred Benson'
+    }
+  },
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.4',
+    reviewCount: '89'
+  },
+  offers: {
+    '@type': 'Offer',
+    url: 'https://example.com/anvil',
+    priceCurrency: 'USD',
+    price: '119.99',
+    priceValidUntil: '2020-11-20',
+    itemCondition: 'https://schema.org/UsedCondition',
+    availability: 'https://schema.org/InStock'
+  }
+}
+
+export default function ProductPage() {
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <h1>Executive Anvil</h1>
+      {/* 产品详情 */}
+    </>
+  )
+}
+```
+
+ld-json的实际意义就是在搜索结果中展示更吸引人的一部分，提高点击率和转化率。
+
+## 总结
+
+这就是Next中常用和主流与Seo相关的开发与配置。

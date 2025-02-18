@@ -34,15 +34,21 @@ export function ContentSidebar({ group }: ContentSidebarProps) {
           <SidebarGroupLabel>{t(group as any)}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {collection.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.slug === pathname}>
-                    <Link href={item.slug}>
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {collection
+                .sort((a, b) => {
+                  const aNum = parseInt(a.title.split('.')[0])
+                  const bNum = parseInt(b.title.split('.')[0])
+                  return aNum - bNum
+                })
+                .map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={item.slug === pathname}>
+                      <Link href={item.slug}>
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

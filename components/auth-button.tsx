@@ -23,7 +23,7 @@ export function AuthButton() {
 
   if (session.status === 'unauthenticated')
     return (
-      <Button onClick={handleSignInOrOut} variant="link" size="sm">
+      <Button className="md:text-xl" onClick={handleSignInOrOut} variant="link" size="sm">
         {t('common.loginIn')}
       </Button>
     )
@@ -31,7 +31,7 @@ export function AuthButton() {
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="link" size="sm">
+          <Button className="md:text-xl" variant="link" size="sm">
             {t('common.myAccount')}
           </Button>
         </DialogTrigger>

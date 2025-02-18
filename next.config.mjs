@@ -18,6 +18,7 @@ class VeliteWebpackPlugin {
 const withNextIntl = createNextIntlPlugin()
 
 const nextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       {

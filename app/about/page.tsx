@@ -47,10 +47,10 @@ export default function About() {
         <p className="text-base text-muted-foreground">{t('dreamsDescription')}</p>
       </motion.section>
 
-      <motion.section variants={itemVariants}>
+      {/* <motion.section variants={itemVariants}>
         <h2 className="mb-3 text-2xl font-semibold text-primary">{t('blogPurpose')}</h2>
         <p className="text-base text-muted-foreground">{t('blogPurposeReason')}</p>
-      </motion.section>
+      </motion.section> */}
 
       <motion.section variants={itemVariants}>
         <h2 className="mb-4 text-2xl font-semibold text-primary">{t('myTimeLine')}</h2>

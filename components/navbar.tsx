@@ -19,7 +19,12 @@ export default async function Navbar({
 }) {
   const t = await getTranslations()
   return (
-    <nav className={cn('sticky top-0 z-50 flex h-16 w-full flex-row items-center md:h-20', className)}>
+    <nav
+      className={cn(
+        'sticky top-0 z-50 flex w-full flex-row items-center px-5 py-2 backdrop-blur-lg md:px-10 md:py-4',
+        className
+      )}
+    >
       {!hideLogo && (
         <div className="flex w-full flex-row items-center justify-between">
           {children ? children : <NamedLogoWithLink />}
@@ -29,6 +34,7 @@ export default async function Navbar({
         <Link
           href={'/'}
           className={buttonVariants({
+            className: 'md:text-xl',
             variant: 'link',
             size: 'sm'
           })}
@@ -38,6 +44,7 @@ export default async function Navbar({
         <Link
           href={'/about'}
           className={buttonVariants({
+            className: 'md:text-xl',
             variant: 'link',
             size: 'sm'
           })}
