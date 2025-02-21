@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { useTheme } from 'next-themes'
 
 import {
   Sidebar,
@@ -12,7 +13,8 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem
+  SidebarMenuItem,
+  SidebarSeparator
 } from '@/components/ui/sidebar'
 import { CollectionName, getCollections } from '@/lib/collections'
 
@@ -23,7 +25,13 @@ type ContentSidebarProps = {
 export function ContentSidebar({ group }: ContentSidebarProps) {
   const { byName } = getCollections()
   const t = useTranslations('article')
+  const common = useTranslations('common')
 
+  const { setTheme, theme } = useTheme()
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light')
+  }
   const pathname = usePathname()
   const collection = byName[group]
 
@@ -53,6 +61,33 @@ export function ContentSidebar({ group }: ContentSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarSeparator />
+
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === '/'}>
+                <Link href="/">
+                  <span>{common('home')}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === '/about'}>
+                <Link href="/about">
+                  <span>{common('about')}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton>
+                <span onClick={toggleTheme}>切换主题</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
     </Sidebar>
   )
 }
