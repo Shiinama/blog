@@ -1,0 +1,266 @@
+---
+title: 6.React源码阅读(1)-核心调度原理
+description: requestdleCallback简单实战，以及react中的调度核心原理.
+published: true
+toc:
+  visible: true
+date: 2022-11-20
+---
+
+# requestdleCallback简单实战，以及react中的调度核心原理
+
+## 1、核心功能介绍
+
+讲到Fiber不得不先提到一个Api那就是`requestdleCallback`，这个`Api`是干嘛的那，就是说写在这个函数里的将在浏览器空闲时间被调用，当高优先级任务执行的时候，当前任务就可以被停止，执行高优先级任务。我想从这个`api`的例子里去带大家去先理解一下`空闲时间`以及`让出主线程`，再深入理解`react`里的调度核心原理。
+
+**空闲时间**：页面是一帧一帧渲染出来的，1s有60帧代表这个页面的流畅的，每一帧大概是16ms，而如果我们每一帧的执行是小于16ms，就意味着有空闲时间。
+
+**Api介绍：** ![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/Apidesciption.jpeg?updatedAt=1739631177528)`2`代表的是函数返回值的id，可以把它传入 [`Window.cancelIdleCallback()`](https://link.juejin.cn?target=https%3A%2F%2Fdeveloper.mozilla.org%2Fzh-CN%2Fdocs%2FWeb%2FAPI%2FWindow%2FcancelIdleCallback "https://developer.mozilla.org/zh-CN/docs/Web/API/Window/cancelIdleCallback") 方法来结束回调。
+
+`dieTimeout`是一个`Boolean`类型当它的值为 `true` 的时候说明 `callback` 正在被执行。
+
+其中的原型对象上有一个`timeRemaining`表示的是当前这个周期（帧）的空闲时间剩余多少的时间。
+
+## 2、简单实战
+
+先看第一段代码和表现，计算会一直占用你的主线程，导致你用户的交互没法去吧背景更改颜色。 
+![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/example.jpeg?updatedAt=1739631177716)
+![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/example2.jpeg?updatedAt=1739631177591)
+紧接着看第二段代码，给他加上requestdleCallback就可以在用户点击的时候把当前计算任务暂停，然后去执行把背景颜色变为绿色的这个操作。 
+![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/code.jpeg?updatedAt=1739631177609)
+![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/code2.jpeg?updatedAt=1739631177883)
+
+## 3、源码实现
+
+这里只是描述了一下空闲时间以及让出主线程这个概念,但实际上react中并不是用requestdleCallback去实现调度，[具体可以看我写的这篇文章，讲了一下react到底为什么不用requestdleCallback去实现调度](https://juejin.cn/post/7170095557443551246)。
+
+### 3.1、源码实现
+
+黄色的是向外抛出的事件，源码是通过`MessageChannel`来实现消息的发送和接收。
+ ![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/source_code.jpeg?updatedAt=1739631177738)
+
+```js
+  let scheduledHostCallback = null;
+  let taskTimeoutID = -1;
+
+  let yieldInterval = 5;
+  let deadline = 0;
+
+  // TODO: Make this configurable
+  // TODO: Adjust this based on priority?
+  const maxYieldInterval = 300;
+  let needsPaint = false;
+  if (
+    enableIsInputPending &&
+    navigator !== undefined &&
+    navigator.scheduling !== undefined &&
+    navigator.scheduling.isInputPending !== undefined
+  ) {
+    const scheduling = navigator.scheduling;
+    // 17.02的源码这里比较简单，其实这都不用看直接看false,因为enableIsInputPending为false,就而且17.2里面isInputPending是不可以用的，我们直接看18把，然后我就发现18里面好像依然没解决这个问题
+    shouldYieldToHost = function() {
+      const currentTime = getCurrentTime();
+      if (currentTime >= deadline) {
+        // 简单的说就是长时间阻塞主线程的东西就给它打断了，绘制（交互）和用户输入之类的东西就给他打断了，都不是我们可以在最大延时里再看看
+        if (needsPaint || scheduling.isInputPending()) {
+          // There is either a pending paint or a pending input.
+          return true;
+        }
+        // 300ms最大延时打断
+        return currentTime >= maxYieldInterval;
+      } else {
+        // 不需要打断
+        return false;
+      }
+    };
+
+    requestPaint = function() {
+      needsPaint = true;
+    };
+  } else {
+    // 直接看这里这个deadline是在performWorkUntilDeadline执行任务的时候去设置的
+    shouldYieldToHost = function() {
+      return getCurrentTime() >= deadline;
+    };
+
+    // Since we yield every frame regardless, `requestPaint` has no effect.
+    requestPaint = function() {};
+  }
+  // 强制设置检测时间，源码没用到调试的时候可以设置,电脑越好，fps越高分片时间越短
+  forceFrameRate = function(fps) {
+    if (fps < 0 || fps > 125) {
+      // Using console['error'] to evade Babel and ESLint
+      console['error'](
+        'forceFrameRate takes a positive int between 0 and 125, ' +
+          'forcing frame rates higher than 125 fps is not supported',
+      );
+      return;
+    }
+    if (fps > 0) {
+      yieldInterval = Math.floor(1000 / fps);
+    } else {
+      // reset the framerate
+      yieldInterval = 5;
+    }
+  };
+
+  const performWorkUntilDeadline = () => {
+    // 有执行任务
+    if (scheduledHostCallback !== null) {
+      const currentTime = getCurrentTime();
+      // 计算一帧的打断检测时间
+      deadline = currentTime + yieldInterval;
+      const hasTimeRemaining = true;
+      try {
+        // 执行c回调
+        const hasMoreWork = scheduledHostCallback(
+          hasTimeRemaining,
+          currentTime,
+        );
+        // 执行完该回调后, 判断后续是否还有其他任务
+        if (!hasMoreWork) {
+          isMessageLoopRunning = false;
+          scheduledHostCallback = null;
+        } else {
+          // 还有其他任务, 推进进入下一个宏任务队列中
+          port.postMessage(null);
+        }
+      } catch (error) {
+        // If a scheduler task throws, exit the current browser task so the
+        // error can be observed.
+        port.postMessage(null);
+        throw error;
+      }
+    } else {
+      isMessageLoopRunning = false;
+    }
+    // Yielding to the browser will give it a chance to paint, so we can
+    // reset this.
+    // 重置状态
+    needsPaint = false;
+  };
+
+  const channel = new MessageChannel();
+  // port2 发送
+  const port = channel.port2;
+  // port1 接收
+  channel.port1.onmessage = performWorkUntilDeadline;
+  // 在每一帧中执行任务
+  requestHostCallback = function(callback) {
+    // 回调注册
+    scheduledHostCallback = callback;
+    if (!isMessageLoopRunning) {
+      isMessageLoopRunning = true;
+      // 进入宏任务队列
+      port.postMessage(null);
+    }
+  };
+  // 取消回调
+  cancelHostCallback = function() {
+    scheduledHostCallback = null;
+  };
+  // 设置超时回调
+  requestHostTimeout = function(callback, ms) {
+    taskTimeoutID = setTimeout(() => {
+      callback(getCurrentTime());
+    }, ms);
+  };
+  // 取消超时
+  cancelHostTimeout = function() {
+    clearTimeout(taskTimeoutID);
+    taskTimeoutID = -1;
+  };
+
+```
+
+这段react的核心调度可以分成2部分：
+
+调度：通过`MessageChannel`建立通道，然后2个端口一个发消息一个接消息，我们抛出发消息的事件，当接到消息的时候我们就可以设置空闲时间`deadline`，`yieldInterval`是默认5ms的，同时也执行回调函数。
+
+切片：当我们接受到消息的时候设置了`deadline`，`shouldYieldToHost`通过`deadline`返回一个boolean来决定是否去打断构建，就是实现时间分片的主要函数。
+
+### 3.2、源码setTimeout的降级实现
+
+当我们在没有dom环境下，我们的react选择的是setTimeout.
+
+```js
+if (
+  // 无dom环境下，感觉可能是因为node环境下MessageChannel用来做线程管理了，就使用一个降级策略用setTimeout去代替MessageChannel
+  typeof window === 'undefined' ||
+  // Check if MessageChannel is supported, too.
+  typeof MessageChannel !== 'function'
+) {
+  // If this accidentally gets imported in a non-browser environment, e.g. JavaScriptCore,
+  // fallback to a naive implementation.
+  let _callback = null;
+  let _timeoutID = null;
+  const _flushCallback = function() {
+    if (_callback !== null) {
+      try {
+        const currentTime = getCurrentTime();
+        const hasRemainingTime = true;
+        _callback(hasRemainingTime, currentTime);
+        _callback = null;
+      } catch (e) {
+        setTimeout(_flushCallback, 0);
+        throw e;
+      }
+    }
+  };
+  requestHostCallback = function(cb) {
+    if (_callback !== null) {
+      // Protect against re-entrancy.
+      setTimeout(requestHostCallback, 0, cb);
+    } else {
+      _callback = cb;
+      setTimeout(_flushCallback, 0);
+    }
+  };
+  cancelHostCallback = function() {
+    _callback = null;
+  };
+  requestHostTimeout = function(cb, ms) {
+    _timeoutID = setTimeout(cb, ms);
+  };
+  cancelHostTimeout = function() {
+    clearTimeout(_timeoutID);
+  };
+  shouldYieldToHost = function() {
+    return false;
+  };
+  requestPaint = forceFrameRate = function() {};
+} else {
+  // Capture local references to native APIs, in case a polyfill overrides them.
+  const setTimeout = window.setTimeout;
+  const clearTimeout = window.clearTimeout;
+
+  if (typeof console !== 'undefined') {
+    // TODO: Scheduler no longer requires these methods to be polyfilled. But
+    // maybe we want to continue warning if they don't exist, to preserve the
+    // option to rely on it in the future?
+    const requestAnimationFrame = window.requestAnimationFrame;
+    const cancelAnimationFrame = window.cancelAnimationFrame;
+
+    if (typeof requestAnimationFrame !== 'function') {
+      // Using console['error'] to evade Babel and ESLint
+      console['error'](
+        "This browser doesn't support requestAnimationFrame. " +
+          'Make sure that you load a ' +
+          'polyfill in older browsers. https://reactjs.org/link/react-polyfills',
+      );
+    }
+    if (typeof cancelAnimationFrame !== 'function') {
+      // Using console['error'] to evade Babel and ESLint
+      console['error'](
+        "This browser doesn't support cancelAnimationFrame. " +
+          'Make sure that you load a ' +
+          'polyfill in older browsers. https://reactjs.org/link/react-polyfills',
+      );
+    }
+  }
+
+```
+
+## 4、总结
+
+`调度中心`最核心的代码, 在[SchedulerHostConfig.default.js](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Fscheduler%2Fsrc%2Fforks%2FSchedulerHostConfig.default.js "https://github.com/facebook/react/blob/v17.0.2/packages/scheduler/src/forks/SchedulerHostConfig.default.js")中,大家有空可以去看看源码.

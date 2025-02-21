@@ -1,0 +1,227 @@
+---
+title: 19. React-native新架构
+description: 抹平 ios 和安卓样式差异的方式
+published: true
+toc:
+  visible: true
+date: 2023-04-19
+---
+
+# React-native新架构
+
+
+文章主要介绍了 React-native 的新架构，包括抹平 ios 和安卓样式差异的方式，老架构存在的问题，新架构中如 JSI 中间层带来的诸多变化，如不再强依赖 JavaScriptCore 引擎、可直接在 js 层调用 native 方法等，还讲解了 RN 的渲染阶段、基本库如 React Navigation 等，以及异常捕捉、包更新等内容。
+
+关联问题: 新架构优势是什么 Fabric如何优化渲染 Turbo Modules怎样加速
+
+AI智能总结首次生成速度较慢, 请耐心等待
+
+“ _**本文正在参加[「金石计划」](https://juejin.cn/post/7207698564641996856/)**_ ”
+
+# 1、React-native的style
+
+上一篇文章，我们应该已经对跨平台有了一定的概念，但这里其实有一个问题并没有解决，就是其实在`ios和安卓`上的样式是有差异的，那么我们的`Rn`就需要去抹平这种差异化，`rn`中采用的是`css-in-js`。
+
+我们在`js`中写的`style`对象，将由单独的一个线程去处理，也就是`Shadow thread`。在这个线程中由`Yoga`引擎（这也是facebook开发的）重新去计算`app`的布局，这个引擎在计算了有关`app`的东西后，将结果又反馈至`UI`线程，最终呈现出来。
+
+那么一个完整的老版本的架构是这样的：
+
+![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/1.jpeg?updatedAt=1739809404405)
+
+然后我们现在把整个流程理一下： 假设我们现在有一段`react`的代码
+
+```javascript
+<View style={{width: 200, height: 200}}/> 
+
+```
+
+下一步就是`js`线程将其序列化
+
+```arduino
+UIManager.createView([352,"RCTView",191,{width":200,"height":200}])
+
+
+```
+
+而此时这个`task`进入到了桥前的异步队列中，它的目的地是`ShadowThread`,`ShadowTread`接收到这条信息后，先反序列化，形成`Shadow tree`，然后传给`Yoga`，形成原生布局信息。
+
+下一步又先序列化把信息传给`native`线程，然后拿到后反序列化根据`布局信息`去进行渲染和绘制。
+
+大伙现在应该已经对一个`rn`的整体架构有了基本的了解，还记得上篇文章的问题吗？`桥`的`负载和异步`会导致性能问题和不确定性。
+
+* 线程信息的传递因为要减小开销每次都需要反复序列化，但序列化又是一个消耗很大的事情。
+    
+* 异步队列的不确定性，你并不能保证一个事件的顺序。
+    
+
+因此`rn`的新架构就是要去解决这些问题，也就是现在的中间层。
+
+# 2、React-native新架构
+
+关于新架构的内容很多，可能有些地方我自己也有理解不当的地方欢迎指正。
+
+我们先讲讲最大的改动，就`rn`在新架构中直接把老的桥干掉了，直接换成了一个新的`中间层或者说通用层`，也就是 `JS Interface (JSI)`。在这个通用层里面有很多的新内容我们可以先看一下这个架构图。 
+![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/2.jpeg?updatedAt=1739809404461)
+
+So，我们来看看有哪些变化，上面的图中间部分，就是`JSI`。（解释一下为啥这个图是这样的，因为就`Turbo Modules`我其实认为是`Native Moudles`的加强，而`Fabric`是`Renderer`的加强，他们是原本就存在的）。
+
+1、`JS-bundle`不再`强依赖`于`JavaScriptCore`引擎了。我们现在可以很方便用更好的引擎去替换了，性能更好了。比如`Hermes`。
+
+2、`JSI`让我们可以直接在`js`层调用`native`的方法了。由`HostObject C++ object`实现,它直接存储了`native`层方法和属性的引用放在了一个全局对象上，然后我们`js`就可以直接调用`java/oc的api`。
+
+3、`Turbo Modules`的出现（上图中的Native Moudles），在之前的架构中 `JS` 使用的所有 `Native Modules`（例如蓝牙、地理位置、文件存储等）都必须在应用程序打开之前进行初始化，这意味着即使用户不需要某些模块，但是它仍然必须在启动时进行初始化。
+
+`Turbo Modules` 基本上是对这些旧的 Native 模块的增强，正如在前面介绍的那样，现在 JS 将能够持有这些模块的引用，所以 `JS` 代码可以仅在需要时才加载对应模块，这样可以将显着缩短 `RN` 应用的启动时间。
+
+4、`Fabric`也就是上图中的`renderer`（以前shadow层是在native层实现的），一个新的`UI渲染器`，它就相当于在c++中，可以直接创建一个 `ShadowTree`，一个就是快，同时也减少了渲染元素的步骤。
+
+可能大家没懂，举个例子：当 `App` 运行时，`React` 会执行你的代码并在 `JS` 中创建一个 `ReactElementTree` ，基于这棵树渲染器会在 `C++` 中创建一个 `ReactShadowTree`。`Fabric` 会使用 `Shadow Tree` 来计算 `UI` 元素的位置，而一旦 `Layout` 完成，`Shadow Tree` 就会被转换为由 `Native Elements` 组成的 `HostViewTree`（例如：RN 里的 会变成 Android 中的 ViewGroup 和 iOS 中的 UIView）。
+
+5、 `codegen`其实就是一个静态类型检查器，`CodeGen`使用类型确定后的 `JavaScript` 来为`Turbo Modules`和 `Fabric`定义供他们使用的接口元素，并且它会在编译时生成更多的`native`代码，而非运行时。
+
+# 3、RN的渲染
+
+将 React 代码渲染到宿主平台，我们称为渲染流水线，可大致分为三个阶段：
+
+* 渲染（`Render`）：在 `JavaScript` 中，`React` 执行那些业务逻辑代码创建 `React` 元素树（React Element Trees）。然后在 `C++` 中，用 `React` 元素树创建 `React` 影子树（React Shadow Tree）。
+* 提交（`Commit`）：在 `React` 影子树完全创建后，渲染器会触发一次提交。这会将 `React` 元素树和新创建的 `React` 影子树的提升为“下一棵要挂载的树”。 这个过程中也包括了布局信息计算。
+* 挂载（`Mount`）：`React` 影子树有了布局计算结果后，它会被转化为一个宿主视图树（`Host View Tree`）。
+
+# 4、一些基本的库
+
+Ok，上面都是框架的架构设计，我们先有一个大体的概念，那么现在我们稍微走近实战去了解一些必要的包，因为后面不会怎么讲。
+
+`React-native`只内置了一些必要的包，但为了尽可能的减小包的大小，许多的包需要你自己去配置，例如:`asyncStorage`，这种`sdk`你需要一点点依赖相关的原生知识，但问题不大，一般都会有模版去教你，照着模版就行了（但也不一定，绝大数情况是）。那么我们现在就看看一些常用的包。
+
+## 3.1、React Navigation
+
+这个应该几乎是每个用`rn`的同学都该了解的东西了，原生`app`和`web`的路由是不同的，在`app`里其实是没有`url`这种概念，在原生里要理解`screen`，也就是说控制用户所见屏幕。在老版本`rn`有一些原始导航组件去控制屏幕,但很复杂，所以就现在一般都会用到`react-navigation`这个库。
+
+我直接上实战吧，
+
+```javascript
+import * as React from "react";
+
+import { NavigationContainer } from "@react-navigation/native";
+
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+import Home from "./Home";
+
+import Settings from "./Settings";
+
+const Stack = createNativeStackNavigator();
+
+export default function App() {
+
+return (
+
+    <NavigationContainer>
+
+        <Stack.Navigator>
+
+            <Stack.Screen name="Home" component={Home} />
+
+            <Stack.Screen name="Settings" component={Settings}/>
+
+        </Stack.Navigator>
+
+    </NavigationContainer>
+
+);
+
+}
+
+```
+
+`createNativeStackNavigator`是创建你的导航组件的一个方法，它返回一个对象，里面有`Screen`和`Navigator`2个组件，他们用来配置导航
+
+```javascript
+import React from "react";
+
+import { View, Text, Button, StatusBar } from "react-native";
+
+import styles from "./styles";
+
+export default function Home({ navigation }) {
+
+return (
+
+<View style={styles.container}>
+
+<StatusBar barStyle="dark-content" />
+
+<Text>Home Screen</Text>
+
+<Button
+
+title="Settings"
+
+onPress={() => navigation.navigate("Settings")}
+
+/>
+
+</View>
+
+);
+
+}
+
+```
+
+就看到`home`组件，当你按下的时候就跳转到`settings`这个屏幕上去，更多的内容我们后面实战的时候再讲吧，只是做个简单的演示。
+
+## 3.2 RN组件库
+
+`antd mobile`估计国内我们基本用的都这个或者就是自己封装的组件库，推荐几个其他的`NativeBase`、`React Native Element`、 `UI Kittern`、 `React-native-paper`
+
+## 3.3 启动页
+
+其实启动页就是你`js`线程启动前展示的过度页面，`React-native-bootsplash`。
+
+## 3.4 Icon
+
+`react-native-vector-icons`、 `react-native-svg`。
+
+## 3.5 异常捕捉
+
+通常，当我们开发一个web应用时，我们很好处理错误，因为它们不会超出`JS`的范围。简单的说我们前端就是`web`的王（掌控力），我们可以很容易地看到原因，并在`DevTools`中打开日志。
+
+但`Rn`因为除了环境的JS之外，我们还有`native`组件，这也可能导致`app`执行中的错误。因此，当发生错误时，我们的应用程序将关闭立即我们很难弄清楚原因，因此`React-native-exception-handler`也正是解决这个问题的包。
+
+就像这样：
+
+```javascript
+import { setJSExceptionHandler, setNativeExceptionHandler } from "react-native-exception-handler";
+
+setJSExceptionHandler((error, isFatal) => {
+
+// …
+
+});
+
+const exceptionhandler = (exceptionString) => {
+
+// 处理异常代码
+
+};
+
+setNativeExceptionHandler(
+
+exceptionhandler,
+
+forceAppQuit,
+
+executeDefaultHandler
+
+);
+
+```
+
+## 3.6 包更新
+
+其实如果是ios我们要更新应用上传到商店，有这么个技术`OAT`可以替换js包,就可以看看微软的`Codepush`
+
+# 4、结束
+
+[rn中文文档地址](https://link.juejin.cn?target=https%3A%2F%2Freactnative.cn%2F "https://reactnative.cn/")，就这2篇文章都是在理一些基础理论的东西，对于一些组件api大伙可以看看文档。呜！就你想成为强者吗！那就来一起学习吧，->[看这里沸点](https://juejin.cn/user/400646714977431/pins)。

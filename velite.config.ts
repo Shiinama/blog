@@ -132,7 +132,130 @@ export const business = defineCollection({
     })
     .transform(computedFields)
 })
+//独立开发
+export const independentDevelopment = defineCollection({
+  name: 'IndependentDevelopment',
+  pattern: 'independent-development/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
 
+//vue
+export const vue = defineCollection({
+  name: 'vue',
+  pattern: 'vue/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+//SDK
+export const sdk = defineCollection({
+  name: 'sdk',
+  pattern: 'sdk/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+
+//前端
+export const fontEnd = defineCollection({
+  name: 'fontend',
+  pattern: 'font-end/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+//面试
+export const interview = defineCollection({
+  name: 'interview',
+  pattern: 'interview/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+//flutter
+export const flutter = defineCollection({
+  name: 'flutter',
+  pattern: 'flutter/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
+
+//默认配置文件
 export default defineConfig({
   root: 'content',
   output: {
@@ -142,7 +265,21 @@ export default defineConfig({
     name: '[name]-[hash:6].[ext]',
     clean: true
   },
-  collections: { blog, easyAiTechnology, timeline, seo, reactSourceCode, business },
+  //在此添加内容的 子类 
+  collections: { 
+    blog, 
+    easyAiTechnology, 
+    timeline, 
+    seo,
+    reactSourceCode,
+    business,
+    independentDevelopment,
+    vue, 
+    sdk,
+    fontEnd,
+    interview,
+    flutter
+  },
   mdx: {
     rehypePlugins: [
       rehypeSlug,

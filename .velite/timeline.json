@@ -81,6 +81,55 @@
     "slugAsParams": "2022-summary"
   },
   {
+    "slug": "/content/timeline/2023-newyear",
+    "title": "新的一年，要变强啊",
+    "description": "新的一年，要变强啊.",
+    "published": true,
+    "date": "2023-01-03T00:00:00.000Z",
+    "body": "const{Fragment:e,jsx:c,jsxs:d}=arguments[0];function _createMdxContent(n){const i={a:\"a\",blockquote:\"blockquote\",code:\"code\",h1:\"h1\",p:\"p\",span:\"span\",strong:\"strong\",...n.components};return d(e,{children:[d(i.h1,{id:\"新的一年要变强啊\",children:[c(i.a,{className:\"subheading-anchor\",\"aria-label\":\"Link to section\",href:\"#新的一年要变强啊\",children:c(i.span,{className:\"icon icon-link\"})}),\"新的一年，要变强啊\"]}),\"\\n\",c(i.p,{children:\"这篇文章是一位自称“下水道前端工程师”的鼠鼠的自我反思与成长建议。先指出自身未变强的现状，接着从技术分层、如何拼图链接、业务与价值、保持热情等方面阐述。强调要找准技术水平，通过多种方式提升，重视业务创造价值，长期保持工作和学习热情，别摆烂要往前冲。\"}),\"\\n\",c(i.p,{children:\"关联问题: 如何提高前端能力 业务与技术怎平衡 前端价值怎样凸显\"}),\"\\n\",c(i.p,{children:\"AI智能总结首次生成速度较慢, 请耐心等待\"}),\"\\n\",d(i.h1,{id:\"闲谈\",children:[c(i.a,{className:\"subheading-anchor\",\"aria-label\":\"Link to section\",href:\"#闲谈\",children:c(i.span,{className:\"icon icon-link\"})}),\"闲谈\"]}),\"\\n\",d(i.p,{children:[\"鼠鼠我啊，作为一个\",c(i.code,{children:\"下水道前端工程师\"}),\"，除了crud好像啥也不会了捏，过去了一年好像自己也没变强捏，还是那个\",c(i.code,{children:\"下水道鼠鼠\"}),\"那。\"]}),\"\\n\",d(i.p,{children:[\"看到群里的\",c(i.code,{children:\"今年要更卷\"}),\"，又想到元旦这几天好像什么也没学什么代码也没看，电脑都没打开过，想至此感觉真的是悲从心中起，不由想起\",c(i.code,{children:\"黑色四叶草\"}),\"里的：\",c(i.code,{children:\"引以为耻的并不是身为弱者，而是甘为弱者\"}),\"。鼠鼠我啊还有这个\",c(i.code,{children:\"心气\"}),\"捏，也想走出下水道捏，也想\",c(i.code,{children:\"超越极限\"}),\"捏。\"]}),\"\\n\",d(i.h1,{id:\"定位\",children:[c(i.a,{className:\"subheading-anchor\",\"aria-label\":\"Link to section\",href:\"#定位\",children:c(i.span,{className:\"icon icon-link\"})}),\"定位\"]}),\"\\n\",d(i.p,{children:[\"首先鸭，我们应该找准自己在一个什么水平，我以我的理解简单\",c(i.code,{children:\"在技术上\"}),\"分为3层。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"交付层\"}),\"：你已经能\",c(i.code,{children:\"熟练\"}),\"的使用各种api，写大量的\",c(i.code,{children:\"应用代码\"}),\"，处理业务逻辑，\",c(i.code,{children:\"考虑用户体验\"}),\"了。这时候你就已经是一个\",c(i.code,{children:\"合格的初级前端工程师\"}),\"了。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"交付层+基建层\"}),\"：可能\",c(i.code,{children:\"绝大多数的前端工程师都卡在了这个地方\"}),\"，这也是我觉得最难跨越的一个层次，这个层次就要考虑一个\",c(i.code,{children:\"知识体系的完整性\"}),\"，诸如：\",c(i.code,{children:\"框架原理/库、工程化、网络、浏览器基础、性能等\"}),\"。\"]}),\"\\n\",d(i.blockquote,{children:[\"\\n\",d(i.p,{children:[\"在这个层次的前端工程师，已经拥有一个\",c(i.code,{children:\"相对完善的前端拼图体系\"}),\"。举个例子：就可能会出现这种情况一个写了3年的前端工程师，问他什么是\",c(i.code,{children:\"cjs,esm\"}),\"他都不能很清晰的给你个答案。\"]}),\"\\n\"]}),\"\\n\",d(i.p,{children:[\"并且我并不认为这是你\",c(i.code,{children:\"背背面试题\"}),\"，\",c(i.code,{children:\"看看教学视频\"}),\"就能获得的能力，你\",c(i.code,{children:\"顶多只是收集了拼图\"}),\"，你\",c(i.code,{children:\"并不能将拼图拼在一起\"}),\"，也就是融会贯通。\"]}),\"\\n\",d(i.blockquote,{children:[\"\\n\",d(i.p,{children:[\"意思就是你可能知道了什么是\",c(i.code,{children:\"宏任务微任务\"}),\"，但你可能并不知道\",c(i.code,{children:\"微任务会占用主线程\"}),\"。你好像已经会node了，那如果\",c(i.code,{children:\"Node+pm2+shell+fs\"}),\"。你可能也粗浅的了解了\",c(i.code,{children:\"babel\"}),\"，\",c(i.code,{children:\"glup\"}),\"，但你并不能用它去做点什么。\"]}),\"\\n\"]}),\"\\n\",d(i.p,{children:[\"你\",c(i.code,{children:\"只是知道了\"}),\"，但你并没有把你的知识\",c(i.code,{children:\"拼起来\"}),\"。这里我说的不是\",c(i.code,{children:\"深度的问题\"}),\"（因为前端\",c(i.code,{children:\"每个大方向\"}),\"都是看个人的深挖，\",c(i.code,{children:\"人的精力是有限的\"}),\"），只是一个\",c(i.code,{children:\"广度连接\"}),\"（就是你可以不深，但\",c(i.code,{children:\"一定要理解做过\"}),\"）。这个阶段都是处于\",c(i.code,{children:\"中级\"}),\"，当你\",c(i.code,{children:\"拼图完整了\"}),\"，你就可以\",c(i.code,{children:\"晋升到高级\"}),\"了。到这里其实你就不仅仅只是一个前端了，你已经把你的\",c(i.code,{children:\"步伐从前端逐渐往全栈在跨步\"}),\"了。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"交付层+基建层+容器层\"}),\"：\",c(i.code,{children:\"容器\"}),\",\",c(i.code,{children:\"浏览器，AOT，JIT，协议，标准\"}),\"等你都了解了，你还在某个方向领域\",c(i.code,{children:\"走得特别深入\"}),\"。你\",c(i.code,{children:\"不仅走出下水道了，你还是鼠上鼠了\"}),\"，你已经是\",c(i.code,{children:\"前端专家\"}),\"了。\"]}),\"\\n\",d(i.h1,{id:\"如何去做一个拼图链接\",children:[c(i.a,{className:\"subheading-anchor\",\"aria-label\":\"Link to section\",href:\"#如何去做一个拼图链接\",children:c(i.span,{className:\"icon icon-link\"})}),\"如何去做一个拼图链接\"]}),\"\\n\",d(i.blockquote,{children:[\"\\n\",c(i.p,{children:\"世界上唯一不用努力就能得到的只有年龄。\"}),\"\\n\"]}),\"\\n\",d(i.p,{children:[\"谈谈我自己的思路吧。其实很重要的一点就是\",c(i.code,{children:\"独立思考\"}),\"，每一件对自己\",c(i.code,{children:\"成长有益的事情\"}),\"其实都很难，\",c(i.code,{children:\"收益和努力程度是成正比\"}),\"的。\"]}),\"\\n\",d(i.p,{children:[\"1、\",c(i.code,{children:\"源码阅读\"}),\"，这东西真别光看，\",c(i.code,{children:\"得自己上手去写去输出\"}),\"，你只看没法去\",c(i.code,{children:\"思考源码的精髓\"}),\"所在（就类似于\",c(i.code,{children:\"他在浏览器环境上解决了什么问题\"}),\"，\",c(i.code,{children:\"他为什么要这么处理\"}),\"，\",c(i.code,{children:\"他的算法做了什么优化\"}),\"诸如此类的思考），你\",c(i.code,{children:\"遇不到你在实操\"}),\"会遇到的问题，写博客输出其实是个\",c(i.code,{children:\"很好的方式\"}),\"。\"]}),\"\\n\",d(i.p,{children:[\"2、\",c(i.code,{children:\"刨根问底\"}),\"，我们平时写代码会遇到很多问题，你通过搜索引擎去得到了答案，或者你换了一种写法去解决了问题。那为什么你的\",c(i.code,{children:\"第一想法不能是深挖\"}),\"？你去查\",c(i.code,{children:\"issue\"}),\",你去\",c(i.code,{children:\"源码里定位问题\"}),\"，难道不是一种更好的方式吗？\"]}),\"\\n\",d(i.p,{children:[\"3、\",c(i.code,{children:\"创造性\"}),\"，你可以为你平时的工作，做一些创造性的东西。比如：\",c(i.code,{children:\"前端工程化提效\"}),\"、\",c(i.code,{children:\"组件库\"}),\"、\",c(i.code,{children:\"中间件\"}),\"、\",c(i.code,{children:\"浏览器插件\"}),\"等。\"]}),\"\\n\",d(i.p,{children:[\"4、\",c(i.code,{children:\"算法\"}),\"，算法其实是有利于逻辑思维的成长，它属于是在\",c(i.code,{children:\"潜移默化的帮助我们成长\"}),\"，这是一个\",c(i.code,{children:\"很漫长\"}),\"的过程。\"]}),\"\\n\",d(i.p,{children:[\"5、\",c(i.code,{children:\"站在巨人的肩膀上\"}),\"，掘金和\",c(i.code,{children:\"gitbub\"}),\"有很多的强者，一方面是\",c(i.code,{children:\"多看看文章把\"}),\"，还有就是他们的小册实际上是对某一块东西的整合。你也可能需要做一个账号养成，就是比如你刷\",c(i.code,{children:\"比站，twitter,youtube\"}),\"全是技术文。\"]}),\"\\n\",d(i.h1,{id:\"业务与价值\",children:[c(i.a,{className:\"subheading-anchor\",\"aria-label\":\"Link to section\",href:\"#业务与价值\",children:c(i.span,{className:\"icon icon-link\"})}),\"业务与价值\"]}),\"\\n\",d(i.blockquote,{children:[\"\\n\",c(i.p,{children:\"业务是程序员最远的捷径\"}),\"\\n\"]}),\"\\n\",d(i.p,{children:[\"为什么说是最远的捷径，因为事实上，懂业务，解决业务痛点，深入业务还不够。你与此同时也需要一些\",c(i.code,{children:\"交流和表达能力的天赋\"}),\"（PPT和人际交往能力）。简单的说就是：\",c(i.code,{children:\"你要懂业务\"}),\"！\",c(i.code,{children:\"你要创造价值\"}),\"！\",c(i.code,{children:\"你要社交\"}),\"！当然我们也不必这么\",c(i.code,{children:\"极端\"}),\"（我就看不起那些\",c(i.code,{children:\"业务崽之类的\"}),\"），我们\",c(i.code,{children:\"讲究一个平衡\"}),\"就好，上述提到的属于是\",c(i.code,{children:\"个人能力的一部分\"}),\"。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"业务\"}),\"：\"]}),\"\\n\",d(i.p,{children:[\"写到这的时候自己\",c(i.code,{children:\"写了又删删了又写\"}),\"，单纯的\",c(i.code,{children:\"不喜欢\"}),\"，我想当个\",c(i.code,{children:\"纯纯的技术鼠\"}),\"，虽然这不现实。\"]}),\"\\n\",d(i.p,{children:[\"因为\",c(i.code,{children:\"写代码\"}),\"在这个\",c(i.code,{children:\"大环境\"}),\"下，本质就是\",c(i.code,{children:\"创造价值\"}),\"，\",c(i.code,{children:\"创造收益\"}),\"，\",c(i.code,{children:\"你的领导你的老板\"}),\"可能都不懂代码但依然可以\",c(i.code,{children:\"骑在你头上骂你\"}),\"，可能你的同事代码写的\",c(i.code,{children:\"稀烂工资还是比你高\"}),\"。他们就是\",c(i.code,{children:\"那群不懂技术或者不深入技术\"}),\"但是懂业务的人。\"]}),\"\\n\",d(i.p,{children:[\"有时候你可能\",c(i.code,{children:\"卷到深夜去学习一些远离业务的东西\"}),\"，并不会对你涨工资加钱有什么提升，毕竟你做的东西\",c(i.code,{children:\"没有带来收益\"}),\"。相反\",c(i.code,{children:\"你懂业务，深入业务，并且能解决业务痛点\"}),\"，能提升你\",c(i.code,{children:\"公司话语权\"}),\"那你\",c(i.code,{children:\"离你涨薪\"}),\"肯定是不远了。（我也并不建议在不重视技术的公司多待）。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"价值\"}),\"：\"]}),\"\\n\",d(i.p,{children:[\"那作为一个前端如何去\",c(i.code,{children:\"展现价值\"}),\"。毕竟可能\",c(i.code,{children:\"绝大多数前端\"}),\"做的东西中后台系统，\",c(i.code,{children:\"数据的准确性都体现在了后端\"}),\"。我个人觉得可以从：\",c(i.code,{children:\"页面交互体验\"}),\"、\",c(i.code,{children:\"渲染速度\"}),\"、\",c(i.code,{children:\"数据量性能问题评估\"}),\"（这个东西是前后端都可以去做的）、\",c(i.code,{children:\"工程化提效\"}),\"、\",c(i.code,{children:\"打包速度\"}),\"。几个方面去凸显出来，这些东西都是可以放在日报、年终总结、评审会说的，也是能\",c(i.code,{children:\"实在的产生收益\"}),\"的东西。\"]}),\"\\n\",d(i.h1,{id:\"长期保持热情\",children:[c(i.a,{className:\"subheading-anchor\",\"aria-label\":\"Link to section\",href:\"#长期保持热情\",children:c(i.span,{className:\"icon icon-link\"})}),\"长期保持热情\"]}),\"\\n\",d(i.blockquote,{children:[\"\\n\",c(i.p,{children:\"鼠鼠告诉你啊，写代码可好玩了，还有很多你没有见过也没有经历过的有趣代码和复杂功能，所以不要放弃啊。\"}),\"\\n\"]}),\"\\n\",d(i.p,{children:[\"核心思想就是保持\",c(i.code,{children:\"趣味性\"}),\"，如果你从一开始\",c(i.code,{children:\"就不喜欢写代码\"}),\"说了也白搭趁早转行。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"工作热情\"}),\"：这个事就是在说，虽然把你长期写\",c(i.code,{children:\"差不多东西\"}),\"，让你\",c(i.code,{children:\"失去了写代码的热情\"}),\"，你可以尝试同样的功能也\",c(i.code,{children:\"不同的实现方式\"}),\"去做，简单的说就是：\",c(i.code,{children:\"要不断地给自己设立新挑战，提出更高的要求\"}),\"，把\",c(i.code,{children:\"写代码当成玩\"}),\"就好了。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"学习热情\"}),\"：其实进入社会了之后，所有的学习都需要自觉，你可以给自己定一些\",c(i.code,{children:\"符合实际\"}),\"，\",c(i.code,{children:\"也不枯燥\"}),\"的目标，去\",c(i.code,{children:\"每天坚持完成\"}),\"。哈哈哈其实这也好难，建议开始越简单越好，因为你总会遇到一些你特别不想去做的时候。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"别摆烂\"}),\"：如果这个世界对你\",c(i.code,{children:\"还算友善\"}),\"，那就\",c(i.code,{children:\"别摆烂\"}),\"，\",c(i.code,{children:\"认真\"}),\"去做好每一件事情。我们也不是圣人，你觉得\",c(i.code,{children:\"环境不好\"}),\"就跑路就是，但还是\",c(i.code,{children:\"多想想\"}),\"是不是自己的问题。\"]}),\"\\n\",d(i.p,{children:[c(i.strong,{children:\"冲\"}),\"：鼠鼠们啊，都不是那么\",c(i.code,{children:\"完美的生物\"}),\"捏，鼠鼠就该走\",c(i.code,{children:\"鼠鼠自己的路\"}),\"啊，不管其他\",c(i.code,{children:\"坏鼠鼠\"}),\"说什么，不管前路如何，往前走就好捏，\",c(i.code,{children:\"今天\"}),\"的鼠鼠被打回下水道，\",c(i.code,{children:\"明天\"}),\"的鼠鼠又从下水道出来了捏。\"]}),\"\\n\",d(i.h1,{id:\"鼠鼠语录\",children:[c(i.a,{className:\"subheading-anchor\",\"aria-label\":\"Link to section\",href:\"#鼠鼠语录\",children:c(i.span,{className:\"icon icon-link\"})}),\"鼠鼠语录\"]}),\"\\n\",c(i.p,{children:\"鼠鼠我啊，就只有这些东西了那，尽管很烂，甚至全是垃圾。可是鼠鼠还是不想失去它们，不想什么都没有。\"})]})}return{default:function(e={}){const{wrapper:d}=e.components||{};return d?c(d,{...e,children:c(_createMdxContent,{...e})}):_createMdxContent(e)}};",
+    "toc": {
+      "content": [
+        {
+          "title": "新的一年，要变强啊",
+          "url": "#新的一年要变强啊",
+          "items": []
+        },
+        {
+          "title": "闲谈",
+          "url": "#闲谈",
+          "items": []
+        },
+        {
+          "title": "定位",
+          "url": "#定位",
+          "items": []
+        },
+        {
+          "title": "如何去做一个拼图链接",
+          "url": "#如何去做一个拼图链接",
+          "items": []
+        },
+        {
+          "title": "业务与价值",
+          "url": "#业务与价值",
+          "items": []
+        },
+        {
+          "title": "长期保持热情",
+          "url": "#长期保持热情",
+          "items": []
+        },
+        {
+          "title": "鼠鼠语录",
+          "url": "#鼠鼠语录",
+          "items": []
+        }
+      ],
+      "visible": true
+    },
+    "slugAsParams": "2023-newyear"
+  },
+  {
     "slug": "/content/timeline/2023-summary",
     "title": "2023的傻逼年终分享",
     "description": "大家好，我是溪抱鱼，今年是步入前端行业的第三年了，一个还算有趣的前端，光阴似箭，日月如梭可能是对这一年最好的总结。",

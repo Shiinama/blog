@@ -1,0 +1,161 @@
+---
+title: 14. 前端基础-设计层次
+description: 前端基础-设计层次
+published: true
+toc:
+  visible: true
+date: 2024-01-16
+---
+
+# 前端基础-设计层次
+
+这篇文章主要介绍了前端设计中的层次相关内容，包括视觉层次结构的概念，不用大小而用字体粗细、颜色突出元素，不在彩色背景用灰色字，根据场景弱化或突出元素，处理 Label-value 的方法，语义 H5 标签的运用，利用覆盖面积和对比度调整权重，以及设计操作时考虑语义和层次结构。
+
+关联问题: 如何选背景色文字 怎样弱化标签效果 图标权重咋调整
+
+
+视觉设计的核心就是“让它们看起来好看”，但如果我们没有天生的设计天赋，我们会觉得很难实现。但并不是这样的，对于"变好看"这件事情本身其实是有理可依、有据可循的。而层次结构就是这其中的一部分。
+
+视觉层次结构指的是界面中的元素彼此之间的重要性，它是你所拥有的让人感觉“设计”的最有效的工具。当一个界面中的所有东西都在争夺注意力时，从直觉上就是丑陋和嘈杂混乱的，就像一堵巨大的内容墙：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/1.jpeg?updatedAt=1739889978730)
+
+当我们故意减少对次要和第三级信息的强调，并努力突出最重要的元素时，看起来会立马好很多：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/2.jpeg?updatedAt=1739889978342)
+
+## 不使用大小去突出元素
+
+通常我们在设计一个板块的时候，总是会思考通过字体的大小去突出内容的`重要性`和`层次`，但是这并不是一个好的做法，通常就会导致主要的内容太大，次要的内容太小。
+
+就像这个例子一样:
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/3.jpeg?updatedAt=1739889979038)
+
+但如果使用 `font-weight`来做同样的事情，会合理得多:
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/4.jpeg?updatedAt=1739889979138)
+
+再加上颜色那？给次要文本使用一个`次要`的颜色
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/5.jpeg?updatedAt=1739889979003)
+
+而通常在一个`block`里 `2-3`种颜色和 `2`种字重显然就已经足够了。
+
+颜色：
+
+* 主要内容使用深一点的颜色，就比如黑色。
+* 次要内容使用灰色或者黑色降低透明度。
+* 三级的内容浅灰色。
+
+字重：
+
+* 字体本身的`font-weight`
+* 600 或者 700的需要强调的加粗
+
+最终就像这样：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/6.jpeg?updatedAt=1739889979464)
+
+## 不在彩色背景上使用灰色的字
+
+让文本变成浅灰色是在白色背景上降低强调度的好方法，但在彩色背景上看起来不那么好。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/7.jpeg?updatedAt=1739889978262)
+
+这是因为我们看到的灰色对白色的效果减少了对比。
+
+而文本更接近背景色实际上有助于创建层次结构，而不是使它变成浅灰色。
+
+## ![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/8.jpeg?updatedAt=1739889978486)
+但我们不改变背景应该怎么办那？实现这一点的最简单的方法是使用白文本，并不停的尝试透明度，但其实这也是往常我们开发的一些做法~，但这其实不是一个最好的实践，只能算是一个最简单取巧的办法而已：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/9.jpeg?updatedAt=1739889978246)
+一个更好的方法是根据背景色手工选择一种新的颜色。选择相同色调的颜色，调整饱和度和亮度，直到正确，用这种方式手调选择颜色很容易减少对比，而文本看起来看好一点。：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/10.jpeg?updatedAt=1739889978769)
+## 弱化还是突出？
+
+看这张图，我想要突出 `orders`这个导航栏，怎么办？如果按照上面的说法应该是加大选中的字重和颜色。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/11.jpeg?updatedAt=1739889980871)
+但这显然不是很合适，在这种场景下通过弱化其他元素是更好的选择。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/12.jpeg?updatedAt=1739889980981)
+再举一个例子，大家可以思考一下这是弱化的什么？
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/13.jpeg?updatedAt=1739889981552)
+## 讨厌的Label-value
+
+虽然Label-value这种形式能很好的表达信息，但是它其实真的不是一个好的设计尤其是在C端上面。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/14.jpeg?updatedAt=1739889981667)
+这种做法的问题是，它很难用任何层次结构呈现数据；每一块数据的权重看起来都是一样的（即使是在B端那种动辄几十个 `Label-value`的表现形式真的是给用户带来一种好用的感官吗？）。
+
+以上面这张图为例，我们可以通过查看格式来理解数据。通过结构传达上下文，看到某人姓名下面的“客户支持”时，也一样能理解它的`Label`是什么。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/15.jpeg?updatedAt=1739889981532)
+当我们能够在没有标签的情况下呈现数据时，强调重要信息或识别信息会更容易，使界面更容易使用，同时让它感觉更 `设计`。
+
+* * *
+
+### 用其他形式表达Label
+
+而即使没有`label`的数据不能完全清晰，通常也可以通过向值添加澄清文本来避免添加`label`。例如，如果需要在电商界面中显示库存，不是 `库存：12`，尝试像“库存中的12”这样的东西。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/16.jpeg?updatedAt=1739889982086)
+如果你正在开发一个房地产app，像“卧室：3”这样的东西可以变成“3卧室”。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/17.jpeg?updatedAt=1739889982799)
+当我们能够将标签和值组合成一个单元时，在`不牺牲清晰度`的情况下给每个数据 `有意义`的样式。
+
+### 弱化Label
+
+有时你确实需要一个标签；例如：一个心率检测数据。  
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/18.jpeg?updatedAt=1739889982962)
+数据本身是最重要的，标签只是为了知道这到底是个啥。通过使标签更小，减少对比度，使用更轻的字体重量，或这三种组合来弱化标签。
+
+### 强调标签的时候
+
+当我们在一些信息密集的页面，通常在B端页面的时候，或者一些手机参数网站。
+
+这时候用户很关心手机参数`label`，那可能我们就需要强调 `label`,比如：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/19.jpeg?updatedAt=1739889982716)
+在这些场景中，不要过分强调数据。
+
+## 对于语义H5标签
+
+在Web开发的时候我们如果向`block`、`article`这种添加标题，就会经常使用像h1、h2或h3这样的标题标签。  
+但它可能会导致应用程序ui中出现一些错误的决策。所以很多时候都会重写h1-h6还有一些语义化标签，使其更加的贴合设计。
+
+## 覆盖面积的强调
+
+与普通文本相比，粗体文本之所以感觉被强调，是因为粗体文本覆盖了更多的表面积——在相同的空间中，文本使用的像素比背景更多。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/20.jpeg?updatedAt=1739889982461)
+事实证明，元素覆盖面积和层次结构之间的关系对UI中的其他元素也有影响。
+
+### 使用对比度来调整权重
+
+理解这种关系在使用图标时的一个地方变得很重要。就像粗体文本一样，图标（尤其是实标）通常非常“重”，覆盖了很多表面积。因此，当你在一些文本旁边放一个图标时，这个图标往往会感觉被强调。  
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/21.jpeg?updatedAt=1739889984116)
+与文本不同，没有办法改变图标的“权重”，需要以其他方式去调整它。一个简单有效的方法是通过给图标一个更柔和的颜色来降低图标的对比度。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/22.jpeg?updatedAt=1739889984734)
+## 语义
+
+当用户可以在一个页面上执行多个操作时，我们就很容易陷入纯粹基于`语义`来设计这些操作的陷阱中。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/23.jpeg?updatedAt=1739889984208)
+`语义`是按钮设计的重要组成部分，但这并不意味着你可以忘记层次结构。一个页面上的每一个动作都位于一个重要的金字塔之中。主体页只有一个真正的主要动作，几个不那么重要的次要动作，少数很少使用第三动作。在设计这些操作时，传达它们在`层次结构`中的位置是很重要的。
+
+可以由`color`、 `outline`、`无外观`这些技巧来完成层次结构，就像是`Delete Listing`他是第三动作，他应该是可发现的，但不引人注目。设计像链接这样的样式通常是最好的方法。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/24.jpeg?updatedAt=1739889984711)
+结构化的设计这其实在大多数组件库中都会有，但真正的用和理解是另外的方式：
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/25.jpeg?updatedAt=1739889985083)
+但其实说了这么多，最核心的逻辑就是，什么是一个页面上最重要的东西？假设上面的例子`Delete Listing`他可以不那么重要，但是有的时候在警示的时候又需要强调，这是我们应该去想的问题。
+
+![image.png](https://ik.imagekit.io/leiakito/font-end-desgin-level/26.jpeg?updatedAt=1739889985051)

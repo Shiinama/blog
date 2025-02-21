@@ -1,0 +1,383 @@
+---
+title: 3. 组件库实战基础篇
+description: 组件库实战基础篇
+published: true
+toc:
+  visible: true
+date: 2023-01-20
+---
+
+# 组件库实战基础篇
+
+
+文章主要介绍了组件库相关的实战基础内容，包括 pnpm 的常用命令、概念及工作区配置，turborepo 的理论、基础配置、上下游依赖、缓存与强制构建，changeset 的理论与实操，自定义 CLI 模式，单组件打包配置，样式系统思路，以及组件库的招人信息。
+
+关联问题: pnpm优势有哪些 turborepo如何实操 changeset作用是什么
+
+AI智能总结首次生成速度较慢, 请耐心等待
+
+# 命令
+
+命令很多，建议看文档，给开发小伙伴讲讲常用的，以后慢慢补充。
+
+## pnpm
+
+我说一下我们组件库会常用到的命令和一些基础的概念（因为有小伙伴老是写不对命令）。
+
+`工作空间的概念`: 举个例子，我们的一个大项目是一个大的`厂区`，厂区里面有很多的`厂房`也就是工作区，每个厂房都有一套自己的`流水线`，`厂房和流水线`之间也会相互借东西，最后拼装成一个完整的产品。而`Pnpm`的优势就在于，它既让你厂房之间隔离得很好，同时在`厂房之间的联动`也非常方便。
+
+`辅助语法的概念`: 既然上面已经说到了厂房，`pnpm`的提供了一系列的命令都是让你这个`厂长`去更好的管理你的流水线和产品。就一般就是一个`命令` + `哪个厂区`的模式（当然我们不要拘泥于这种形式目的都是为了帮你管理厂区），比如:`--filter -r -w -D等`
+
+[更多的参照官网](https://link.juejin.cn?target=https%3A%2F%2Fpnpm.io%2Fzh%2F "https://pnpm.io/zh/")。
+
+### 工作区
+
+`pnpm-workspace.yaml` 定义了 [工作空间](https://link.juejin.cn?target=https%3A%2F%2Fpnpm.io%2Fzh%2Fworkspaces "https://pnpm.io/zh/workspaces") 的根目录，并能够使您从工作空间中包含 / 排除目录 。 默认情况下，包含所有子目录。
+
+For example:
+
+```js
+packages:
+  # all packages in direct subdirs of packages/
+  - 'packages/*'
+  # all packages in subdirs of components/
+  - 'components/**'
+  # exclude packages that are inside test directories
+  - '!**/test/**'
+
+```
+
+### CLI
+
+· `-C` 在src中启动pnpm
+
+```js
+pnpm -C './src' <cmd>
+
+```
+
+`-w` 在根目录启动pnpm,执行命令
+
+```js
+pnpm -w <cmd>
+
+```
+
+### \--filter或-F
+
+`pnpm的选择器`
+
+```js
+// 当我们要选择某个包的时候
+pnpm -F @fd/fd-components <cmd>
+pnpm -F @scopo/xxx <cmd>
+// 当我们要选择一组包的时候
+pnpm -F "*packages" <cmd>
+// 相对于当前工作目录匹配项目
+pnpm --filter "./packages/**" <cmd>
+// 从某个目录中选择符合给定的通配符的所有包
+pnpm --filter "@babel/*{components/**}" <cmd>  
+pnpm --filter "@babel/*{components/**}[origin/master]" <cmd>
+// 排除
+// 这将在除 `foo` 以外的所有项目中运行一个命令
+pnpm --filter=!foo <cmd> -w
+//这将在所有不在 `lib`目录下的项目中运行一个命令：
+pnpm --filter=!./lib <cmd> -w
+// 当包被过滤时，每个都会被匹配到至少一个选择器。 你可以使用无限数量的过滤器：
+pnpm --filter ...foo --filter bar --filter baz... test
+
+```
+
+### 相互引用下载包
+
+这里pnpm自动帮你处理了远程包还是本地
+
+```js
+// 会在dev依赖下，加载"@fd/xxx1": "workspace:*"，同理也可以直接写在package.json里，发布后会转换为常规名称
+pnpm -F @fd/xxx add @fd/xxx1 -D
+// 远程包
+pnpm -F @fd/xxx add @babel/parse
+
+```
+
+### shell
+
+`--recursive, -r`在工作区的每个项目中执行 shell 命令。
+
+```js
+// 为所有的软件包清理 `node_modules` 安装信息。
+pnpm -r exec rm -rf node_modules
+// 发布packages下所有包
+pnpm -r publish -F packages
+
+```
+
+`--if-present`如果脚本未定义，那么您可以使用 `--if-present ` 标志以避免遇到用非零的退出代码从而导致退出。 这使您可以在不中断执行链的情况下运行可能未定义的脚本。
+
+`--parallel`完全忽略并发和拓扑排序，在所有匹配的包中立即运行给定的脚本。
+
+### pnpm之多组件实例问题
+
+`严格依赖隔离`（包之间版本不同，会隔离处理放在.pnpm，子包分别软连对应的版本）造成的多实例问题：
+
+在开发的时候虽然`peerDependencies`可以帮我们解决组件内的核心依赖库(如Vue)被`重复下载和安装`的问题，也可以保证对于组件库的`单实例`。可是当对外使用发布后，因为`pnpm的依赖严格隔离`的会导致使用者拥有一个vue实例，组件库内又拥有一个vue实例，从而就造成了多实例的问题。
+
+我们要解决的话，就是保证唯一实例，有很多方案，一种是在主应用的打包配置内强制指定核心包。
+
+但其实我们应该从`组件库层面`就解决这个问题，`所以看文档`。 ![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/2.jpeg?updatedAt=1739803980502) 在npm.rc内加入如下配置，强制提升vue到全局，在发包的时候存在`peerDependencies`,所以不管是主应用还是组件库都会去找上层的vue,就可以保证唯一实例。
+
+```js
+public-hoist-pattern[]=vue
+public-hoist-pattern[]=*types*
+public-hoist-pattern[]=*eslint*
+public-hoist-pattern[]=@prettier/plugin-*
+public-hoist-pattern[]=*prettier-plugin-*
+
+```
+
+## turborepo
+
+还是先讲讲理论：
+
+这是什么东西？同样是以上面的厂房为例，每一个厂房的有`不同流水线，他们负责加工不同的零件`，可能你的B零件需要用到A零件，`turborepo`就是一个出色的管理者,它井井有条的帮你管理的厂区。
+
+对应到`menorepo仓库`中，就是各种包的打包构建和shell命令，在以往我们需要去`一个个包的命令去执行`或者去使用一些`自动化工具类glup`之类的，但是`turborepo`的出现，就相当于拥有了一个`大管家`，它会自动以一个优解帮助你处理整套上下游的依赖，以及还能通过缓存加快你下一次的构建速度。
+
+[文档](https://link.juejin.cn?target=https%3A%2F%2Fturbo.build%2Frepo%2Fdocs "https://turbo.build/repo/docs")。
+
+### 基础
+
+`globalEnv`： 为了在不同环境下生成不同的哈希值，它会被加到哈希算法中。
+
+`pipeline`：
+
+以我们现在的组件库为例 它的每个对象的`健名`都是为可执行命令的名称。
+
+我们看到`pipeline`的第一个`build`，它的意思是`pnpm turbo run build`会找到所有包中有`build`命令（scripts里）的开始执行(`^`build的意思是会按照一个拓扑顺序执行依赖)，然后开始执行`types`命令，执行完所有里选定的包的脚本后，才算执行完成。
+
+接下来我们看`types`，他会先找到有`types命令`的包，去执行`build`和`types`。
+
+这块其实最好的理解方式是去实操，文档和文章里讲的东西实在很有限。
+
+```json
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build", "types"],
+      "outputs": ["dist/**"]
+    },
+    "types": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "docs:build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    }
+  }
+}
+
+```
+
+```js
+// 和前面介绍的pnpm的filter大致一致但有些遍历的语法
+pnpm turbo --filter xxx <task>
+// task就是指的配置项里pipeline管道所配置的任务
+pnpm turbo <task>
+
+```
+
+### 上下游依赖
+
+假设我们有A,B,C,D这样的四个依赖，他们是一个`线性排列的构建顺序`。
+
+`A` -> `B` -> `C/D`
+
+`假设我们要只构建B`,这就是纯净构建。
+
+```js
+pnpm turbo --filter B build
+
+```
+
+`假设我们要构建AB`,多加了`...`在`filter`之后，表示会定点构建，带动他的`上游也就是A也会构建`，`而C不会构建`，而这种带动上游的定点构建的方式是我们用得比较多的。
+
+```js
+pnpm turbo --filter B...  build
+
+```
+
+而反之, `...`表示`B`的上游`C和D`也会被构建，也就是`ABCD`都会构建。
+
+```js
+pnpm turbo --filter ...B build
+
+```
+
+### 缓存与强制构建
+
+#### 1、缓存提升
+
+指定`.turbo缓存到cwd`，方便操作,可以看到根据文件内容生成了`哈希值文件`，当下一次文件改动的时候，将通过`哈希值`进行对比，来确定`构建`的内容。
+
+```js
+// 缓存提升
+turbo run build --cache-dir=".turbo"
+
+```
+
+![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/1.jpeg?updatedAt=1739804130054)
+
+#### 2、强制构建
+
+`--force` 强制
+
+`-no-cache`无缓存构建
+
+`无视 cache 构建需要带上 --force 参数`强制构建
+
+```js
+// 构建不需要缓存
+pnpm turbo run build --no-cache
+// 无缓存强制构建
+pnpm turbo run build --no-cache --force
+
+```
+
+#### 3、效果
+
+![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/3.jpeg?updatedAt=1739804129270)
+ ![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/4.jpeg?updatedAt=1739804129666)
+
+实战才是最好的导师,`tuborepo`还有更多优秀的内容，比如`远程缓存，持续CI/CD`，但这些我都想放在后期专门讲一篇CI/CD也就是 `github bot, github action，changeset，turborepo联动`。
+
+## changeset
+
+`理论知识`： 当前我们的厂区已经有两个管理者`turborepo`和`pnpm`负责整个厂房的运转和构建，我们还需要一个产品发布的管理者，也就是`changeset`.
+
+`简单实操`： 执行`changeset`选择你要发布的包（注意一个问题在这之前，你需要把你不发布的包设为私有在`package.json`中设置为私有`"private": true,`），然后依据[sem](https://link.juejin.cn?target=https%3A%2F%2Fsemver.org%2Flang%2Fzh-CN%2F "https://semver.org/lang/zh-CN/")规范，选择你的`MAJOR | MINOR | PATCH`和填写你的注释内容。
+
+![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/5.jpeg?updatedAt=1739804129695)
+
+紧接着就执行`changeset version`，去消耗掉上一步生成的`changeset文件`，生成`changelog文件`。
+
+最后执行`changeset publish`就会将你选择的包根据版本发布（这个过程它也会帮你检测远程的包的版本等一系列内置操作）。
+
+同样是最好的地方，就是changeset，对github工作流和CI/CD的支持。
+
+## 自定义CLI
+
+因为`turborepo`的出现，这块真的太爽了，自定义命令的`CLI+Turborepo`查找命令这种模式。
+
+`pnpm fd gen`会同时为开发者生成`docs文档和组件模板`(里面包含打包的各种配置和packagejson)，让小伙伴们就可以更专注于开发组件的逻辑而不是去考虑更多的工程化的问题，就像是这样。
+
+![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/6.jpeg?updatedAt=1739804130140)
+
+![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/7.jpeg?updatedAt=1739804129908)
+
+`pnpm fd del <componentName>` 删除组件和文档内容。
+
+后续的更多的构建打包基础命令，也会是这种模式。
+
+# 单组件打包
+
+在每个组件内都会有一个由脚手架生成 `vite.config.ts` 文件，现在是通过这个文件处理打包内容，后续`vitest`单测也是在这个文件夹里。
+
+```typescript
+// vite.config.ts
+import { resolve } from 'path';
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import vueJsx from '@vitejs/plugin-vue-jsx';
+import vueTypes from 'vite-plugin-vue-type-imports';
+
+import DefineOptions from 'unplugin-vue-define-options/vite';
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  resolve: {
+    extensions: ['.ts', '.vue']
+  },
+  build: {
+    minify: 'esbuild',
+    emptyOutDir: false,
+    lib: {
+      formats: ['es', 'cjs', 'iife'],
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'FdButton'
+    },
+    rollupOptions: {
+      external: ['vue'],
+      output: {
+        dir: './dist',
+        globals: {
+          vue: 'Vue',
+          '@fishdesign-ui/button': 'FdButton'
+        }
+      }
+    }
+  },
+  plugins: [vue(), vueJsx(), vueTypes(), DefineOptions()]
+});
+
+```
+
+还有一个生成`d.ts`的`tsconfig.json`，他的一些默认选项继承自跟目录，这里留下了一些可以自定义的选项，其实大伙想问为啥`d.ts`要单独用`tsc`打包，因为市面的插件都很慢。
+
+```typescript
+{
+  "compilerOptions": {
+    "preserveSymlinks": true, //软连接解析
+    "outDir": "./tmp",
+    "rootDir": "./src",
+    "target": "es2015",
+    "composite": false,
+    "incremental": false, //增量编译,开启后会生成一个文件对比
+    "skipLibCheck": true, //跳过默认库声明文件的类型检查
+    "skipDefaultLibCheck": true,
+    "declarationDir": "./dist"
+  },
+  "extends": "../../tsconfig.json",
+  "include": ["./src", "typings/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
+
+
+```
+
+关于生成的package.json，大家可以自己去看看资料。
+
+![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/8.jpeg?updatedAt=1739804130045)
+
+# 样式系统
+
+这块整个的思路分为两部分，一部分是模版(其实vue3也可以写函数式组件了，写那种`jsx函数式的组件会在样式系统`上表现得更好)，一部分是scss文件。
+
+`模版`： 在模版上我们通过函数去生成`class名`，实现`bem的规范`。
+
+![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/9.jpeg?updatedAt=1739804129712)
+
+`样式表`： 样式表内我们通过，混入和样式函数完成一个`间距，颜色，宽度，长度`等的统一
+ ![image.png](https://ik.imagekit.io/leiakito/Component%20Library%20Practical%20Basics/10.jpeg?updatedAt=1739804130338)
+
+# 招人啦
+
+组件库的宗旨是：为摸鱼而生！
+
+目的：主要是一方面在为我们开发减负的同时，也能真正意义上的提升自己水平，这里有这几个方向的内容：`工程化，Vue3组件设计开发，样式体操，类型体操，git, 团队协作，CI/CD，，IDE`
+
+然后组件库因为刚刚起步，`样式系统和类型系统`小伙伴正在开发中，还有很多版块等待开发！
+
+欢迎小伙伴们的加入，积极性强的，想锻炼自己的小伙伴,可以私聊我，现在已经有一部分小伙伴啦，来就一定能学到东西，不是KPI项目也不是什么广告也没有商业性质，仅仅只是为爱发电的一群人罢了

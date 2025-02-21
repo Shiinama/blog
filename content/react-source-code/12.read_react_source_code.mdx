@@ -1,0 +1,266 @@
+---
+title: 12. React源码阅读必知
+description: React源码阅读必知
+published: true
+toc:
+  visible: true
+date: 2022-12-02
+---
+# React源码阅读必知
+
+专栏： 
+
+React源码学习笔记杂记
+
+智能总结
+
+复制
+
+重新生成
+
+这篇文章是关于 React 源码阅读的必知内容，介绍了三个代表性版本的重大变动和关注重点，分析了基础结构中的核心包，包括 react、react-dom、react-reconciler、scheduler 及其功能。还讲解了输入输出，如 scheduleUpdateOnFiber 是输入必经之路，commitRootImpl 是输出的三个阶段。最后推荐了学习源码的顺序和交流方式。
+
+关联问题: 17版本有何特点 怎样理解调度器 react-dom如何工作
+
+
+# 开篇
+
+最近写了一下React源码理解和手写，但兄弟萌总是说看不懂，我自己也看了一下，如果没一些基础知识确实看不懂啊，这里就想了一下写一个React阅读必知来先给兄弟萌get一下react阅读源码前的必知知识点，来减少大家的阅读难度。
+
+# 版本
+
+这里就只讲3个现在的代表性版本，17以前的16主版本，17主版本，18主版本。这只是我的理解，有不同的看法可以指出。
+
+| 版本号 | 重大变动 | 关注重点 |
+| --- | --- | --- |
+| 16  | 生命周期的更新变动，Hooks，context API不需要向下传递，createRef/forwordRef，Memo，Lazy、suspense等 | 提升优化react性能，fiber核心算法的实现，以及解决hooks状态逻辑复用问题、组件嵌套地狱。 |
+| 17  | JSX的编译方式，重构expirationTime，引入车道算法（lanes），事件代理节点从document变为root，调度性能统计埋点 | 解决16的expirationTimes算法缺陷，引入一个连续优先级算法车道模型 |
+| 18  | 将默认的legcy模式变为concurrent模式，重构批处理，suspense，startTransition、usetransition、useDeferredValue | 并发模式的支持（其实17中就已经有了大量的内容了），服务端渲染内容。 |
+
+# 分析版本
+
+这里我就直接以17.02这个版本来分析源码，因为我感觉这个版本相对来说比较让我们能够渐进式又不算太慢的去理解源码。
+
+# 基础结构
+
+我们可以看到react有这么多的包，其实我们是很难下手的，所以我先帮大家解决这个问题，我们web开发只需要关心核心的4个包：`react`、`react-dom`、`react-reconciler`、`scheduler`。
+
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/read_reac_source_code.webp)
+`react`：react基础包，api向外的抛出者，我们应用层大部分调用的api都是来自这个包。
+
+`react-dom`：react的渲染器，通常我们的入口函数就是来自这里render()，他负责把内存的fiber树渲染到页面上。
+
+`react-reconciler`:react的协调器，简单来说就是一个桥梁，连接3个包之间的配合和调用。
+
+`scheduler`: react的`调度器`，他主要就是控制回调的时机。以及实现时间切片，渲染可中断，本质上来说它的出现是为了解决cpu瓶颈。
+
+# 关注重点
+
+我觉得我自己比较容易去学习源码的思路是这样的
+
+`react-reconciler` => `scheduler` => `react-reconciler` => `react-dom` => `react`
+
+简单的说就是先关注协调器做了哪些事情，在关心他把哪些事情交给调度中心，调度中心调度的时机，再回到协调器，交给渲染器渲染，最后给react基础包抛出的事件。
+
+# 回到源码正题
+
+想了一下，我觉得可以这样，我们先去关心输入，和输出，然后在不停的拆解中间的过程，最终达成我们阅读源码的目的，那这里我就直接去把各个包主流程的输入和输出先拿出来去节约大家的事件。
+
+## 1.react-reconciler
+
+### 1.1输入
+
+`scheduleUpdateOnFiber`[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberWorkLoop.old.js%23L517-L619 "https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js#L517-L619")，在`react-reconciler`对外暴露的 api 函数中, 只要涉及到需要改变 fiber 的操作(无论是`首次渲染`或`后续更新`操作), 最后都会间接调用`scheduleUpdateOnFiber`, 所以`scheduleUpdateOnFiber`函数是输入中的`必经之路`.
+
+```js
+// 唯一接收输入信号的函数
+export function scheduleUpdateOnFiber(
+  fiber: Fiber,
+  lane: Lane,
+  eventTime: number,
+) {
+  // ... 省略部分无关代码
+  const root = markUpdateLaneFromFiberToRoot(fiber, lane);
+  if (lane === SyncLane) {
+    if (
+      (executionContext & LegacyUnbatchedContext) !== NoContext &&
+      (executionContext & (RenderContext | CommitContext)) === NoContext
+    ) {
+      // 直接进行`fiber构造`
+      performSyncWorkOnRoot(root);
+    } else {
+      // 注册调度任务, 经过`Scheduler`包的调度, 间接进行`fiber构造`
+      ensureRootIsScheduled(root, eventTime);
+    }
+  } else {
+    // 注册调度任务, 经过`Scheduler`包的调度, 间接进行`fiber构造`
+    ensureRootIsScheduled(root, eventTime);
+  }
+}
+
+```
+
+### 1.2输出
+
+`commitRootImpl`源码里就是三个循环，分别代表提交的三个子阶段，执行dom前（`before mutation`），执行dom操作（`mutation`），执行dom（`layout阶段`）后[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberWorkLoop.old.js%23L1888-L2254 "https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js#L1888-L2254")
+
+```js
+// ... 省略部分无关代码
+function commitRootImpl(root, renderPriorityLevel) {
+  // 设置局部变量
+  const finishedWork = root.finishedWork;
+  const lanes = root.finishedLanes;
+
+  // 清空FiberRoot对象上的属性
+  root.finishedWork = null;
+  root.finishedLanes = NoLanes;
+  root.callbackNode = null;
+
+  // 提交阶段
+  let firstEffect = finishedWork.firstEffect;
+  if (firstEffect !== null) {
+    const prevExecutionContext = executionContext;
+    executionContext |= CommitContext;
+    // 阶段1: dom突变之前
+    nextEffect = firstEffect;
+    do {
+      commitBeforeMutationEffects();
+    } while (nextEffect !== null);
+
+    // 阶段2: dom突变, 界面发生改变
+    nextEffect = firstEffect;
+    do {
+      commitMutationEffects(root, renderPriorityLevel);
+    } while (nextEffect !== null);
+    root.current = finishedWork;
+
+    // 阶段3: layout阶段, 调用生命周期componentDidUpdate和回调函数等
+    nextEffect = firstEffect;
+    do {
+      commitLayoutEffects(root, lanes);
+    } while (nextEffect !== null);
+    nextEffect = null;
+    executionContext = prevExecutionContext;
+  }
+  ensureRootIsScheduled(root, now());
+  return null;
+}
+
+```
+
+## 2.scheduler
+
+### 2.1.输入
+
+`scheduleCallback`简单的说就是交给这个函数，去注册回调，后面分析提到了[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Fscheduler%2Fsrc%2FScheduler.js%23L279-L359 "https://github.com/facebook/react/blob/v17.0.2/packages/scheduler/src/Scheduler.js#L279-L359")
+
+```js
+// 省略部分无关代码
+function unstable_scheduleCallback(priorityLevel, callback, options) {
+  // 1. 获取当前时间
+  var currentTime = getCurrentTime();
+  var startTime;
+  if (typeof options === 'object' && options !== null) {
+    // 从函数调用关系来看, 在v17.0.2中,所有调用 unstable_scheduleCallback 都未传入options
+    // 所以省略延时任务相关的代码
+  } else {
+    startTime = currentTime;
+  }
+  // 2. 根据传入的优先级, 设置任务的过期时间 expirationTime
+  var timeout;
+  switch (priorityLevel) {
+    case ImmediatePriority:
+      timeout = IMMEDIATE_PRIORITY_TIMEOUT;
+      break;
+    case UserBlockingPriority:
+      timeout = USER_BLOCKING_PRIORITY_TIMEOUT;
+      break;
+    case IdlePriority:
+      timeout = IDLE_PRIORITY_TIMEOUT;
+      break;
+    case LowPriority:
+      timeout = LOW_PRIORITY_TIMEOUT;
+      break;
+    case NormalPriority:
+    default:
+      timeout = NORMAL_PRIORITY_TIMEOUT;
+      break;
+  }
+  var expirationTime = startTime + timeout;
+  // 3. 创建新任务
+  var newTask = {
+    id: taskIdCounter++,
+    callback,
+    priorityLevel,
+    startTime,
+    expirationTime,
+    sortIndex: -1,
+  };
+  if (startTime > currentTime) {
+    // 省略无关代码 v17.0.2中不会使用
+  } else {
+    newTask.sortIndex = expirationTime;
+    // 4. 加入任务队列
+    push(taskQueue, newTask);
+    // 5. 请求调度
+    if (!isHostCallbackScheduled && !isPerformingWork) {
+      isHostCallbackScheduled = true;
+      requestHostCallback(flushWork);
+    }
+  }
+  return newTask;
+}
+
+```
+
+### 2.2.执行回调
+
+`performWorkUntilDeadline`这个函数是在调度核心里去执行的，[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Fscheduler%2Fsrc%2Fforks%2FSchedulerHostConfig.default.js%23L185-L218 "https://github.com/facebook/react/blob/v17.0.2/packages/scheduler/src/forks/SchedulerHostConfig.default.js#L185-L218")
+
+```js
+  const performWorkUntilDeadline = () => {
+    // 有执行任务
+    if (scheduledHostCallback !== null) {
+      const currentTime = getCurrentTime();
+      // 计算一帧的过期时间点
+      deadline = currentTime + yieldInterval;
+      const hasTimeRemaining = true;
+      try {
+        // 执行c回调
+        const hasMoreWork = scheduledHostCallback(
+          hasTimeRemaining,
+          currentTime,
+        );
+        // 执行完该回调后, 判断后续是否还有其他任务
+        if (!hasMoreWork) {
+          isMessageLoopRunning = false;
+          scheduledHostCallback = null;
+        } else {
+          // 还有其他任务, 推进进入下一个宏任务队列中
+          port.postMessage(null);
+        }
+      } catch (error) {
+        // If a scheduler task throws, exit the current browser task so the
+        // error can be observed.
+        port.postMessage(null);
+        throw error;
+        
+      }
+    } else {
+      isMessageLoopRunning = false;
+    }
+    // Yielding to the browser will give it a chance to paint, so we can
+    // reset this.
+    // 重置状态
+    needsPaint = false;
+  };
+
+```
+
+## 3.react-dom和react基础包
+
+这两块确实感觉只讲输入和输出不是很合适,因为这两块的重点不是在输入和输出上，感觉前面两个包看懂了再来看这两个包自然就看懂了。
+
+# 总结
+
+学源码确实是一个很枯燥的事情，但是其实挺锻炼逻辑能力和写代码能力的，就感觉每次看完一个框架的源码都是对自己能力的一个大提升，推荐一个渐进顺序vue源码=>react源码=>node交互层源码和一个长期一些我们常用包源码比如p-limit,axios,ajax等之类的。有问题可以+[联系方式](https://juejin.cn/pin/7172471008291455013)我们一起交流，一起卷，老生常谈一下，不是为了面试去学习，希望大家保持一颗学习去心，和写代码的热情。

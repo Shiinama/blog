@@ -1,0 +1,422 @@
+---
+title: 16. 无趣的FP和OOP之争
+description: 文章探讨了 FP 和 OOP 两种编程范式，介绍了继承和组合的概念
+published: true
+toc:
+  visible: true
+date: 2024-01-22
+---
+
+# 无趣的FP和OOP之争
+
+[溪饱鱼](/user/400646714977431/posts)
+
+
+
+文章探讨了 FP 和 OOP 两种编程范式，介绍了继承和组合的概念，比较了多种语言在这两种范式上的倾向，如 JavaScript、Python、Go、Rust、Java 等，并指出实际场景中最佳实践是数据用 OOP、操作数据的行为用 FP，还以购物车系统为例，最后提到框架选型，如 react 更倾向 FP，vue 更倾向 OOP 思想。
+
+关联问题: FP和OOP如何选 哪种语言FP用得多 OOP有何缺陷
+
+
+# 引言
+
+最近经常在`review`和被别人`review`代码，正常来说代码怎么写都能写出来，但写出来的代码好坏就完全是取决于这个人的`基础`、`经验`、以及`对于世界本身的思维逻辑和思考`（因为代码本身就是描述现实世界的`表达形式`，一种更底层的`媒介`）。
+
+既然要说起`FP`和`OOP`就可以从两个词开始`组合`,`继承`。
+
+* **继承**: 子代会继承父代的特性，比如宝马，不同型号的车（如宝马X5和宝马X6）都继承了宝马的公共特性（如品牌、品质、一些设计理念），但是每一种型号都有自己的特性（如车身大小、外形、马力等）
+    
+* **组合**: 由多个模块最终搭成一个整体的功能。而其实在现实世界中，物体往往由不同的部分组成，而不是通过继承得到。
+    
+
+* * *
+
+而`编程范式`则是对于这两种方式的`方法论`和`抽象`，来帮助我们更好的去`模拟` 和 `理解` 现实世界复杂的`对象关系`和`数据流动`。
+
+那么进入主题，面向对象编程（OOP）和 函数式编程（FP）是两种常见的编程范式。
+
+这两种编程范式本质都是解决同一个问题：如何`有效地组织`和`复用代码`。
+
+1.  OOP提倡把数据和处理数据的行为打包成对象，这使得代码更易理解和维护。OOP的继承和多态特性让代码更具可扩展性。它的核心在于`继承`。
+    
+2.  FP强调函数的纯粹性和不可变性，让代码更具可预测性和可测试性。同时，FP的高阶函数和函数组合使得代码更具表达力和复用性。而它的核心是`组合`。
+    
+
+虽然是`组合优于继承`，但这只是趋势。我们要明白的事情是范式的最终的目的是为了降低`软件复杂度`，这两种范式都能够实现相同的功能，但他们在不同的场景下的`复杂度`是不同。我一个比较粗浅的理解是：`重数据就OOP，重行为就FP`。
+
+# 多种语言在OOP和FP的倾向
+
+面向对象编程（OOP）和函数式编程（FP）是两种不同的编程范式，其中OOP更强调数据的封装以及实例和类的概念，而FP更注重函数的纯粹性以及无状态的概念。主要的区别在于数据和行为的关系。在OOP中，数据和行为是在一起的，而在FP中，数据和行为是分开的。但其实在不同的语言中对于这个倾向是有差别的。
+
+我们现在抛出问题，设想我们要为一个大型的电子商务平台构建后台管理系统。该平台需要处理各种类型的产品（书、电子设备、家居用品等）和多种方式的交易（在线购买、在线拍卖、二手交易等）。
+
+## JavaScript
+
+`JavaScript`既支持面向对象编程（OOP）也支持函数式编程（FP）。但一般来说动态语言中都基本是`组合倾向`。只是在JavaScript在ES6之后加入了`class`关键字，使得对面向对象编程更加友好。
+
+1.  面向对象编程 (OOP):
+
+```javascript
+class Product {
+    constructor(name, category) {
+        this.name = name;
+        this.category = category;
+    }
+}
+
+class Transaction {
+    constructor(product, type) {
+        this.product = product;
+        this.type = type;
+    }
+}
+
+class Book extends Product {
+    constructor(name) {
+        super(name, 'book');
+    }
+}
+
+class OnlinePurchase extends Transaction {
+    constructor(product) {
+        super(product, 'online purchase');
+    }
+}
+
+let book = new Book('JavaScript: The Good Parts');
+let transaction = new OnlinePurchase(book);
+
+```
+
+2.  函数式编程 (FP):
+
+```javascript
+const product = (name, category) => ({name, category});
+const transaction = (product, type) => ({product, type});
+
+const book = (name) => product(name, 'book');
+const onlinePurchase = (product) => transaction(product, 'online purchase');
+
+let theBook = book('JavaScript: The Good Parts');
+let theTransaction = onlinePurchase(theBook);
+
+```
+
+## Python
+
+同为动态语言与`javascript`同理。
+
+OOP:
+
+```python
+class Product:
+    def __init__(self, name, category):
+        self.name = name
+        self.category = category
+
+class Transaction:
+    def __init__(self, product, type):
+        self.product = product
+        self.type = type
+
+class Book(Product):
+    def __init__(self, name):
+        super().__init__(name, 'Book')
+
+class OnlinePurchase(Transaction):
+    def __init__(self, product):
+        super().__init__(product, 'Online Purchase')
+
+book = Book('Python for Data Analysis')
+transaction = OnlinePurchase(book)
+
+```
+
+FP:
+
+```python
+def product(name, category):
+    return {'name': name, 'category': category}
+
+def transaction(product, type):
+    return {'product': product, 'type': type}
+
+def book(name):
+    return product(name, 'Book')
+
+def online_purchase(product):
+    return transaction(product, 'Online Purchase')
+
+
+the_book = book('Python for Data Analysis')
+the_transaction = online_purchase(the_book)
+
+```
+
+## Go
+
+虽然`Go`既不是`纯面向对象编程`，也不具备`函数式编程的全部特性`，而是用自己的方式平衡了`过程式编程`和`接口抽象`。
+
+`Go`是通过自己的特性（如接口和嵌入）提供了强大的组合机制，这使得你能够通过组成的方式重用和扩展代码。`Embedding`是Go中一个替代继承的重要特性，它可以让一个类型拥有另一个类型的功能。
+
+这里其实是Go的`组合优于继承`哲学的一个体现，也就是鼓励开发者以更灵活和模块化的方式重用和组合代码，而不是依赖复杂的`继承链`。
+
+下面是一个用Go语言实现的例子：
+
+```go
+type Product struct {
+    Name     string
+    Category string
+}
+
+type Transaction struct {
+    Product
+    Type string
+}
+
+// 使用组合来模拟“子类”
+
+type Book struct {
+    Product  // 嵌入 Product 结构体
+    Author string
+}
+
+type OnlinePurchase struct {
+    Transaction // 嵌入 Transaction 结构体
+}
+
+
+book := Book{Product{"go programming", "book"}, "go authors"}
+transaction := OnlinePurchase{Transaction{book.Product, "online purchase"}}
+
+```
+
+## Rust:
+
+Rust既支持面向对象，也支持函数式编程，这两种范式在Rust中并不冲突，可能是我对`Rust`没有更深的理解，所以不太好总结出它其实更倾向于哪一个。但他自身的很多特性，比如：不可变变量、模式匹配、高阶函数和 闭包。总给我一种感觉他是倾向于`组合`的。
+
+OOP例子：
+
+```rust
+struct Product {
+    name: String,
+    category: String,
+}
+
+struct Transaction {
+    product: Product,
+    type_of: String,
+}
+
+struct Book {
+    product: Product,
+}
+
+struct OnlinePurchase {
+    transaction: Transaction,
+}
+
+// 创建book实例
+let book = Book {
+    product: Product {
+        name: "Programming Rust".to_string(),
+        category: "Book".to_string(),
+    },
+};
+
+// 创建transaction实例
+let transaction = OnlinePurchase {
+    transaction: Transaction {
+        product: book.product,
+        type_of: "Online Purchase".to_string(),
+    },
+};
+
+```
+
+FP例子，可能理解Rust明白在这个场景可能oop更好一些：
+
+```rust
+fn product(name: &str, category: &str) -> (String, String) {
+    (name.to_string(), category.to_string())
+}
+
+fn transaction(product: (String, String), type_of: &str) -> ((String, String), String) {
+    (product, type_of.to_string())
+}
+
+fn book(name: &str) -> (String, String) {
+    product(name, "Book")
+}
+
+fn online_purchase(product: (String, String)) -> ((String, String), String) {
+    transaction(product, "Online Purchase")
+}
+
+let the_book = book("Programming Rust");
+let the_transaction = online_purchase(the_book);
+
+```
+
+## Java
+
+Java就是完全倾向OOP，在Java8+虽然有fp，但~~。
+
+oop:
+
+```java
+public class Product {
+    private String name;
+    private String category;
+
+    public Product(String name, String category) {
+        this.name = name;
+        this.category = category;
+    }
+}
+
+public class Transaction {
+    private Product product;
+    private String type;
+
+    public Transaction(Product product, String type) {
+        this.product = product;
+        this.type = type;
+    }
+}
+
+public class Book extends Product {
+    public Book(String name) {
+        super(name, "book");
+    }
+}
+
+public class OnlinePurchase extends Transaction {
+    public OnlinePurchase(Product product) {
+        super(product, "Online Purchase");
+    }
+}
+
+
+Product book = new Book("Java: The Complete Reference");
+Transaction transaction = new OnlinePurchase(book);
+
+```
+
+fp：
+
+```java
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+class Product {
+    private final String name;
+    private final String category;
+
+    Product(String name, String category) {
+        this.name = name;
+        this.category = category;
+    }
+}
+
+class Transaction {
+    private final Product product;
+    private final String type;
+
+    Transaction(Product product, String type) {
+        this.product = product;
+        this.type = type;
+    }
+}
+
+public static void main(String[] args) {
+    BiFunction<String, String, Product> product = Product::new;
+    BiFunction<Product, String, Transaction> transaction = Transaction::new;
+
+    Function<String, Product> book = name -> product.apply(name, "book");
+    Function<Product, Transaction> onlinePurchase = product -> transaction.apply(product, "online");
+
+    Product theBook = book.apply("Java: The Complete Reference");
+    Transaction theTransaction = onlinePurchase.apply(theBook);
+
+    System.out.println(theTransaction.getType() + ": " + theTransaction.getProduct().getName());
+}
+
+```
+
+# 并不是非此即彼
+
+实际上来说一个完整的场景是既有`数据`也有`动作`的。自己感觉的最佳实践是数据用`OOP`、操作数据的行为用`FP`。
+
+比如：一个购物车系统。在这个系统中，有产品、购物车，我们可以对购物车中的商品进行增加、删除、计算、回滚操作。`ramda.js`是一个函数式编程的库。
+
+```typescript
+import * as R from 'ramda';
+
+class Product {
+  constructor(public name: string, public price: number) {}
+}
+
+class Transaction {
+  constructor(public type: string, public cart:{ items: Product[], discounts: number }) {}
+}
+
+// 数据操作函数
+const addItem = R.curry((product: Product, cart: { items: Product[], discounts: number }) => {
+  return {
+    items: R.append(product, cart.items),
+    discounts: cart.discounts
+  };
+});
+
+const removeItem = R.curry((product: Product, cart: { items: Product[], discounts: number }) => {
+  return {
+    items: R.reject(R.equals(product), cart.items),
+    discounts: cart.discounts
+  };
+});
+
+const applyDiscount = R.curry((discount: number, cart: { items: Product[], discounts: number }) => {
+  return {
+    items: cart.items,
+    discounts: discount
+  };
+});
+
+const getTotal = (cart: { items: Product[], discounts: number }) => {
+  const totalWithoutDiscounts = R.sum(R.map(R.prop('price'), cart.items));
+  return totalWithoutDiscounts - cart.discounts;
+};
+
+const createTransaction = (type: string, cart: { items: Product[], discounts: number }) => {
+  return new Transaction(type, cart);
+};
+
+// 创建商品
+const book = new Product("Book", 100);
+const pen = new Product("Pen", 50);
+
+// 创建购物车
+let cart = { items: [], discounts: 0 };
+
+// 操作购物车
+cart = addItem(book, cart);
+cart = addItem(pen, cart);
+cart = removeItem(book, cart);
+cart = applyDiscount(30, cart);
+
+console.log(getTotal(cart)); // 输出：20
+
+const myTransaction = createTransaction("Online Purchase", cart);
+console.log(myTransaction); // 输出：Transaction { type: 'Online Purchase', cart: { items: [ [Product] ], discounts: 30 } }
+
+```
+
+# 思想与框架
+
+虽然今年开始前端写得比较少，但我觉得我还是个前端。这里为`学境`的技术选型做一个铺垫。
+
+就是为什么选择`react`而不是`vue`，因为实际上`react`对于`fp`要更践行一些，`react`对于纯函数组件、不可变性和高阶组件，本质就是函数思想的延伸。可是有同学会觉得`react`和`vue`都是支持函数式编程的，但实际上`vue`的核心概念更倾向命令式编程和OOP思想（比如对于Vue组件的数据、方法、生命周期等的组织方式）。
+
+至于性能，现代浏览器这么发达，并不缺那三瓜两枣，真正需要高性能的场景也绝不是通过一个框架就能解决的。

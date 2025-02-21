@@ -1,0 +1,317 @@
+---
+title: 3.vue2各种通信方式源码的实现方式
+description: vue2各种通信方式源码的实现方式
+published: true
+toc:
+  visible: true
+date: 2022-12-03
+---
+
+# vue2各种通信方式源码的实现方式
+
+
+# 开篇
+
+就看到讲响应式源码的挺多的，但是好像基本没怎么讲vue2的通信原理的可能是大佬们都觉得因为这块比较简单了，这里我们就去看一下，到底在源码里是怎么去实现通信的，这里暂时把vuex摘出去，bus也摘出去，专注一下vue核心的实现。毕竟算是插件要讲肯定得讲混入时机和插件，单开一章讲（!又有东西可以写了）。
+
+# 实例通信
+
+什么是实例通信，意思就是我们平时会用到一些`this.$refs['xxx']`的写法去拿到组件中的一些方法或者数据进行回调或者操作，还有一些`$children`、`$parent`的实例对象。
+
+## 1.refs
+
+我们直接看源码中的注册函数`registerRef`，[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Fvuejs%2Fvue%2Fblob%2Fmain%2Fsrc%2Fcore%2Fvdom%2Fmodules%2Ftemplate-ref.ts%23L29-L81 "https://github.com/vuejs/vue/blob/main/src/core/vdom/modules/template-ref.ts#L29-L81")
+
+```js
+export function registerRef(vnode: VNodeWithData, isRemoval?: boolean) {
+  const ref = vnode.data.ref
+  if (!isDef(ref)) return
+
+  const vm = vnode.context
+  const refValue = vnode.componentInstance || vnode.elm
+  const value = isRemoval ? null : refValue
+  const $refsValue = isRemoval ? undefined : refValue
+
+  if (isFunction(ref)) {
+    invokeWithErrorHandling(ref, vm, [value], vm, `template ref function`)
+    return
+  }
+  //分支细节1
+  const isFor = vnode.data.refInFor
+  const _isString = typeof ref === 'string' || typeof ref === 'number'
+  const _isRef = isRef(ref)
+  const refs = vm.$refs
+  // 检测是否是字符串传的，不是就直接警告个类型错误
+  if (_isString || _isRef) {
+    if (isFor) {
+      // v-for里的ref特别处理
+    } else if (_isString) {
+      if (isRemoval && refs[ref] !== refValue) {
+        return
+      }
+      // 给ref对象添加实例这时候我们就可以直接去调用一些属性和方法洛
+      refs[ref] = $refsValue
+      // 分支细节2
+      setSetupRef(vm, ref, value)
+    } 
+  }
+  //忽略代码
+}
+
+```
+
+就这里就相当于给refs对象添加实例。
+
+`时机`： patch的时候。
+
+`分支细节1`：`isFor`的意思是这个`ref`是否在`v-for`中，调用逻辑 `initLifecycle` => `processElement` => `processRef`(解析ref属性) => `checkInFor`(检测ref属性是否在v-for里) ，结果就是如果v-for里的ref会被保存成数组而不是对象。
+
+`分支细节2`： 生成Render函数之前的处理，实际的调用是在directives，但这实际跟loder和vue单文件相关，知识点太多惹，暂时略过（记住后面再去了解）。
+
+实际上在这里注册了之后就可以去获取到实例然后去调用里面的属性了。
+
+## 2.parent和children
+
+我们直接看`initLifecycle`这个大伙应该很熟悉了把，init的第一个阶段生命周期的初始化，[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Fvuejs%2Fvue%2Fblob%2Fmain%2Fsrc%2Fcore%2Finstance%2Flifecycle.ts%23L34-L60 "https://github.com/vuejs/vue/blob/main/src/core/instance/lifecycle.ts#L34-L60")
+
+```js
+export function initLifecycle(vm: Component) {
+  const options = vm.$options
+
+  // locate first non-abstract parent
+  // 抽象组件意思就是不呈现dom，就slot,keep-alive,transitions之类的
+  let parent = options.parent
+  // 父组件存在，然后当前组件非抽象组件就去循坏
+  if (parent && !options.abstract) {
+    // 逐级添加父组件
+    while (parent.$options.abstract && parent.$parent) {
+      parent = parent.$parent
+    }
+    // 加入子组件
+    parent.$children.push(vm)
+  }
+
+  vm.$parent = parent
+  vm.$root = parent ? parent.$root : vm
+
+  vm.$children = []
+  vm.$refs = {}
+
+  vm._provided = parent ? parent._provided : Object.create(null)
+  vm._watcher = null
+  vm._inactive = null
+  vm._directInactive = false
+  vm._isMounted = false
+  vm._isDestroyed = false
+  vm._isBeingDestroyed = false
+}
+
+```
+
+这里已经很清晰了，所以说从这里我们可以知道什么，那就是这2个父子实例对象的出现是非常早的。
+
+`时机`:初始化生命周期initLifecycle的时候。
+
+# provide/inject
+
+`provide`提供依赖，`inject`注入依赖，还是老规矩先直接上源码。
+
+![image.png](https://ik.imagekit.io/leiakito/Vue3+ELLnput/provide.jpeg)
+initState是做一些状态初始化操作的函数，那么我们就可以知道这个组件实例初始化的时候在`data/props`前面调用了`initInjections`，在`data/props`后面调用了`initProvide`，也很符合预期。
+
+## 1.Inject
+
+```js
+  function initInjections (vm) {
+  // 根据注册的inject，通过$parent向上查找对应的provide
+    var result = resolveInject(vm.$options.inject, vm);
+    if (result) {
+      toggleObserving(false);
+      //遍历
+      Object.keys(result).forEach(function (key) {
+        /* istanbul ignore else */
+        {
+          //添加响应式
+          defineReactive$$1(vm, key, result[key], function () {
+            warn(
+              "Avoid mutating an injected value directly since the changes will be " +
+              "overwritten whenever the provided component re-renders. " +
+              "injection being mutated: \"" + key + "\"",
+              vm
+            );
+          });
+        }
+      });
+      toggleObserving(true);
+    }
+  }
+
+```
+
+该方法就是通过`resolveInject`找到不停的循坏向上找`provided`属性，然后又拿到值继续向父组件提供。然后遍历添加响应式，在页面里就可以用拉。
+
+## 2\. Provide
+
+```js
+export function initProvide(vm: Component) {
+  const provideOption = vm.$options.provide
+  if (provideOption) {
+    // 把provideOption给vm的provideOption
+    const provided = isFunction(provideOption)
+      ? provideOption.call(vm)
+      : provideOption
+    if (!isObject(provided)) {
+      return
+    }
+    const source = resolveProvided(vm)
+    // 忽略ie9的兼容代码
+  }
+}
+
+```
+
+太抽象拉只能说，该方法单纯把组件注册的`provide`值，赋值给`vm.provideOption`，让`resolveInject`(看前面)使用。然后其实`vm.$options.provideOption`是个函数，其实是调用这个函数得到的`provided`这个函数。在父组件实例化时，我们也调用了`mergeOptions`合并配置项对父组件中的`provide`属性进行了处理：
+
+```js
+// provide的处理
+strats.provide = mergeDataOrFn
+/**
+ * Data
+ */
+ // Data的处理函数
+export function mergeDataOrFn(
+  parentVal: any,
+  childVal: any,
+  vm?: Component
+): Function | null {
+  if (!vm) {
+    // in a Vue.extend merge, both should be functions
+    if (!childVal) {
+      return parentVal
+    }
+    if (!parentVal) {
+      return childVal
+    }
+    // when parentVal & childVal are both present,
+    // we need to return a function that returns the
+    // merged result of both functions... no need to
+    // check if parentVal is a function here because
+    // it has to be a function to pass previous merges.
+    return function mergedDataFn() {
+      return mergeData(
+        isFunction(childVal) ? childVal.call(this, this) : childVal,
+        isFunction(parentVal) ? parentVal.call(this, this) : parentVal
+      )
+    }
+  } else {
+    return function mergedInstanceDataFn() {
+      // instance merge
+      const instanceData = isFunction(childVal)
+        ? childVal.call(vm, vm)
+        : childVal
+      const defaultData = isFunction(parentVal)
+        ? parentVal.call(vm, vm)
+        : parentVal
+      if (instanceData) {
+        return mergeData(instanceData, defaultData)
+      } else {
+        return defaultData
+      }
+    }
+  }
+}
+// data
+strats.data = function (
+  parentVal: any,
+  childVal: any,
+  vm?: Component
+): Function | null {
+  if (!vm) {
+    if (childVal && typeof childVal !== 'function') {
+      __DEV__ &&
+        warn(
+          'The "data" option should be a function ' +
+            'that returns a per-instance value in component ' +
+            'definitions.',
+          vm
+        )
+
+      return parentVal
+    }
+    return mergeDataOrFn(parentVal, childVal)
+  }
+
+  return mergeDataOrFn(parentVal, childVal, vm)
+}
+
+```
+
+讲一下以Provide的视角看是个什么流程，starts的provide是mergedInstanceDataFn他不停的给当前组件整理父组件子组件的数据，然后交给最上面的`provideOption.call(vm)`传入当前组件去回调，就已经提供给了当前组件中。
+
+# on/emit
+
+`$on`和`$emit`就比较简单了，看源码
+
+```js
+// $on 的实现逻辑
+Vue.prototype.$on = function (event: string | Array<string>, fn: Function): Component {
+    const vm: Component = this
+    if (Array.isArray(event)) {
+      for (let i = 0, l = event.length; i < l; i++) {
+        vm.$on(event[i], fn)
+      }
+    } else {
+      (vm._events[event] || (vm._events[event] = [])).push(fn)
+    }
+    return vm
+  }
+
+// $emit 的实现逻辑
+Vue.prototype.$emit = function (event: string): Component {
+    const vm: Component = this
+    let cbs = vm._events[event]
+    if (cbs) {
+      cbs = cbs.length > 1 ? toArray(cbs) : cbs
+      const args = toArray(arguments, 1)
+      const info = `event handler for "${event}"`
+      for (let i = 0, l = cbs.length; i < l; i++) {
+        invokeWithErrorHandling(cbs[i], vm, args, vm, info)
+      }
+    }
+    return vm
+  }
+
+// invokeWithErrorHandling 的实现逻辑
+export function invokeWithErrorHandling (
+  handler: Function,
+  context: any,
+  args: null | any[],
+  vm: any,
+  info: string
+) {
+  let res
+  try {
+    res = args ? handler.apply(context, args) : handler.call(context)
+    if (res && !res._isVue && isPromise(res) && !(res as any)._handled) {
+      res.catch(e => handleError(e, vm, info + ` (Promise/async)`))
+      // issue #9511
+      // avoid catch triggering multiple times when nested calls
+      ;(res as any)._handled = true
+    }
+  } catch (e) {
+    handleError(e, vm, info)
+  }
+  return res
+}
+
+```
+
+`$on`用来收集所有的事件依赖，他会将传入的参数`event`和`fn`作为key和value的形式存到`vm._events`这个事件集合里，就像这样`vm._events[event]=[fn]`
+
+`$emit`是用来触发事件的，他会根据传入的`event`在`vm_events`中找到对应的事件并执行`invokeWithErrorHandling(cbs[i], vm, args, vm, info)`
+
+`invokeWithErrorHandling`就一个，`apply`或者`call`然后去执行。
+
+# 总结
+
+学源码确实是一个很枯燥的事情，但是其实挺锻炼逻辑能力和写代码能力的，就感觉每次看完一个框架的源码都是对自己能力的一个大提升，推荐一个渐进顺序vue源码=>react源码=>node交互层源码和一个长期一些我们常用包源码比如p-limit,axios,ajax等之类的。有问题可以+[联系方式](https://juejin.cn/pin/7172471008291455013)我们一起交流，一起卷，老生常谈一下，不是为了面试去学习，希望大家保持一颗学习去心，和写代码的热情。

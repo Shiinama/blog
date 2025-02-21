@@ -1,11 +1,18 @@
 ---
-title: 1. 如何花钱
-description: 我该怎么花很多钱
+title: 2. 新组件库实战-基建思路
+description: 新组件库实战-基建思路
 published: true
 toc:
   visible: true
-date: 2024-12-25
+date: 2023-01-20
 ---
+# 新组件库实战-基建思路
+
+这篇文章是关于新组件库实战的基建思路，包括工程化现状吐槽，技术选型如仓库模式选 monorepo、框架语言用 Vue3 和 typescript 等，还介绍了各方面支持、代码限制、工作流、打包工具、测试库和文档站点等，阐述了组件库整体思路如流程和分支部分，最后提到组件库招人，旨在提升水平，为爱发电。
+
+关联问题: Vue3为何被选用？ pnpm有何不足？ 测试库如何选择？
+
+AI智能总结首次生成速度较慢, 请耐心等待
 
 # 工程化闲谈
 
@@ -77,7 +84,7 @@ workflow工作流：前期`基于功能分支`（平常应该是大伙工作中�
 
 `turborepo` 是 `vercel` 针对 `monorepo` 拓扑依赖关系的并发构建工具。
 
-`Turborepo`：[vercel / turborepo](https://github.com/vercel/turborepo)
+`Turborepo`：[vercel / turborepo](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo "https://github.com/vercel/turborepo")
 
 就是 `turbo` 这个工具是 `go` 编写的，因为收集依赖关系进行 `io` 还有识别文件 `hash` 保存 `cache` 这些用 `go` 会更快（编译并发型语言的优势惹）。
 
@@ -121,7 +128,7 @@ workflow工作流：前期`基于功能分支`（平常应该是大伙工作中�
 
 ## 流程：
 
-`评估功能与影响 `-> `脚手架生成组件和docs文档` -> `开发组件` -> `play广场调试单个部分` -> `vitest单测` -> `写文档` -> `打组件库包和单包` -> `提PR 通知引用你组件的人`-> `代码review or pk` -> `合并代码更变版本` -> `发布文档站点、单组件、组件库`
+`评估功能与影响` \-> `脚手架生成组件和docs文档` -> `开发组件` -> `play广场调试单个部分` -> `vitest单测` -> `写文档` -> `打组件库包和单包` -> `提PR 通知引用你组件的人`\-> `代码review or pk` -> `合并代码更变版本` -> `发布文档站点、单组件、组件库`
 
 ## 分支部分:
 

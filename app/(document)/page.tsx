@@ -1,15 +1,18 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 
-import { blog, business, easyAiTechnology, reactSourceCode, seo, timeline } from '@/.velite'
+//在此引用需要导入的content/目录下的分类
+import { blog, business, easyAiTechnology, reactSourceCode, seo, timeline,independentDevelopment,vue, sdk,fontEnd,interview,flutter} from '@/.velite'
 import Navbar from '@/components/navbar'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
 
 export const metadata = {
   title: 'Documentation',
   description: 'Manage and view all documentation'
 }
 
+//在此添加 titile 引用  collections: { blog, easyAiTechnology, timeline, seo, reactSourceCode, business },
 export default async function ContentPage() {
   const t = await getTranslations('article')
   const contentTypes = [
@@ -18,9 +21,15 @@ export default async function ContentPage() {
     { title: t('seo'), items: seo },
     { title: t('faqAndPath'), items: easyAiTechnology },
     { title: t('reactSourceCode'), items: reactSourceCode },
-    { title: t('business'), items: business }
+    { title: t('business'), items: business },
+    { title: t('independentDevelopment'), items: independentDevelopment },
+    { title: t('vue'), items: vue },
+    { title: t('sdk'), items: sdk },
+    { title: t('fontEnd'), items: fontEnd },
+    { title: t('interview'), items: interview },
+    { title: t('flutter'), items: flutter }
   ]
-
+  console.log('independentDevelopment:', independentDevelopment)
   return (
     <div className="flex-grow">
       <Navbar />

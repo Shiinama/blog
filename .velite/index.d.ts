@@ -21,3 +21,21 @@ export declare const reactSourceCode: ReactSourceCode[]
 
 export type Business = Collections['business']['schema']['_output']
 export declare const business: Business[]
+
+export type IndependentDevelopment = Collections['independentDevelopment']['schema']['_output']
+export declare const independentDevelopment: IndependentDevelopment[]
+
+export type vue = Collections['vue']['schema']['_output']
+export declare const vue: vue[]
+
+export type sdk = Collections['sdk']['schema']['_output']
+export declare const sdk: sdk[]
+
+export type fontend = Collections['fontEnd']['schema']['_output']
+export declare const fontEnd: fontend[]
+
+export type interview = Collections['interview']['schema']['_output']
+export declare const interview: interview[]
+
+export type flutter = Collections['flutter']['schema']['_output']
+export declare const flutter: flutter[]
