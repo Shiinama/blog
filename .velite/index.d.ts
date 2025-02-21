@@ -36,3 +36,6 @@ export declare const fontEnd: fontend[]
 
 export type interview = Collections['interview']['schema']['_output']
 export declare const interview: interview[]
+
+export type flutter = Collections['flutter']['schema']['_output']
+export declare const flutter: flutter[]

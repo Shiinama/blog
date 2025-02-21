@@ -1,0 +1,464 @@
+---
+title: 1.flutter 包管理 资源管理
+description: flutter 包管理 资源管理
+published: true
+toc:
+  visible: true
+date: 2024-2-19
+---
+# 包管理 资源管理
+
+# 包管理
+
+软件开发中，很多时候一些公关的库或者SDK会被很多项目用到，因此将这些代码单独抽到一个独立的模块，
+
+然后哪个项目使用到集成的模块，大大提高开发的效率。
+
+Java中的jar包 Android中的aar包 Web开发中的npm包 为方便简述统一为package 包
+
+一个APP在实际开发中往往会依赖很多包，而这些包通常都有交叉依赖关系、版本依赖等，如果由开发者手动来管理应用中的依赖包将会非常麻烦。
+
+因此，各种开发生态或编程语言官方通常都会提供一些包管理工具，比如在Android提供了Gradle来管理依赖，iOS用Cocoapods或Carthage来管理依赖，Node中通过npm等。
+
+**而在Flutter开发中也有自己的包管理工具。本节我们主要介绍一下flutter如何使用配置文件`pubspec.yaml`（位于项目根目录）来管理第三方依赖包。**
+
+YAML 是一种文件格式 xml和json与他相比 可能比较容易解析？？？
+
+YAML常用于配置文件 Flutter将YAML作为配置文件
+
+**Flutter默认配置文件为 pubspec.yaml**
+
+```yaml
+#如果修改了name 则所有的dart文件中引用本地文件的包名都必须要修改
+name: flutter_app
+description: A new Flutter application.
+
+# The following line prevents the package from being accidentally published to
+# pub.dev using `pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+    
+  #添加依赖packages ^表示适配当前和大版本一致的版本 ~表示适配和当前小版本一致的版本
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+    #启用国际化
+    flutter_localizations：
+        sdk: flutter
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+    #是否使用Material_desgin设计方式 
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+    #添加资源 不单单是图片 images是和整个pubspec.yaml配置文件同级的目录 如果不同级 需要添加.. 
+  # assets:
+  #   - images/a_dot_burr.jpeg
+  #   - images/a_dot_ham.jpeg
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/assets-and-images/#resolution-aware.
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/assets-and-images/#from-packages
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  #字体设置
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/custom-fonts/#from-packages
+```
+
+下面一一阐述各字段的意义
+
+`name`：应用或包名称。
+
+`description`：应用或包名的描述与简介
+
+`version`：应用的版本号
+
+`dependencies`：应用包或者依赖其他包或插件
+
+`dev_dependencies`：开发依赖环境的工具包(而不是Flutter应用本身的依赖包)
+
+`environment`：FlutterSDK的版本号
+
+`flutter`：flutter的相关配置选项 是否使用Material-Desgin 是否使用图片资源库 是否使用字体
+
+## Pub仓库
+
+Pub (https://pub.dev/) 是Google官方的Dart packages仓库 类似于Node的npm仓库 android中的jcenter。
+
+https://pub.flutter-io.cn/ 中文镜像站点
+
+我们可以在pub查找到我们想要的包和插件 可以向pub发送我们的包和插件。
+
+查找依赖包的网站 https://search.maven.org/ https://mvnrepository.com/
+
+## **示例添加一个随机显示字符串的Widget**
+
+ 
+
+![image.png](https://ik.imagekit.io/leiakito/in-five-months-4k/Flutter/Untitled.png?updatedAt=1739986126304)
+
+图2-5
+
+1.我们看到english_words 最新版本是v3.1.3 并且支持Flutter
+
+将版本添加到dependencies中
+
+```
+dev_dependencies:
+  english_words: ^3.1.5
+```
+
+2.单击pub get
+
+这会将依赖包安装到您的项目。我们可以在控制台中看到以下内容：
+
+```
+flutter packages get
+Running "flutter packages get" in flutter_in_action...
+Process finished with exit code 0
+```
+
+我们也可以在控制台，定位到当前工程目录，然后手动运行`flutter packages get` 命令来下载依赖包。
+
+另外，需要注意`dependencies`和`dev_dependencies`的区别，**前者的依赖包将作为APP的源码的一部分参与编译**，**生成最终的安装包。**
+
+**而后者的依赖包只是作为开发阶段的一些工具包，主要是用于帮助我们提高开发、测试效率，比如flutter的自动化测试包等。**
+
+3.引入english_words包。
+
+```
+import 'package:english_words/english_words.dart';
+```
+
+在输入时 Android studio 会自动提供相关库的导入建议 导入后该行代码将会显示为灰色，表示导入的库尚未使用。
+
+1. 
+
+```
+ final worldPair = new WordPair.random();
+```
+
+在其Build方法中调用 放入到_HomePage.uild中
+
+$.worldPair 将其调用
+
+```dart
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => new _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  Widget build(BuildContext context) {
+    //单词是在build方法中撰写 所以每次热更新 都会重新生成 每次热更新 build都会执行
+    final worldPair = new WordPair.random();
+    // TODO: implement build
+    return new Scaffold(
+      appBar: new AppBar(
+        title: Text('包管理三方插件导入与应用'),
+      ),
+      body: new Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,// $worldPair 意味引用对象在此位置
+          children: [Text('测试随机英文生成方式 热更新实现随机生成'), Text('$worldPair')],
+        ),
+      ),
+    );
+  }
+}
+```
+
+5.如果应用程序正在运行，请使用热重载按钮（⚡️图标） 更新正在运行的应用程序。
+
+每次单击热重载或保存项目时，都会在正在运行的应用程序中随机选择不同的单词对。
+
+这是因为单词对是在 `build` 方法内部生成的。
+
+每次热更新时，`build`方法都会被执行
+
+![image.png](https://ik.imagekit.io/leiakito/in-five-months-4k/Flutter/Untitled%201.png?updatedAt=1739986126227)
+
+## 其他依赖方式
+
+上述所依赖的方式为Pub仓库 我们还可以依赖本地包和Git仓库
+
+**依赖本地包**
+
+如果我们在本地开发一个包 名为pkg1,我们可以通过下面方式依赖
+
+```
+dependencies:
+    pkg1:
+        path: ../../code/pkg1
+```
+
+路径可以是相对的，也可以是绝对的。
+
+**依赖Git：**
+
+你也可以依赖存储在Git仓库中的包。如果软件包位于仓库的根目录中，请使用以下语法
+
+```
+dependencies:
+  pkg1:
+    git:
+      url: git://github.com/xxx/pkg1.git
+```
+
+上面假定包位于Git存储库的根目录中。如果不是这种情况，可以使用path参数指定相对位置，例如：
+
+```
+dependencies:
+  package1:
+    git:
+      url: git://github.com/flutter/packages.git
+      path: packages/package1
+```
+
+# 资源管理
+
+Flutter APP安装包中包含代码和assets 资源两部分。**Assets是会打包到程序安装包中的，可以在运行时访问。**
+
+常见的assets包含静态数据 列如JSON文件 ，配置文件 图标和图片 JPEG WebP GIF 动画 WebP/GIF
+
+,PNG ,BMP 和WBMP 等 。
+
+## 指定assets
+
+和包管理一样 Flutter也是用pubspec.yaml 文件来管理应用程序所需要的资源
+
+```
+flutter:
+   assets:
+   - images/sky.jpg
+   - images/
+```
+
+assets指定应包含在应用程序中的资源文件
+
+- images/ 表示images资源下的所有文件
+
+每个assets都应该通过相对于的pubspec.yaml文件所在的文件系统路径来标识自身路径。
+
+**assets的声明无关紧要，assets的实际目录可以是任何文件夹**
+
+**在构建期间，Flutter将asset放置到称为 *asset bundle* 的特殊存档中，应用程序可以在运行时读取它们（但不能修改）**
+
+## Asset变体(variant)
+
+构建过程中支持asset变体的概念 不同版本的asset可能会在不同的上下文中 在pubspec.yaml的assets部分中指定
+
+asset路径时们，构建过程中 会在相邻子目录中查找具体的有相同名称的任何文件，
+
+这些文件随后会与指定的asset一起被包含在asset bundle中，
+
+```
+…/pubspec.yaml
+…/graphics/my_icon.png
+…/graphics/background.png
+…/graphics/dark/background.png
+…etc.
+```
+
+然后`pubspec.yaml`文件中只需包含:
+
+```
+flutter:
+  assets:
+    - graphics/background.png
+```
+
+那么这两个`graphics/background.png`和`graphics/dark/background.png` 都将包含在您的asset bundle中。前者被认为是*main asset* （主资源），后者被认为是一种变体（variant）。
+
+在选择匹配当前设备分辨率的图片时，Flutter会使用到asset变体（见下文），将来，Flutter可能会将这种机制扩展到本地化、阅读提示等方面。
+
+## 加载assets
+
+您的应用可以通过[`AssetBundle`](https://docs.flutter.io/flutter/services/AssetBundle-class.html)对象访问其asset 。有两种主要方法允许从Asset bundle中加载字符串或图片（二进制）文件。
+
+## 加载文本assets
+
+- 通过[`rootBundle`](https://docs.flutter.io/flutter/services/rootBundle.html) 对象加载：每个Flutter应用程序都有一个[`rootBundle`](https://docs.flutter.io/flutter/services/rootBundle.html)对象， 通过它可以轻松访问主资源包，直接使用`package:flutter/services.dart`中全局静态的`rootBundle`对象来加载asset即可。
+- 通过 [`DefaultAssetBundle`](https://docs.flutter.io/flutter/widgets/DefaultAssetBundle-class.html) 加载：建议使用 [`DefaultAssetBundle`](https://docs.flutter.io/flutter/widgets/DefaultAssetBundle-class.html) 来获取当前BuildContext的AssetBundle。 这种方法不是使用应用程序构建的默认asset bundle，而是使父级widget在运行时动态替换的不同的AssetBundle，这对于本地化或测试场景很有用。
+
+通常，可以使用`DefaultAssetBundle.of()`在应用运行时来间接加载asset（例如JSON文件），而在widget上下文之外，或其它`AssetBundle`句柄不可用时，可以使用`rootBundle`直接加载这些asset，例如：
+
+```
+import 'dart:async' show Future;
+import 'package:flutter/services.dart' show rootBundle;
+
+Future<String> loadAsset() async {
+  return await rootBundle.loadString('assets/config.json');
+}
+```
+
+## 加载图片
+
+类似于原生开发 Flutter也可以为当前设备加载适合其分辨率的图像
+
+## 声明分辨率相关的图片 assets
+
+[`AssetImage`](https://docs.flutter.io/flutter/painting/AssetImage-class.html) 可以将asset的请求逻辑映射到最接近当前设备像素比例（dpi）的asset。为了使这种映射起作用，必须根据特定的目录结构来保存asset：
+
+- …/image.png
+- …/**M**x/image.png
+- …/**N**x/image.png
+- …etc.
+
+其中M和N是数字标识符，对应于其中包含的图像的分辨率，也就是说，它们指定不同设备像素比例的图片。
+
+主资源默认对应于1.0倍的分辨率图片。看一个例子：
+
+- …/my_icon.png
+- …/2.0x/my_icon.png
+- …/3.0x/my_icon.png
+
+在设备像素比率为1.8的设备上，`.../2.0x/my_icon.png` 将被选择。对于2.7的设备像素比率，`.../3.0x/my_icon.png`将被选择。
+
+如果未在`Image` widget上指定渲染图像的宽度和高度，那么`Image` widget将占用与主资源相同的屏幕空间大小。 也就是说，如果`.../my_icon.png`是72px乘72px，那么`.../3.0x/my_icon.png`应该是216px乘216px; 但如果未指定宽度和高度，它们都将渲染为72像素×72像素（以逻辑像素为单位）。
+
+`pubspec.yaml`中asset部分中的每一项都应与实际文件相对应，但主资源项除外。当主资源缺少某个资源时，会按分辨率从低到高的顺序去选择 ，也就是说1x中没有的话会在2x中找，2x中还没有的话就在3x中找。
+
+## 加载图片
+
+要加载图片 可以使用AssetImage类，列如 我们可以从上面的asset声明中加载背景图片
+
+```dart
+Widget build(BuildContext context) {
+  return new DecoratedBox(
+    decoration: new BoxDecoration(
+      image: new DecorationImage(
+        image: new AssetImage('graphics/background.png'),
+      ),
+    ),
+  );
+}
+```
+
+注意 AssetImage并非一个Widget 它实际上是一个ImageProvider ，有些时候你可能期望自接得到一个显示的Widget，那么你可以使用Image.asset()方法如:
+
+```dart
+Widget build(BuildContext context) {
+  return Image.asset('images/sky.jpg');
+}
+```
+
+使用默认的asset bundle加载资源时 内容会自动处理分辨率等，
+
+这些处理对于我来说是无感知的 如果使用一些更低级别的类，如 [`ImageStream`](https://docs.flutter.io/flutter/painting/ImageStream-class.html)或 [`ImageCache`](https://docs.flutter.io/flutter/painting/ImageCache-class.html) 时你会注意到有与缩放相关的参数)
+
+## 使用依赖包中的资源图片
+
+要加载依赖包中的图像 必需给**AssetImage**提供**package**参数
+
+列如 假设你得项目中有这么一个名为’**my_icons**包’ 它具有以下结构:
+
+- …/pubspec.yaml
+- …/icons/heart.png
+- …/icons/1.5x/heart.png
+- …/icons/2.0x/heart.png
+- …etc.
+- 然后加载图片 使用
+
+```
+new AssetImage('icons/heart.png', package: 'my_icons')
+```
+
+或
+
+```
+new Image.asset('icons/heart.png', package: 'my_icons')
+```
+
+注意：包在使用本身资源的时候也应该加上**package**参数来获取
+
+## 打包包中的 assets
+
+如果在`pubspec.yaml`文件中声明了期望的资源，它将会打包到相应的package中。特别是，包本身使用的资源必须在`pubspec.yaml`中指定。
+
+包也可以选择在其`lib/`文件夹中包含未在其`pubspec.yaml`文件中声明的资源。在这种情况下，对于要打包的图片，应用程序必须在`pubspec.yaml`中指定包含哪些图像。 例如，一个名为“fancy_backgrounds”的包，可能包含以下文件：
+
+- …/lib/backgrounds/background1.png
+- …/lib/backgrounds/background2.png
+- …/lib/backgrounds/background3.png
+
+要包含第一张图像，必须在`pubspec.yaml`的assets部分中声明它：
+
+```
+flutter:
+  assets:
+    - packages/fancy_backgrounds/backgrounds/background1.png
+```
+
+`lib/`是隐含的，所以它不应该包含在资产路径中。
+
+## 更新启动页
+
+图2-10
+
+在Flutter框架加载时，Flutter会使用本地平台机制绘制启动页。此启动页将持续到Flutter渲染应用程序的第一帧时。
+
+> 注意: 这意味着如果您不在应用程序的main()方法中调用runApp 函数 （或者更具体地说，如果您不调用window.render去响应window.onDrawFrame）的话， 启动屏幕将永远持续显示。
+> 
+
+## Android
+
+要将启动屏幕（splash screen）添加到您的Flutter应用程序， 请导航至`.../android/app/src/main`。在`res/drawable/launch_background.xml`，通过自定义drawable来实现自定义启动界面（你也可以直接换一张图片）。
+
+```
+  <item>        <bitmap            android:gravity="center"            android:src="@mipmap/sky" />    </item>
+```
+
+launch_background.xml` src设置为图片位置

@@ -42,6 +42,7 @@
     "vue":"Vue",
     "sdk":"Sdk",
     "fontEnd":"fontEnd",
-    "interview":"interview"
+    "interview":"interview",
+    "flutter":"flutter"
   }
 }

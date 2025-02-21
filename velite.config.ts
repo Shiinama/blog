@@ -234,6 +234,26 @@ export const interview = defineCollection({
     })
     .transform(computedFields)
 })
+//flutter
+export const flutter = defineCollection({
+  name: 'flutter',
+  pattern: 'flutter/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
 
 //默认配置文件
 export default defineConfig({
@@ -257,7 +277,8 @@ export default defineConfig({
     vue, 
     sdk,
     fontEnd,
-    interview
+    interview,
+    flutter
   },
   mdx: {
     rehypePlugins: [
