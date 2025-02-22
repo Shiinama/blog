@@ -1,5 +1,5 @@
 ---
-title: 5.React Fiber对象的创建与更新
+title: 5. React Fiber架构：React Fiber对象的创建、更新、提交
 description: 深入探讨React Fiber架构中Fiber对象的创建过程、初始化提交以及Fiber树的更新机制,揭示React内部工作原理。
 published: true
 toc:
@@ -7,9 +7,9 @@ toc:
 date: 2023-03-09
 ---
 
-# React Fiber对象的创建与更新机制
+# React Fiber架构：React Fiber对象的创建、更新、提交
 
-在上一篇文章中，我们详细讨论了Fiber的整体结构和链表。本文将深入探讨Fiber对象的创建过程、初始化提交以及Fiber树的更新机制。本节`react`版本18.3（新写的文章就不用看老版本了一样的）。
+在上一篇文章中，我们详细讨论了Fiber的整体结构和链表。本文将深入探讨Fiber对象的创建过程、初始化提交以及Fiber树的更新机制。
 
 ## 1. 创建Fiber对象
 
@@ -28,9 +28,21 @@ function createFiberRoot(containerInfo, tag, hydrate, hydrationCallbacks) {
   initializeUpdateQueue(uninitializedFiber)
   return root
 }
+
+function createHostRootFiber(tag) {
+  let mode
+  if (tag === ConcurrentRoot) {
+    mode = ConcurrentMode | BlockingMode | StrictMode
+  } else if (tag === BlockingRoot) {
+    mode = BlockingMode | StrictMode
+  } else {
+    mode = NoMode
+  }
+  return createFiber(HostRoot, null, null, mode)
+}
 ```
 
-这个函数创建了FiberRoot和RootFiber。FiberRoot是整个应用的起点，而RootFiber则是组件树的根节点。
+这个过程创建了FiberRoot和RootFiber。FiberRoot是整个应用的起点，而RootFiber则是组件树的根节点。
 
 ### 1.2 创建子Fiber节点
 
@@ -39,8 +51,10 @@ function createFiberRoot(containerInfo, tag, hydrate, hydrationCallbacks) {
 ```javascript
 function reconcileChildren(current, workInProgress, nextChildren, renderLanes) {
   if (current === null) {
+    // 如果是首次渲染，使用 mountChildFibers
     workInProgress.child = mountChildFibers(workInProgress, null, nextChildren, renderLanes)
   } else {
+    // 如果是更新，使用 reconcileChildFibers
     workInProgress.child = reconcileChildFibers(workInProgress, current.child, nextChildren, renderLanes)
   }
 }
@@ -55,15 +69,34 @@ function reconcileChildren(current, workInProgress, nextChildren, renderLanes) {
 ```javascript
 function createFiberFromElement(element, mode, lanes) {
   let owner = null
-  const type = element.type // 获取元素类型（如 'div', 自定义组件等）
-  const key = element.key // 获取元素的 key
-  const pendingProps = element.props // 获取元素的 props
+  const type = element.type
+  const key = element.key
+  const pendingProps = element.props
   const fiber = createFiberFromTypeAndProps(type, key, pendingProps, owner, mode, lanes)
+  return fiber
+}
+
+function createFiberFromTypeAndProps(type, key, pendingProps, owner, mode, lanes) {
+  let fiberTag = IndeterminateComponent
+  // 根据组件类型确定 fiberTag
+  if (typeof type === 'function') {
+    if (shouldConstruct(type)) {
+      fiberTag = ClassComponent
+    }
+  } else if (typeof type === 'string') {
+    fiberTag = HostComponent
+  }
+
+  const fiber = createFiber(fiberTag, pendingProps, key, mode)
+  fiber.elementType = type
+  fiber.type = type
+  fiber.lanes = lanes
+
   return fiber
 }
 ```
 
-这个函数根据React元素的类型、key和props创建对应的Fiber节点。
+这个过程根据React元素的类型、key和props创建对应的Fiber节点。
 
 ## 2. 初始化提交
 
@@ -79,89 +112,594 @@ function commitRoot(root) {
   runWithPriority(ImmediatePriority, commitRootImpl.bind(null, root, renderPriorityLevel))
   return null
 }
+
+function commitRootImpl(root, renderPriorityLevel) {
+  do {
+    flushPassiveEffects()
+  } while (rootWithPendingPassiveEffects !== null)
+
+  flushRenderPhaseStrictModeWarningsInDEV()
+
+  if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
+    throw new Error('Should not already be working.')
+  }
+
+  const finishedWork = root.finishedWork
+  const lanes = root.finishedLanes
+
+  if (finishedWork === null) {
+    return null
+  }
+  root.finishedWork = null
+  root.finishedLanes = NoLanes
+
+  if (finishedWork === root.current) {
+    throw new Error(
+      'Cannot commit the same tree as before. This error is likely caused by ' + 'a bug in React. Please file an issue.'
+    )
+  }
+
+  // 提交阶段开始
+  root.callbackNode = null
+  root.callbackPriority = NoLane
+
+  // 更新 remainingLanes 和 pendingLanes
+  let remainingLanes = mergeLanes(finishedWork.lanes, finishedWork.childLanes)
+  markRootFinished(root, remainingLanes)
+
+  if (root === workInProgressRoot) {
+    workInProgressRoot = null
+    workInProgress = null
+    workInProgressRootRenderLanes = NoLanes
+  }
+
+  // 获取副作用列表
+  let firstEffect
+  if (finishedWork.flags > PerformedWork) {
+    if (finishedWork.lastEffect !== null) {
+      finishedWork.lastEffect.nextEffect = finishedWork
+      firstEffect = finishedWork.firstEffect
+    } else {
+      firstEffect = finishedWork
+    }
+  } else {
+    firstEffect = finishedWork.firstEffect
+  }
+
+  // 开始提交三个子阶段
+  // ...
+}
 ```
 
-这里，React将提交过程的优先级设置为最高(`ImmediatePriority`)，确保提交过程不会被打断。
+这里，React将提交过程的优先级设置为最高(`ImmediatePriority`)，确保提交过程不会被打断。同时，它还处理了一些准备工作，如刷新被动效果和获取副作用列表。
+
+而使用最高优先级执行提交过程，确保更新能够尽快应用到DOM，我理解其实有几个原因：
+
+1. 用户体验：提交阶段直接影响到用户可见的UI变化。通过给予最高优先级，React确保这些变化能够尽快呈现给用户，提高应用的响应性。
+2. 一致性保证：提交阶段需要同步执行以保证UI的一致性。如果这个过程被中断，可能会导致UI处于不一致的状态。
 
 ### 2.2 提交阶段
 
-提交阶段分为三个子阶段：Before mutation、Mutation和Layout。
+提交阶段分为三个子阶段：Before mutation、Mutation和Layout,简化后代码如下
 
 ```javascript
 function commitRootImpl(root, renderPriorityLevel) {
-  // Before mutation阶段
-  commitBeforeMutationEffects(root, renderPriorityLevel)
+  // ...
 
-  // Mutation阶段
+  // 第一阶段：Before mutation
+  commitBeforeMutationEffects()
+
+  // 第二阶段：Mutation
   commitMutationEffects(root, renderPriorityLevel)
 
-  // Layout阶段
+  // 切换当前树
   root.current = finishedWork
+
+  // 第三阶段：Layout
   commitLayoutEffects(root, lanes)
 
-  requestPaint()
-  return null
+  // ...
 }
 ```
 
 每个阶段都有特定的任务：
 
-1. Before mutation阶段：处理DOM操作前的准备工作，如调用getSnapshotBeforeUpdate生命周期方法。
-2. Mutation阶段：执行实际的DOM操作。
-3. Layout阶段：处理DOM操作后的工作，如调用componentDidUpdate生命周期方法。
+1. Before mutation阶段：
+   - 处理DOM操作前的准备工作
+   - 调度useEffect
 
-## 3. Fiber树的更新
+```javascript
+function commitBeforeMutationEffects() {
+  while (nextEffect !== null) {
+    const current = nextEffect.alternate
 
-当组件的状态发生变化时，React需要更新Fiber树并重新渲染。
+    if (!shouldFireAfterActiveInstanceBlur && focusedInstanceHandle !== null) {
+      // ...
+    }
+
+    const flags = nextEffect.flags
+    if ((flags & Snapshot) !== NoFlags) {
+      commitBeforeMutationEffectOnFiber(current, nextEffect)
+    }
+    if ((flags & Passive) !== NoFlags) {
+      if (!rootDoesHavePassiveEffects) {
+        rootDoesHavePassiveEffects = true
+        scheduleCallback(NormalSchedulerPriority, () => {
+          flushPassiveEffects()
+          return null
+        })
+      }
+    }
+    nextEffect = nextEffect.nextEffect
+  }
+}
+```
+
+2. Mutation阶段：
+   - 执行实际的DOM操作
+   - 调用生命周期方法
+   - 重置文本节点
+
+```javascript
+function commitMutationEffects(root: FiberRoot, renderPriorityLevel) {
+  while (nextEffect !== null) {
+    const flags = nextEffect.flags;
+
+    if (flags & ContentReset) {
+      commitResetTextContent(nextEffect);
+    }
+
+    if (flags & Ref) {
+      const current = nextEffect.alternate;
+      if (current !== null) {
+        commitDetachRef(current);
+      }
+    }
+
+    const primaryFlags = flags & (Placement | Update | Deletion | Hydrating);
+    switch (primaryFlags) {
+      case Placement: {
+        commitPlacement(nextEffect);
+        nextEffect.flags &= ~Placement;
+        break;
+      }
+      case PlacementAndUpdate: {
+        commitPlacement(nextEffect);
+        nextEffect.flags &= ~Placement;
+        const current = nextEffect.alternate;
+        commitWork(current, nextEffect);
+        break;
+      }
+      case Update: {
+        const current = nextEffect.alternate;
+        commitWork(current, nextEffect);
+        break;
+      }
+      case Deletion: {
+        commitDeletion(root, nextEffect, renderPriorityLevel);
+        break;
+      }
+    }
+
+    nextEffect = nextEffect.nextEffect;
+  }
+}
+```
+
+3. Layout阶段：
+   - 处理DOM操作后的工作
+   - 调用useLayoutEffect钩子
+   - 更新ref
+
+```javascript
+function commitLayoutEffects(root: FiberRoot, committedLanes: Lanes) {
+  while (nextEffect !== null) {
+    const flags = nextEffect.flags;
+
+    if (flags & (Update | Callback)) {
+      const current = nextEffect.alternate;
+      commitLayoutEffectOnFiber(root, current, nextEffect, committedLanes);
+    }
+
+    if (flags & Ref) {
+      commitAttachRef(nextEffect);
+    }
+
+    nextEffect = nextEffect.nextEffect;
+  }
+}
+```
+
+## 3. Fiber树的更新机制
+
+React的更新机制是其性能优化的核心。当组件状态发生变化时，React会创建一个新的Fiber树（称为workInProgress树），然后与当前的Fiber树进行对比，找出需要更新的部分。
 
 ### 3.1 调度更新
 
-当我们调用`setState`或使用Hooks时，React会创建一个更新并将其加入更新队列：
+当我们调用`setState`或使用`hooks`更新状态时，React会调度一次更新，这部分源码其实在第3章讲得很多了：
 
 ```javascript
-function enqueueUpdate(fiber, update) {
-  const updateQueue = fiber.updateQueue
-  const sharedQueue = updateQueue.shared
-  const pending = sharedQueue.pending
-  if (pending === null) {
-    update.next = update
+function scheduleUpdateOnFiber(fiber: Fiber, lane: Lane, eventTime: number) {
+  const root = markUpdateLaneFromFiberToRoot(fiber, lane);
+  if (root === null) {
+    return null;
+  }
+
+  // 标记根节点为已调度
+  markRootUpdated(root, lane, eventTime);
+
+  if (root === workInProgressRoot) {
+    // 如果我们正在处理这个根节点，可能需要调整优先级
+    if (
+      workInProgressRootExitStatus === RootSuspendedWithDelay ||
+      (workInProgressRootExitStatus === RootSuspended &&
+        includesOnlyRetries(workInProgressRootRenderLanes) &&
+        now() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+    ) {
+      // 中断当前渲染
+      prepareFreshStack(root, NoLanes);
+    } else {
+      // 继续当前渲染，合并新的更新
+      workInProgressRootRenderLanes = mergeLanes(
+        workInProgressRootRenderLanes,
+        lane,
+      );
+    }
+  }
+
+  ensureRootIsScheduled(root, eventTime);
+  if (
+    lane === SyncLane &&
+    executionContext === NoContext &&
+    (fiber.mode & ConcurrentMode) === NoMode
+  ) {
+    // 同步更新，立即执行
+    performSyncWorkOnRoot(root);
+  }
+
+  return root;
+}
+```
+
+### 3.2 构建workInProgress树
+
+在React的更新过程中，这个过程的核心是`createWorkInProgress`函数，它负责创建或重用Fiber节点来构建新的树结构。我们前面提到过，但我们现在深入看看这个设计：
+
+```javascript
+function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
+  let workInProgress = current.alternate;
+
+  if (workInProgress === null) {
+    // 如果alternate不存在，创建一个新的Fiber
+    workInProgress = createFiber(
+      current.tag,
+      pendingProps,
+      current.key,
+      current.mode,
+    );
+    workInProgress.elementType = current.elementType;
+    workInProgress.type = current.type;
+    workInProgress.stateNode = current.stateNode;
+
+    workInProgress.alternate = current;
+    current.alternate = workInProgress;
   } else {
-    update.next = pending.next
-    pending.next = update
+    // 如果alternate存在，重置workInProgress
+    workInProgress.pendingProps = pendingProps;
+    workInProgress.type = current.type;
+    workInProgress.flags = NoFlags;
+    workInProgress.nextEffect = null;
+    workInProgress.firstEffect = null;
+    workInProgress.lastEffect = null;
+    // ... 其他属性的重置
   }
-  sharedQueue.pending = update
+
+  // 复制一些不变的属性
+  workInProgress.childLanes = current.childLanes;
+  workInProgress.lanes = current.lanes;
+  workInProgress.child = current.child;
+  workInProgress.memoizedProps = current.memoizedProps;
+  workInProgress.memoizedState = current.memoizedState;
+  workInProgress.updateQueue = current.updateQueue;
+
+  // 处理dependencies
+  const currentDependencies = current.dependencies;
+  workInProgress.dependencies =
+    currentDependencies === null
+      ? null
+      : {
+          lanes: currentDependencies.lanes,
+          firstContext: currentDependencies.firstContext,
+        };
+
+  // 复制其他属性
+  workInProgress.sibling = current.sibling;
+  workInProgress.index = current.index;
+  workInProgress.ref = current.ref;
+
+  return workInProgress;
 }
 ```
 
-### 3.2 开始工作循环
+这个函数的主要目的是创建或重用一个Fiber节点，作为当前更新过程中的工作单元：
 
-React使用工作循环来处理更新：
+1. **Fiber节点复用**：
+
+   - React使用`alternate`属性来实现Fiber节点的复用。每个Fiber节点都有一个`alternate`，指向其在另一棵树中的对应节点。
+   - 如果`alternate`存在，React会重用这个节点，而不是创建新的节点。这大大减少了内存分配和垃圾回收的开销。
+
+2. **选择性重置**：
+
+   - 当重用一个Fiber节点时，React只重置那些可能发生变化的属性（如`pendingProps`、`flags`、`effects`等）。
+   - 不变的属性（如`childLanes`、`lanes`、`child`等）直接从当前Fiber复制，避免不必要的操作。
+
+3. **浅拷贝**：
+
+   - 对于大多数属性，React使用浅拷贝。这意味着引用类型的属性（如`updateQueue`、`memoizedState`等）只复制引用，而不是深度克隆（react几乎都是浅拷贝）。
+   - 这种策略在大多数情况下是高效的，但也要求开发者在操作这些属性时要小心，避免意外修改。
+
+### 3.3 Diff算法
+
+React的Diff算法是其高效更新的核心，用于比较两棵虚拟DOM树的差异，以最小化实际DOM操作。React的Diff算法基于三个主要假设：
+
+1. 不同类型的元素会产生不同的树结构。
+2. 开发者可以通过key属性来暗示哪些子元素在不同的渲染中可能是稳定的。
+3. 只对同级元素进行比较。
+
+#### 3.3.1 Diff算法的入口
+
+Diff算法的入口是`reconcileChildFibers`函数，几乎所有的更新和渲染过程都会用到这个函数：
 
 ```javascript
-function workLoopConcurrent() {
-  while (workInProgress !== null && !shouldYield()) {
-    performUnitOfWork(workInProgress)
-  }
-}
-```
-
-这个循环会不断地处理工作单元，直到完成所有工作或需要让出控制权。
-
-### 3.3 对比和更新
-
-在更新过程中，React会对比新旧Fiber树，找出需要更新的部分：
-
-```javascript
-function reconcileChildFibers(returnFiber, currentFirstChild, newChild, lanes) {
+function reconcileChildFibers(
+  returnFiber: Fiber,
+  currentFirstChild: Fiber | null,
+  newChild: any,
+  lanes: Lanes
+): Fiber | null {
+  // 处理单个子元素
   if (typeof newChild === 'object' && newChild !== null) {
     switch (newChild.$$typeof) {
       case REACT_ELEMENT_TYPE:
-        return placeSingleChild(reconcileSingleElement(returnFiber, currentFirstChild, newChild, lanes))
-      // 处理其他类型...
+        return placeSingleChild(
+          reconcileSingleElement(
+            returnFiber,
+            currentFirstChild,
+            newChild,
+            lanes
+          )
+        );
+      // ... 其他类型的处理
     }
   }
-  // 处理文本节点和其他情况...
+
+  // 处理多个子元素
+  if (isArray(newChild)) {
+    return reconcileChildrenArray(
+      returnFiber,
+      currentFirstChild,
+      newChild,
+      lanes
+    );
+  }
+
+  // 处理文本节点
+  if (typeof newChild === 'string' || typeof newChild === 'number') {
+    return placeSingleChild(
+      reconcileSingleTextNode(
+        returnFiber,
+        currentFirstChild,
+        '' + newChild,
+        lanes
+      )
+    );
+  }
+
+  // 其他情况，删除所有现有子节点
+  return deleteRemainingChildren(returnFiber, currentFirstChild);
 }
 ```
 
-这个过程会创建、更新或删除Fiber节点，最终形成一个新的Fiber树。
+#### 3.3.2 单节点对比
+
+对于单个子元素，React使用`reconcileSingleElement`函数进行对比：
+
+```javascript
+function reconcileSingleElement(
+  returnFiber: Fiber,
+  currentFirstChild: Fiber | null,
+  element: ReactElement,
+  lanes: Lanes
+): Fiber {
+  const key = element.key;
+  let child = currentFirstChild;
+
+  while (child !== null) {
+    // 比较key
+    if (child.key === key) {
+      // 比较type
+      if (child.elementType === element.type) {
+        deleteRemainingChildren(returnFiber, child.sibling);
+        const existing = useFiber(child, element.props);
+        existing.ref = coerceRef(returnFiber, child, element);
+        existing.return = returnFiber;
+        return existing;
+      }
+      // key相同但type不同，删除所有旧的子节点
+      deleteRemainingChildren(returnFiber, child);
+      break;
+    } else {
+      deleteChild(returnFiber, child);
+    }
+    child = child.sibling;
+  }
+
+  // 创建新的Fiber节点
+  const created = createFiberFromElement(element, returnFiber.mode, lanes);
+  created.ref = coerceRef(returnFiber, currentFirstChild, element);
+  created.return = returnFiber;
+  return created;
+}
+```
+
+单节点对比的过程主要包括：
+
+1. 比较key和type
+2. 复用或创建新节点
+3. 删除不需要的旧节点
+
+#### 3.3.3 多节点对比
+
+对于多个子元素，React使用`reconcileChildrenArray`函数进行对比：
+
+```javascript
+function reconcileChildrenArray(
+  returnFiber: Fiber,
+  currentFirstChild: Fiber | null,
+  newChildren: Array<any>,
+  lanes: Lanes
+): Fiber | null {
+  let resultingFirstChild: Fiber | null = null;
+  let previousNewFiber: Fiber | null = null;
+
+  let oldFiber = currentFirstChild;
+  let lastPlacedIndex = 0;
+  let newIdx = 0;
+  let nextOldFiber = null;
+
+  // 第一次遍历：处理更新的节点
+  for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
+    if (oldFiber.index > newIdx) {
+      nextOldFiber = oldFiber;
+      oldFiber = null;
+    } else {
+      nextOldFiber = oldFiber.sibling;
+    }
+    const newFiber = updateSlot(
+      returnFiber,
+      oldFiber,
+      newChildren[newIdx],
+      lanes
+    );
+    if (newFiber === null) {
+      if (oldFiber === null) {
+        oldFiber = nextOldFiber;
+      }
+      break;
+    }
+    if (shouldTrackSideEffects) {
+      if (oldFiber && newFiber.alternate === null) {
+        deleteChild(returnFiber, oldFiber);
+      }
+    }
+    lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+    if (previousNewFiber === null) {
+      resultingFirstChild = newFiber;
+    } else {
+      previousNewFiber.sibling = newFiber;
+    }
+    previousNewFiber = newFiber;
+    oldFiber = nextOldFiber;
+  }
+
+  // 所有新子节点都已处理完毕
+  if (newIdx === newChildren.length) {
+    deleteRemainingChildren(returnFiber, oldFiber);
+    return resultingFirstChild;
+  }
+
+  // 所有旧子节点都已处理完毕，添加剩余的新节点
+  if (oldFiber === null) {
+    for (; newIdx < newChildren.length; newIdx++) {
+      const newFiber = createChild(returnFiber, newChildren[newIdx], lanes);
+      if (newFiber === null) {
+        continue;
+      }
+      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+      if (previousNewFiber === null) {
+        resultingFirstChild = newFiber;
+      } else {
+        previousNewFiber.sibling = newFiber;
+      }
+      previousNewFiber = newFiber;
+    }
+    return resultingFirstChild;
+  }
+
+  // 将剩余的旧节点添加到Map中，用于后续的查找
+  const existingChildren = mapRemainingChildren(returnFiber, oldFiber);
+
+  // 第二次遍历：处理剩余的新节点，尝试从Map中复用旧节点
+  for (; newIdx < newChildren.length; newIdx++) {
+    const newFiber = updateFromMap(
+      existingChildren,
+      returnFiber,
+      newIdx,
+      newChildren[newIdx],
+      lanes
+    );
+    if (newFiber !== null) {
+      if (shouldTrackSideEffects) {
+        if (newFiber.alternate !== null) {
+          existingChildren.delete(
+            newFiber.key === null ? newIdx : newFiber.key
+          );
+        }
+      }
+      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+      if (previousNewFiber === null) {
+        resultingFirstChild = newFiber;
+      } else {
+        previousNewFiber.sibling = newFiber;
+      }
+      previousNewFiber = newFiber;
+    }
+  }
+
+  // 删除Map中剩余的旧节点
+  if (shouldTrackSideEffects) {
+    existingChildren.forEach(child => deleteChild(returnFiber, child));
+  }
+
+  return resultingFirstChild;
+}
+```
+
+多节点对比的过程主要包括：
+
+1. 第一次遍历：尝试更新现有节点
+2. 处理新增节点
+3. 处理需要移动的节点
+4. 删除不再需要的旧节点
+
+#### 3.3.4 Diff算法的优化策略
+
+1. **两次遍历**：第一次处理可以直接更新的节点，第二次处理需要移动或新建的节点。
+2. **使用key进行优化**：通过key可以快速判断元素是否可以复用。
+3. **从两端向中间比较**：这种策略可以快速处理头尾的增删操作。
+4. **使用Map存储剩余节点**：提高查找效率。
+5. **就地复用**：尽可能地复用已有的Fiber节点。
+6. **批量处理**：将多个更新操作批量处理，减少渲染次数。
+
+通过这些优化策略，React的Diff算法能够在O(n)的时间复杂度内完成对比，大大提高了性能。理解Diff算法的工作原理对于优化React应用非常重要，例如：
+
+1. 合理使用`key`属性，特别是在列表渲染中，避免使用索引作为key。
+2. 尽量保持组件的稳定性，避免不必要的重新渲染。
+3. 合理拆分组件，避免大型组件导致的大范围Diff。
+
+### 3.4 完成更新
+
+一旦Diff完成，React会标记需要更新的Fiber节点，然后在commit阶段应用这些更新。这个过程与初始渲染时的commit阶段类似，但只会处理被标记为需要更新的节点。
+
+## 总结
+
+React Fiber架构通过可中断的渲染过程和精细的更新控制，大大提高了React应用的性能和响应性。通过创建、更新和提交Fiber对象，React能够灵活地管理组件树，实现高效的状态更新和DOM操作。理解这些内部机制对于深入掌握React和优化React应用至关重要。
+
+在实际开发中，我们可以利用这些知识来优化我们的React应用：
+
+1. 合理使用`key`属性，帮助React更好地识别列表中的元素变化。
+2. 使用`React.memo`、`useMemo`和`useCallback`来避免不必要的重渲染。
+3. 理解并正确使用生命周期方法和Hooks，避免在不恰当的时机进行昂贵的操作。
+4. 对于大型列表，考虑使用虚拟化技术（如`react-window`）来减少渲染的节点数量。
+
+通过深入理解React Fiber的工作原理，我们可以编写出更高效、更可维护的React应用。

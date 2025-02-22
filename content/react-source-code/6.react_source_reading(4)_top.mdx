@@ -1,0 +1,219 @@
+---
+title: 6. 函数式组件-构建细节以及更新（上）
+description: React源码阅读(4)-支线(函数式组件)-构建细节以及更新（上）
+published: true
+toc:
+  visible: true
+date: 2022-12-05
+---
+
+# 函数式组件-构建细节以及更新（上）
+
+在前面的过程中，我们已经理解了Fiber，它能帮助我们理解优化级调度机制等优化应用性能。那么接下来我们就通过Hooks和函数式组件来进一步深入React的优化。
+
+## 函数式组件的处理流程
+
+## beginWork阶段
+
+我们直接从`beginWork`开始,讲解最常用的函数式组件的更新和构建。[源码地址](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberBeginWork.old.js%23L3083-L3494 'https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberBeginWork.old.js#L3083-L3494')
+
+```js
+switch (workInProgress.tag) {
+    // 忽略代码
+    // 函数式组件的子节点构建
+    case FunctionComponent: {
+      const Component = workInProgress.type;
+      const unresolvedProps = workInProgress.pendingProps;
+      const resolvedProps =
+        workInProgress.elementType === Component
+          ? unresolvedProps
+          : resolveDefaultProps(Component, unresolvedProps);
+      return updateFunctionComponent(
+        current,
+        workInProgress,
+        Component,
+        resolvedProps,
+        renderLanes,
+      );
+    }
+    // 忽略代码
+```
+
+在`beginWork`阶段,React会根据组件类型选择相应的处理方法。对于函数式组件,它会调用`updateFunctionComponent`方法。
+
+## 更新分析
+
+`beginWork`探寻阶段的主要任务是设置是否需要更新的状态。这个状态是后续许多代码判断的基础。
+
+```js
+if (current !== null) {
+  // 双缓存机制
+  const oldProps = current.memoizedProps
+  const newProps = workInProgress.pendingProps
+  // 不相等就进入对比
+  if (oldProps !== newProps || hasLegacyContextChanged() || (__DEV__ ? workInProgress.type !== current.type : false)) {
+    // 状态标记需要更新这个状态，记住这个状态后续很多工作都与之相关
+    didReceiveUpdate = true
+    // 如果渲染车道内不包含更新就不需要更新
+  } else if (!includesSomeLane(renderLanes, updateLanes)) {
+    didReceiveUpdate = false
+    // 上下文特殊处理，优化
+    switch (workInProgress.tag) {
+    }
+    // 循坏子节点需要更新不
+    return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes)
+  } else {
+    if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
+      // 处理Suspense组件不会Context更新时更新的问题强制将标记变为true。
+      didReceiveUpdate = true
+    } else {
+      // An update was scheduled on this fiber, but there are no new props
+      // nor legacy context. Set this to false. If an update queue or context
+      // consumer produces a changed value, it will set this to true. Otherwise,
+      // the component will assume the children have not changed and bail out.
+      didReceiveUpdate = false
+    }
+  }
+} else {
+  // 剩下的就是都不需要更新
+  didReceiveUpdate = false
+}
+```
+
+这段代码主要做了以下几件事:
+
+1. 比较新旧props是否相等
+2. 检查context是否发生变化
+3. 根据比较结果设置`didReceiveUpdate`状态
+4. 处理特殊情况,如Suspense组件的强制更新
+
+## updateFunctionComponent
+
+在设置更新状态后,React会调用`updateFunctionComponent`方法来处理函数式组件。
+
+```js
+function updateFunctionComponent(
+  current,
+  workInProgress,
+  Component,
+  nextProps: any,
+  renderLanes,
+) {
+  // 忽略代码
+
+  let context;
+  let nextChildren;
+  // 这里和useContext有关，hooks分支中我们去讲一下
+  prepareToReadContext(workInProgress, renderLanes);
+  if (__DEV__) {
+    //忽略代码
+  } else {
+    // 这里就直接进入了hooks相关逻辑，最后返回下级ReactElement对象
+    nextChildren = renderWithHooks(
+      current,
+      workInProgress,
+      Component,
+      nextProps,
+      context,
+      renderLanes,
+    );
+  }
+  // 老规矩，如果didReceiveUpdate这个状态也就是前面提到的不需要更新，向下查找子节
+  if (current !== null && !didReceiveUpdate) {
+    bailoutHooks(current, workInProgress, renderLanes);
+    return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
+  }
+
+  // React DevTools reads this flag.我们暂时都略过performance的东西
+  workInProgress.flags |= PerformedWork;
+  // 向下生成子fiber节点
+  reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  return workInProgress.child;
+}
+```
+
+`updateFunctionComponent`的主要工作包括:
+
+1. 准备context
+2. 调用`renderWithHooks`执行函数组件
+3. 根据`didReceiveUpdate`状态决定是否需要更新
+4. 生成子Fiber节点
+
+## renderWithHooks
+
+`renderWithHooks`函数是Hooks机制的核心,它为函数式组件提供了状态管理和副作用处理的能力:
+
+```js
+export function renderWithHooks<Props, SecondArg>(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  Component: (p: Props, arg: SecondArg) => any,
+  props: Props,
+  secondArg: SecondArg,
+  nextRenderLanes: Lanes,
+): any {
+  // 1阶段：去设置全局的状态
+  renderLanes = nextRenderLanes; // 当前渲染优先级
+  currentlyRenderingFiber = workInProgress; // 当前fiber节点, 也就是function组件对应的fiber节点
+  if (__DEV__) {
+    //忽略代码
+  }
+  // 清除当前fiber的遗留状态
+  workInProgress.memoizedState = null;
+  workInProgress.updateQueue = null;
+  workInProgress.lanes = NoLanes;
+   if (__DEV__) {
+    //忽略代码
+   } else {
+      // 2阶段：生成ReactElement子节点
+      // ReactCurrentDispatcher来自react-dom中的全局变量，确认是初始化还是更新
+      ReactCurrentDispatcher.current =
+        current === null || current.memoizedState === null
+          ? HooksDispatcherOnMount
+          : HooksDispatcherOnUpdate;
+      // 执行function函数
+      let children = Component(props, secondArg);
+   }
+
+  // 重置全局变量,并返回
+  // 执行function之后, 还原被修改的全局变量, 不影响下一次调用
+  renderLanes = NoLanes;
+  currentlyRenderingFiber = (null: any);
+
+  currentHook = null;
+  workInProgressHook = null;
+  didScheduleRenderPhaseUpdate = false;
+
+  return children;
+}
+```
+
+这个函数的工作流程可以分为三个阶段:
+
+1. 准备阶段: 设置全局变量,清除旧的状态。
+2. 执行阶段: 根据是首次渲染还是更新,选择合适的Hooks处理器,然后执行组件函数。
+3. 清理阶段: 重置全局变量,防止影响其他组件。
+
+## 执行过程分析
+
+[在线尝试](https://link.juejin.cn?target=https%3A%2F%2Fcodesandbox.io%2Fs%2Fjovial-hill-idlc7g%3Ffile%3D%2Fsrc%2FApp.tsx 'https://codesandbox.io/s/jovial-hill-idlc7g?file=/src/App.tsx')
+
+通过打断点分析,我们可以了解函数组件的执行过程:
+
+1. 初始化阶段:
+
+   - 组件首次进入`beginWork`时,被标记为`indeterminateComponent`(不确定的组件类型)
+   - 执行`renderWithHooks`
+   - 执行完毕后,打上`FunctionComponent`标记
+
+2. 更新阶段:
+   - 直接进入`updateFunctionComponent`逻辑
+
+![执行过程图1](https://ik.imagekit.io/leiakito/Vue3+ELLnput/React%20%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%20%E6%94%AF%E7%BA%BF%20%E7%BB%84%E4%BB%B6%20%E6%9E%84%E5%BB%BA%E7%BB%86%E8%8A%82.webp?updatedAt=1739720712530)
+![执行过程图2](https://ik.imagekit.io/leiakito/Vue3+ELLnput/923c00657040409ba6031935d913a946~tplv-k3u1fbpfcp-zoom-in-crop-mark_1512_0_0_0.webp?updatedAt=1739720711840)
+
+## 总结
+
+本文详细介绍了React函数式组件的构建和更新过程,从`beginWork`到`updateFunctionComponent`,再到`renderWithHooks`。我们了解了React如何处理函数式组件,如何决定是否需要更新,以及Hooks机制的核心实现。
+
+下一篇将深入探讨函数组件中具体Hooks的实现,以及是如何优化性能的。

@@ -1,0 +1,225 @@
+---
+title: 2.React Fiber架构：调度核心原理与实现
+description: 深入剖析React Fiber的调度机制，详细解读其源码实现，探讨React如何通过自定义调度器实现高效的任务调度和时间切片，以及与浏览器API的对比。
+published: true
+toc:
+  visible: true
+date: 2022-12-10
+---
+
+# React Fiber架构：调度核心原理与实现
+
+在深入探讨React Fiber的调度机制之前，我们可以通过浏览器提供的`requestIdleCallback` API获得一下启发。这个API虽然不是React实际使用的方案，但它为我们理解"空闲时间"和"让出主线程"的概念提供了很好的基础。
+
+## 1. requestIdleCallback 简介
+
+浏览器的渲染过程是以帧为单位的，通常我们期望保持60帧/秒的刷新率，这意味着每帧大约有16.67ms的时间。如果一帧的工作在16ms内完成，剩余的时间就是所谓的"空闲时间"。
+
+### 1.1 API 详解
+
+```javascript
+const handle = window.requestIdleCallback(callback[, options])
+```
+
+- `callback`: 一个在空闲期被调用的函数。
+- `options`: 可选，包含 `timeout` 属性，指定超时时间。
+- 返回值 `handle`: 可用于 `cancelIdleCallback()` 取消回调。
+
+回调函数接收一个 `IdleDeadline` 对象作为参数，包含：
+
+- `timeRemaining()`: 返回当前空闲期剩余的估计毫秒数。
+- `didTimeout`: 布尔值，表示回调是否因超时而被调用。
+
+### 1.2 实际应用示例
+
+让我们通过两个对比示例来深入理解 `requestIdleCallback` 的实际应用。
+
+#### 不使用 requestIdleCallback
+
+```javascript
+const button = document.getElementById('button')
+const input = document.getElementById('input')
+let isPrimeNumber = true
+
+button.addEventListener('click', () => {
+  // 模拟耗时计算
+  for (let i = 2; i < 1000000000; i++) {
+    isPrimeNumber = true
+    for (let j = 2; j < i; j++) {
+      if (i % j === 0) {
+        isPrimeNumber = false
+        break
+      }
+    }
+  }
+  console.log('计算完成')
+})
+
+input.addEventListener('input', () => {
+  console.log('输入值：', input.value)
+})
+```
+
+在这个例子中，点击按钮后的大量计算会阻塞主线程，导致输入框无法及时响应用户输入。
+
+#### 使用 requestIdleCallback
+
+```javascript
+const button = document.getElementById('button')
+const input = document.getElementById('input')
+let isPrimeNumber = true
+let i = 2
+
+button.addEventListener('click', () => {
+  function doWork(deadline) {
+    while (i < 1000000000 && deadline.timeRemaining() > 0) {
+      isPrimeNumber = true
+      for (let j = 2; j < i; j++) {
+        if (i % j === 0) {
+          isPrimeNumber = false
+          break
+        }
+      }
+      i++
+    }
+
+    if (i < 1000000000) {
+      requestIdleCallback(doWork)
+    } else {
+      console.log('计算完成')
+    }
+  }
+
+  requestIdleCallback(doWork)
+})
+
+input.addEventListener('input', () => {
+  console.log('输入值：', input.value)
+})
+```
+
+这个改进版本将计算任务分割成多个小任务，在浏览器空闲时执行，从而保证了输入框的响应性。
+
+## 2. React 中的调度实现
+
+尽管 `requestIdleCallback` 展示了空闲调度的概念，但React并未直接使用它。React实现了自己的`空闲调度`，主要基于 `MessageChannel` API。这个选择有几个重要原因：
+
+### 2.1 为什么选择 MessageChannel
+
+1. 高效性：MessageChannel 是一个轻量级且高效的 API，由浏览器原生实现，比 setTimeout 或 setInterval 更快、更可靠。
+
+2. 精确性：与 setTimeout 相比，MessageChannel 能提供更精确的计时。setTimeout 通常有最小 4ms 的延迟，而 MessageChannel 几乎没有这种限制。
+
+3. 优先级：MessageChannel 的消息处理通常比 setTimeout 有更高的优先级，在繁忙的 JavaScript 环境中能更快地得到执行。
+
+4. 性能优势：根据性能测试，MessageChannel 的延迟通常在 0-1ms 之间，而 setTimeout 在 4-16ms 之间。这种差异在需要频繁调度的场景中尤为明显。
+
+5. 细粒度控制：与 requestAnimationFrame（通常是 60Hz，约 16.7ms 间隔）相比，MessageChannel 可以在帧之间的任何时候触发，提供了更细粒度的控制。
+
+这些特性使 MessageChannel 成为实现 React 调度器的理想选择，能够提供更细粒度和更可控的任务调度能力，对于 React 实现复杂的更新调度和保持应用的响应性至关重要。
+
+### 2.2 React 调度源码实现
+
+React的调度器使用 `MessageChannel` 来实现消息的发送和接收。以下是核心实现的简化版本：
+
+```javascript
+let scheduledHostCallback = null
+let isMessageLoopRunning = false
+let yieldInterval = 5
+let deadline = 0
+
+const channel = new MessageChannel()
+const port = channel.port2
+channel.port1.onmessage = performWorkUntilDeadline
+
+const requestHostCallback = function (callback) {
+  scheduledHostCallback = callback
+  if (!isMessageLoopRunning) {
+    isMessageLoopRunning = true
+    port.postMessage(null)
+  }
+}
+
+const performWorkUntilDeadline = () => {
+  if (scheduledHostCallback !== null) {
+    const currentTime = getCurrentTime()
+    deadline = currentTime + yieldInterval
+    const hasTimeRemaining = true
+    try {
+      const hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime)
+      if (!hasMoreWork) {
+        isMessageLoopRunning = false
+        scheduledHostCallback = null
+      } else {
+        port.postMessage(null)
+      }
+    } catch (error) {
+      port.postMessage(null)
+      throw error
+    }
+  } else {
+    isMessageLoopRunning = false
+  }
+}
+
+const shouldYieldToHost = function () {
+  return getCurrentTime() >= deadline
+}
+```
+
+这个实现的关键点在于：
+
+1. 使用 `MessageChannel` 创建一个消息通道。
+2. `requestHostCallback` 函数用于注册回调并启动消息循环。
+3. `performWorkUntilDeadline` 函数在每次接收到消息时执行，它会运行回调函数并决定是否需要继续工作。
+4. `shouldYieldToHost` 函数用于判断是否应该中断当前工作，让出主线程。
+
+### 2.3 时间切片实现
+
+React通过设置一个时间片（默认为5ms，见 `yieldInterval` 变量）来实现任务的分割。在每个时间片内，React会尝试执行尽可能多的工作，但一旦超过时间限制，就会暂停当前工作，将控制权交还给浏览器。
+
+这种实现允许React在执行复杂更新时保持应用的响应性，有效防止了长时间任务阻塞主线程的问题。通过 MessageChannel 的高效特性，React 能够在每一帧中多次执行调度，实现更平滑的任务分割和更响应的用户界面。
+
+## 3. setTimeout 降级实现
+
+当然为了兼容不支持 `MessageChannel` 的环境，React还提供了一个基于 `setTimeout` 的降级实现：
+
+```javascript
+//简化版
+if (typeof window === 'undefined' || typeof MessageChannel !== 'function') {
+  let _callback = null
+  let _timeoutID = null
+  const _flushCallback = function () {
+    if (_callback !== null) {
+      try {
+        const currentTime = getCurrentTime()
+        const hasRemainingTime = true
+        _callback(hasRemainingTime, currentTime)
+        _callback = null
+      } catch (e) {
+        setTimeout(_flushCallback, 0)
+        throw e
+      }
+    }
+  }
+  requestHostCallback = function (cb) {
+    if (_callback !== null) {
+      setTimeout(requestHostCallback, 0, cb)
+    } else {
+      _callback = cb
+      setTimeout(_flushCallback, 0)
+    }
+  }
+  // ... 其他相关函数的降级实现
+}
+```
+
+这个降级实现虽然不如 `MessageChannel` 版本精确，但仍然保证了基本的调度功能。
+
+## 4. 总结与思考
+
+React的调度器是性能优化的核心之一。通过自定义的调度机制，React能够更好地控制任务执行的时机和顺序，从而在复杂应用中保持良好的性能和响应性。
+
+理解React的调度机制不仅有助于我们更好地使用React，也为我们在其他场景下进行性能优化提供了宝贵的思路。
+
+那么在下一章我们将直接进入到任务队列、可中断渲染、调度、同步模式的讲解和学习。

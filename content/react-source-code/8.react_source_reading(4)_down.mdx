@@ -1,0 +1,315 @@
+---
+title: 8. 函数式组件-构建细节以及更新（下）
+description: React源码阅读(4)-支线(函数式组件)-构建细节以及更新（下）
+published: true
+toc:
+  visible: true
+date: 2022-12-08
+---
+
+# 函数式组件-构建细节以及更新（下）
+
+React Hooks的引入彻底改变了React组件的编写方式,使函数组件能够管理状态和副作用。本文将深入探讨React Hooks的内部实现,特别是useEffect、useRef、useMemo和useCallback这几个常用的Hooks。
+
+好的，我理解您希望对整个部分进行重写。我会重新组织内容，使其更加清晰和连贯。以下是重写后的内容：
+
+## Effect Hook的内部机制
+
+React中的Effect Hook（主要是useEffect和useLayoutEffect）是用于处理组件副作用的重要工具。它们的实现涉及到React的渲染和提交过程的多个阶段。让我们深入了解它们的工作原理。
+
+### useEffect和useLayoutEffect的区别
+
+虽然useEffect和useLayoutEffect的API看起来相似，但它们的执行时机有重要区别：
+
+- useEffect：在渲染完成后异步执行
+- useLayoutEffect：在DOM变更后同步执行
+
+这个区别体现在它们的内部实现上：
+
+```javascript
+function mountEffect(create, deps) {
+  return mountEffectImpl(UpdateEffect | PassiveEffect, HookPassive, create, deps)
+}
+
+function mountLayoutEffect(create, deps) {
+  return mountEffectImpl(UpdateEffect, HookLayout, create, deps)
+}
+```
+
+关键区别在于传入的flags：useEffect使用PassiveEffect标志，而useLayoutEffect不使用。这决定了它们在commit阶段的处理方式。
+
+### Effect的创建过程
+
+当组件首次渲染时，Effect通过mountEffectImpl函数创建：
+
+```javascript
+function mountEffectImpl(fiberFlags, hookFlags, create, deps) {
+  const hook = mountWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
+  currentlyRenderingFiber.flags |= fiberFlags
+  hook.memoizedState = pushEffect(HookHasEffect | hookFlags, create, undefined, nextDeps)
+}
+```
+
+这个函数完成以下关键任务：
+
+1. 创建新的hook并添加到fiber的hook链表中
+2. 设置fiber的flags，这决定了在commit阶段如何处理这个fiber
+3. 调用pushEffect创建effect对象并将其添加到effect链表中
+
+### Effect的执行过程
+
+Effect的执行分为三个主要阶段，对应commit阶段的三个子阶段：
+
+1. Before mutation (commitBeforeMutationEffects)
+2. Mutation (commitMutationEffects)
+3. Layout (commitLayoutEffects)
+
+#### Before Mutation阶段
+
+在这个阶段，React为useEffect的执行做准备：
+
+```javascript
+function commitBeforeMutationEffects() {
+  while (nextEffect !== null) {
+    const flags = nextEffect.flags
+    if ((flags & Passive) !== NoFlags) {
+      if (!rootDoesHavePassiveEffects) {
+        rootDoesHavePassiveEffects = true
+        scheduleCallback(NormalSchedulerPriority, () => {
+          flushPassiveEffects()
+          return null
+        })
+      }
+    }
+    nextEffect = nextEffect.nextEffect
+  }
+}
+```
+
+这里，React调度了一个异步任务来执行useEffect。这就是为什么useEffect在渲染后异步执行的原因。
+
+#### Mutation阶段
+
+在这个阶段，React处理useLayoutEffect的清理函数：
+
+```javascript
+function commitMutationEffects(root, renderPriorityLevel) {
+  while (nextEffect !== null) {
+    const flags = nextEffect.flags
+    if (flags & Update) {
+      const current = nextEffect.alternate
+      commitWork(current, nextEffect)
+    }
+    nextEffect = nextEffect.nextEffect
+  }
+}
+```
+
+这个过程是同步的，发生在DOM更新之前，确保在新的副作用执行前清理旧的副作用。
+
+为什么useLayoutEffect在这里执行清理函数？
+
+- 确保在DOM更新前清理旧的副作用，防止潜在的内存泄漏。
+- 为新的副作用准备一个干净的环境。
+
+#### Layout阶段
+
+在Layout阶段，React执行useLayoutEffect的回调函数：
+
+```javascript
+function commitLayoutEffects(root, committedLanes) {
+  while (nextEffect !== null) {
+    const flags = nextEffect.flags
+    if (flags & (Update | Callback)) {
+      const current = nextEffect.alternate
+      commitLayoutEffectOnFiber(root, current, nextEffect, committedLanes)
+    }
+    if (flags & Ref) {
+      commitAttachRef(nextEffect)
+    }
+    nextEffect = nextEffect.nextEffect
+  }
+}
+```
+
+useLayoutEffect的回调在这里同步执行，而useEffect的回调仍在等待异步执行。
+
+### useEffect的异步执行
+
+useEffect的实际执行发生在之前调度的异步任务中，当浏览器有空闲时间时，之前调度的异步任务（flushPassiveEffects）会被执行。这个函数会遍历所有待执行的effects并执行它们：
+
+```javascript
+function flushPassiveEffects() {
+  if (rootWithPendingPassiveEffects !== null) {
+    const root = rootWithPendingPassiveEffects
+    // 首先执行所有的清理函数
+    flushPassiveEffectsImpl()
+    // 然后执行新的effect
+    flushPassiveEffectsImpl()
+  }
+}
+```
+
+这个函数首先执行所有待清理的effect的清理函数，然后执行所有新的effect回调。
+
+## 2. Ref Hook的实现原理
+
+useRef的实现相对简单,但它的作用却非常重要:
+
+```javascript
+function mountRef(initialValue) {
+  const hook = mountWorkInProgressHook()
+  const ref = { current: initialValue }
+  hook.memoizedState = ref
+  return ref
+}
+
+function updateRef() {
+  const hook = updateWorkInProgressHook()
+  return hook.memoizedState
+}
+```
+
+useRef的核心思想是创建一个可变的引用,这个引用在组件的整个生命周期内保持不变。这就是为什么我们可以用useRef来存储DOM节点或任何可变值,而不会触发组件重新渲染。
+
+在fiber树的构建和提交阶段,React会特别处理带有ref的fiber:
+
+```javascript
+function markRef(current, workInProgress) {
+  const ref = workInProgress.ref
+  if ((current === null && ref !== null) || (current !== null && current.ref !== ref)) {
+    workInProgress.flags |= Ref
+  }
+}
+```
+
+这个函数会在ref发生变化时标记fiber,以便在commit阶段进行处理。
+
+在commit阶段,React会先解除旧的ref,然后设置新的ref:
+
+```javascript
+function commitAttachRef(finishedWork) {
+  const ref = finishedWork.ref
+  if (ref !== null) {
+    const instance = finishedWork.stateNode
+    let instanceToUse
+    switch (finishedWork.tag) {
+      case HostComponent:
+        instanceToUse = getPublicInstance(instance)
+        break
+      default:
+        instanceToUse = instance
+    }
+    if (typeof ref === 'function') {
+      ref(instanceToUse)
+    } else {
+      ref.current = instanceToUse
+    }
+  }
+}
+```
+
+好的，我理解您希望在第三节中增加关于浅比较依赖的内容。我们可以扩展这一部分，详细解释React如何进行依赖比较，以及这对useMemo和useCallback的性能优化有何影响。以下是修改后的内容：
+
+## 3. useMemo和useCallback的实现及依赖比较机制
+
+useMemo和useCallback的实现非常相似，它们都用于性能优化。这两个Hook的核心是通过比较依赖项来决定是否需要重新计算值或重新创建函数。让我们深入了解它们的实现，特别是依赖比较的机制：
+
+```javascript
+function mountMemo(nextCreate, deps) {
+  const hook = mountWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
+  const nextValue = nextCreate()
+  hook.memoizedState = [nextValue, nextDeps]
+  return nextValue
+}
+
+function updateMemo(nextCreate, deps) {
+  const hook = updateWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
+  const prevState = hook.memoizedState
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps = prevState[1]
+      if (areHookInputsEqual(nextDeps, prevDeps)) {
+        return prevState[0]
+      }
+    }
+  }
+  const nextValue = nextCreate()
+  hook.memoizedState = [nextValue, nextDeps]
+  return nextValue
+}
+```
+
+### 依赖比较机制
+
+React使用`areHookInputsEqual`函数来进行依赖项的浅比较。这个函数的实现大致如下：
+
+```javascript
+function areHookInputsEqual(nextDeps, prevDeps) {
+  if (prevDeps === null) {
+    return false
+  }
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (Object.is(nextDeps[i], prevDeps[i])) {
+      continue
+    }
+    return false
+  }
+  return true
+}
+```
+
+这个函数有以下几个关键点：
+
+1. 浅比较：只比较依赖数组中每个元素的引用，不进行深层比较。
+
+2. 使用Object.is：这个方法比较两个值是否相同，它与`===`操作符类似，但能够正确处理NaN和-0的情况。
+
+3. 长度敏感：如果新旧依赖数组的长度不同，会返回false。
+
+### 浅比较的影响
+
+浅比较机制对useMemo和useCallback的使用有重要影响：
+
+1. 基本类型依赖：对于数字、字符串、布尔值等基本类型，浅比较能够有效地检测变化。
+
+2. 对象和数组依赖：由于只比较引用，如果你传入一个每次渲染都新创建的对象或数组，即使内容没变，也会被视为依赖变化。例如：
+
+   ```javascript
+   useMemo(() => expensiveCalculation(a, b), [{ a, b }]) // 不推荐
+   ```
+
+   这里每次渲染都创建了一个新对象，导致memo失效。应该改为：
+
+   ```javascript
+   useMemo(() => expensiveCalculation(a, b), [a, b]) // 推荐
+   ```
+
+3. 函数依赖：类似地，如果依赖项包含内联函数，每次渲染都会创建新的函数引用，导致优化失效。
+
+### 最佳实践
+
+为了充分利用useMemo和useCallback的优化效果：
+
+1. 只包含必要的依赖：仅包含计算或回调函数真正依赖的值。
+
+2. 使用基本类型依赖：尽可能使用数字、字符串等基本类型作为依赖。
+
+3. 稳定的引用：对于对象或函数依赖，考虑使用useMemo或useCallback来稳定它们的引用。
+
+4. 考虑使用useRef：对于不需要触发重新渲染的可变值，考虑使用useRef而不是将其作为依赖项。
+
+## 总结
+
+React Hooks的实现涉及到复杂的内部机制,包括fiber树的构建、更新和提交过程。
+
+关键点包括:
+
+1. Effect Hooks (useEffect和useLayoutEffect) 的执行时机和优化机制
+2. Ref Hook (useRef) 的不触发重渲染特性及其在DOM操作中的应用
+3. Memo Hooks (useMemo和useCallback) 的依赖比较和缓存机制
+
+通过这些机制,React实现了在函数组件中管理状态和副作用的能力,同时保持了良好的性能和开发体验。深入理解这些实现细节,有助于我们在实际开发中更好地使用Hooks,写出更高质量的React代码。

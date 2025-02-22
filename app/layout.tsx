@@ -1,4 +1,3 @@
-import { Noto_Sans_SC } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 
@@ -11,12 +10,6 @@ import type { Metadata, Viewport } from 'next'
 
 import '../styles/globals.css'
 import '../styles/code.css'
-
-const fontNoto = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-noto'
-})
 
 export const metadata: Metadata = {
   title: '鱼的杂记',
@@ -54,7 +47,7 @@ export default async function RootLayout({
   return (
     <NextAuthProvider>
       <html lang={locale} suppressHydrationWarning>
-        <body className={cn('min-h-screen bg-background', fontNoto.variable)} suppressHydrationWarning>
+        <body className={cn('min-h-screen bg-background')} suppressHydrationWarning>
           <NextIntlClientProvider messages={messages}>
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
               {children}

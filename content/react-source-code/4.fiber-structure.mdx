@@ -1,256 +1,350 @@
 ---
-title: 4. React Fiber链表结构深度解析
-description: Fiber是React的核心架构，它使用链表结构来组织和管理组件树。
+title: 4.React Fiber架构:链表、Fiber节点与Fiber树
+description: 深入解析React Fiber架构的核心概念,包括链表基础、Fiber节点结构、Fiber树的构建以及双缓冲更新机制。
 published: true
 toc:
   visible: true
-date: 2023-03-05
+date: 2023-01-08
 ---
 
-# React Fiber链表结构深度解析
+# 4.React Fiber架构:链表、Fiber节点与Fiber树
 
-## 1. Fiber结构深入剖析
+React Fiber是React的核心架构,它基于链表结构组织和管理组件树。本文将从链表基础开始,逐步深入探讨Fiber节点、Fiber树和双缓冲机制,以及它们之间的关系。
 
-Fiber是React的核心架构，它使用链表结构来组织和管理组件树。
+## 1. 链表基础
 
-### 1.1 Fiber节点的结构
+在深入Fiber架构之前,我们需要先理解链表这一基础数据结构。链表是由一系列节点组成的线性集合,每个节点包含数据和指向下一个节点的指针。
 
-每个Fiber节点都是一个复杂的JavaScript对象，包含了组件的各种信息及其与其他节点的关系。以下是Fiber节点的详细结构：
+### 1.1 链表的基本操作及复杂度分析
+
+以下是链表的基本操作实现及其时间复杂度分析:
 
 ```javascript
-{
-  // 标记组件类型
-  tag: WorkTag,
+class Node {
+  constructor(data) {
+    this.data = data
+    this.next = null
+  }
+}
 
-  // 唯一标识，用于优化更新过程
-  key: null | string,
+class LinkedList {
+  constructor() {
+    this.head = null
+  }
 
-  // 组件的类型（函数组件、类组件等）
-  type: any,
+  // 在链表末尾添加节点 - O(n)
+  append(data) {
+    const newNode = new Node(data)
+    if (!this.head) {
+      this.head = newNode
+      return
+    }
+    let current = this.head
+    while (current.next) {
+      current = current.next
+    }
+    current.next = newNode
+  }
 
-  // 对应的DOM节点或组件实例
-  stateNode: any,
+  // 在链表开头插入节点 - O(1)
+  prepend(data) {
+    const newNode = new Node(data)
+    newNode.next = this.head
+    this.head = newNode
+  }
 
-  // 链表结构
-  return: Fiber | null,
-  child: Fiber | null,
-  sibling: Fiber | null,
+  // 删除指定数据的节点 - O(n)
+  delete(data) {
+    if (!this.head) return
+    if (this.head.data === data) {
+      this.head = this.head.next
+      return
+    }
+    let current = this.head
+    while (current.next) {
+      if (current.next.data === data) {
+        current.next = current.next.next
+        return
+      }
+      current = current.next
+    }
+  }
 
-  // 更新相关
-  pendingProps: any,
-  memoizedProps: any,
-  updateQueue: UpdateQueue<any> | null,
-  memoizedState: any,
-
-  // 副作用相关
-  flags: Flags,
-  subtreeFlags: Flags,
-  deletions: Array<Fiber> | null,
-
-  // 调度优先级相关
-  lanes: Lanes,
-  childLanes: Lanes,
-
-  // 替身（用于并发模式）
-  alternate: Fiber | null,
-
-  // 开发工具使用
-  _debugOwner?: Fiber | null,
-  _debugIsCurrentlyTiming?: boolean,
-  _debugNeedsRemount?: boolean,
-
-  // 其他属性...
+  // 遍历链表 - O(n)
+  traverse() {
+    let current = this.head
+    while (current) {
+      console.log(current.data)
+      current = current.next
+    }
+  }
 }
 ```
 
-它主要包含了组件的基本信息，还包括了更新、副作用和调度优先级等重要信息。
+复杂度分析:
 
-### 1.2 Fiber的链表结构
+- 插入操作:
+  - 在头部插入(prepend): O(1)
+  - 在尾部插入(append): O(n)
+- 删除操作: 平均O(n)
+- 查找操作: O(n)
 
-Fiber树使用三个主要指针构建链表结构：
+链表的主要优势在于插入和删除操作的灵活性,特别是在已知位置的插入和删除可以达到O(1)的时间复杂度。
+
+## 2. Fiber节点结构
+
+Fiber节点是React内部用来表示组件的核心数据结构。每个Fiber节点对应一个React元素,包含了该元素的类型、属性、状态等信息。Fiber节点构成了一个双向链表树结构,这种结构允许React实现可中断的渲染过程。
+
+### 2.1 Fiber节点的完整结构
+
+以下是Fiber节点的完整结构:
+
+```javascript
+function FiberNode(
+  tag: WorkTag,
+  pendingProps: mixed,
+  key: null | string,
+  mode: TypeOfMode,
+) {
+  // Instance
+  this.tag = tag;
+  this.key = key;
+  this.elementType = null;
+  this.type = null;
+  this.stateNode = null;
+
+  // Fiber
+  this.return = null;
+  this.child = null;
+  this.sibling = null;
+  this.index = 0;
+
+  this.ref = null;
+
+  this.pendingProps = pendingProps;
+  this.memoizedProps = null;
+  this.updateQueue = null;
+  this.memoizedState = null;
+  this.dependencies = null;
+
+  this.mode = mode;
+
+  // Effects
+  this.flags = NoFlags;
+  this.subtreeFlags = NoFlags;
+  this.deletions = null;
+
+  this.lanes = NoLanes;
+  this.childLanes = NoLanes;
+
+  this.alternate = null;
+
+  // ... 性能计时相关代码（省略）
+
+  // ... 开发环境相关代码（省略）
+}
+```
+
+### 2.2 Fiber节点属性解释
+
+1. **Instance 相关**
+
+   - `tag`: 标识 Fiber 节点类型（如函数组件、类组件、原生 DOM 等）
+   - `key`: 用于优化更新过程的唯一标识符
+   - `elementType`: 元素的类型（如对于 DOM 元素是字符串，对于组件是函数或类）
+   - `type`: 与 elementType 类似，但可能会被特殊处理（如在懒加载时）
+   - `stateNode`: 保存与 Fiber 相关的本地状态（如对于 DOM 元素，它是实际的 DOM 节点）
+
+2. **Fiber 树结构**
+
+   - `return`: 指向父 Fiber 节点
+   - `child`: 指向第一个子 Fiber 节点
+   - `sibling`: 指向下一个兄弟 Fiber 节点
+   - `index`: 在父节点的子节点列表中的索引
+
+3. **数据相关**
+
+   - `ref`: 如果元素定义了 ref，这里存储 ref 的值
+   - `pendingProps`: 新的待处理的 props
+   - `memoizedProps`: 上一次渲染时的 props
+   - `updateQueue`: 存储状态更新的队列
+   - `memoizedState`: 上一次渲染时的 state
+   - `dependencies`: 依赖项（如 context、事件等）
+
+4. **模式与副作用**
+
+   - `mode`: 标识当前 Fiber 树的渲染模式（如 Concurrent、Strict 等）
+   - `flags`: 标记需要执行的副作用（如需要插入、更新、删除等）
+   - `subtreeFlags`: 子树中的副作用标记
+   - `deletions`: 需要删除的子节点列表
+
+5. **调度相关**
+
+   - `lanes`: 表示更新的优先级
+   - `childLanes`: 子树中的优先级
+
+6. **其他**
+   - `alternate`: 指向内存中的另一个 Fiber，用于双缓冲
+
+### 2.3 创建Fiber节点的源码
+
+React 使用 `createFiberFromElement` 函数来创建 Fiber 节点:
+
+```javascript
+function createFiberFromElement(element: ReactElement, mode: TypeOfMode, lanes: Lanes): Fiber {
+  let owner = null;
+  if (__DEV__) {
+    owner = element._owner;
+  }
+  const type = element.type;
+  const key = element.key;
+  const pendingProps = element.props;
+  const fiber = createFiberFromTypeAndProps(
+    type,
+    key,
+    pendingProps,
+    owner,
+    mode,
+    lanes,
+  );
+  if (__DEV__) {
+    fiber._debugSource = element._source;
+    fiber._debugOwner = element._owner;
+  }
+  return fiber;
+}
+```
+
+这个函数根据 React 元素创建对应的 Fiber 节点,处理元素的类型、key、props 等信息,并创建一个新的 Fiber 对象。
+
+### 2.4 深入理解React元素
+
+React元素是描述UI中一部分的普通JavaScript对象。它们是React应用的最小构建块,用于表示界面上应该渲染的内容。
+
+#### 2.4.1 React元素的结构
+
+一个典型的React元素对象结构如下:
+
+```javascript
+const element = {
+  type: 'div',
+  props: {
+    className: 'container',
+    children: [
+      { type: 'h1', props: { children: 'Hello, World!' } },
+      { type: 'p', props: { children: 'This is a paragraph.' } }
+    ]
+  },
+  key: null,
+  ref: null,
+  $$typeof: Symbol.for('react.element'),
+  _owner: null,
+  _store: {}
+}
+```
+
+#### 2.4.2 React元素的主要属性
+
+1. `type`: 指定了React元素的类型。它可以是:
+
+   - 字符串(如 'div', 'span')表示原生DOM元素
+   - 函数或类表示自定义React组件
+   - React内置组件(如React.Fragment)
+
+2. `props`: 包含了传递给组件的所有属性,包括:
+
+   - 常规属性(如className, style等)
+   - 特殊属性children,表示子元素
+
+3. `key`: 用于在列表中唯一标识元素,帮助React高效地更新DOM
+
+4. `ref`: 用于获取对DOM节点或组件实例的引用
+
+5. `$$typeof`: 一个Symbol,用于标识这是一个React元素,防止XSS攻击
+
+6. `_owner`: 内部使用,指向创建该元素的组件
+
+#### 2.4.3 创建React元素
+
+通常,我们使用JSX来创建React元素:
+
+```jsx
+const element = (
+  <div className="container">
+    <h1>Hello, World!</h1>
+    <p>This is a paragraph.</p>
+  </div>
+)
+```
+
+JSX会被Babel等工具转译为`React.createElement()`调用:
+
+```javascript
+const element = React.createElement(
+  'div',
+  { className: 'container' },
+  React.createElement('h1', null, 'Hello, World!'),
+  React.createElement('p', null, 'This is a paragraph.')
+)
+```
+
+#### 2.4.4 React元素与Fiber节点的关系
+
+- React元素是描述UI的静态结构,而Fiber节点是React内部用于管理组件树和执行更新的动态数据结构。
+- 每个React元素最终都会对应到一个Fiber节点。
+
+## 3. Fiber树结构
+
+Fiber树是由Fiber节点构成的树形结构,它反映了React组件的层次关系。Fiber树使用三个主要指针构建链表结构:
 
 1. `child`: 指向第一个子节点
 2. `sibling`: 指向下一个兄弟节点
 3. `return`: 指向父节点
 
-我们可以假设我们有以下的React组件结构：
+### 3.1 Fiber树的构建过程
 
-```jsx
-<App>
-  <Header />
-  <Main>
-    <Article />
-    <Sidebar />
-  </Main>
-  <Footer />
-</App>
-```
-
-这个结构可以用Fiber链表表示如下：
+以下是一个简化的Fiber树构建过程:
 
 ```javascript
-const App = {
-  tag: 'ClassComponent',
-  type: App,
-  child: Header,
-  sibling: null,
-  return: null
-}
-
-const Header = {
-  tag: 'FunctionComponent',
-  type: Header,
-  child: null,
-  sibling: Main,
-  return: App
-}
-
-const Main = {
-  tag: 'FunctionComponent',
-  type: Main,
-  child: Article,
-  sibling: Footer,
-  return: App
-}
-
-const Article = {
-  tag: 'FunctionComponent',
-  type: Article,
-  child: null,
-  sibling: Sidebar,
-  return: Main
-}
-
-const Sidebar = {
-  tag: 'FunctionComponent',
-  type: Sidebar,
-  child: null,
-  sibling: null,
-  return: Main
-}
-
-const Footer = {
-  tag: 'FunctionComponent',
-  type: Footer,
-  child: null,
-  sibling: null,
-  return: App
-}
-```
-
-在这个例子中：
-
-1. `App`的`child`指向`Header`，因为`Header`是`App`的第一个子节点。
-2. `Header`的`sibling`指向`Main`，因为`Main`是`Header`的下一个兄弟节点。
-3. `Main`的`child`指向`Article`，因为`Article`是`Main`的第一个子节点。
-4. `Article`的`sibling`指向`Sidebar`，因为`Sidebar`是`Article`的下一个兄弟节点。
-5. 所有节点的`return`都指向它们的父节点。例如，`Header`、`Main`和`Footer`的`return`都指向`App`。
-
-这种结构允许React在树中高效地向上、向下和横向移动，无论是在渲染过程中还是在进行更新时。例如，当React需要更新`Main`组件时，它可以轻松地访问其子组件（通过`child`指针）和兄弟组件（通过`sibling`指针），同时也可以回到父组件（通过`return`指针）。
-
-## 2. Fiber树的构建和更新机制
-
-### 2.1 创建Fiber节点的过程
-
-React使用`createFiberFromElement`函数创建单个Fiber节点:
-
-```javascript
-function createFiberFromElement(element, mode, lanes) {
-  let owner = null
-  if (__DEV__) {
-    owner = element._owner
-  }
-  const type = element.type
-  const key = element.key
-  const pendingProps = element.props
-  const fiber = createFiberFromTypeAndProps(type, key, pendingProps, owner, mode, lanes)
-  if (__DEV__) {
-    fiber._debugSource = element._source
-    fiber._debugOwner = element._owner
-  }
+function createFiberFromElement(element) {
+  const { type, props } = element
+  const fiber = new FiberNode(getFiberTag(type), props, element.key, NoMode)
+  fiber.type = type
   return fiber
 }
-```
 
-这个函数创建了Fiber节点。它调用了`createFiberFromTypeAndProps`来实际创建Fiber对象，这个函数会根据组件的类型（如函数组件、类组件、宿主组件等）创建不同的Fiber节点。
+function reconcileChildrenArray(returnFiber, currentFirstChild, newChildren) {
+  let prevSibling = null
+  let oldFiber = currentFirstChild
+  let newFiber = null
+  let index = 0
 
-### 2.2 构建Fiber树的过程
-
-`reconcileChildFibers`函数是构建和更新Fiber树的核心:
-
-```javascript
-function reconcileChildFibers(returnFiber, currentFirstChild, newChild, lanes) {
-  // 处理不同类型的子节点（单个元素、数组等）
-  if (typeof newChild === 'object' && newChild !== null) {
-    switch (newChild.$$typeof) {
-      case REACT_ELEMENT_TYPE:
-        return placeSingleChild(reconcileSingleElement(returnFiber, currentFirstChild, newChild, lanes))
-      case REACT_PORTAL_TYPE:
-        return placeSingleChild(reconcileSinglePortal(returnFiber, currentFirstChild, newChild, lanes))
-      case REACT_LAZY_TYPE:
-        const payload = newChild._payload
-        const init = newChild._init
-        return reconcileChildFibers(returnFiber, currentFirstChild, init(payload), lanes)
+  for (; index < newChildren.length; index++) {
+    const newChild = newChildren[index]
+    if (shouldTrackSideEffects && oldFiber && newChild && !sameNode(newChild, oldFiber)) {
+      deleteChild(returnFiber, oldFiber)
     }
 
-    if (isArray(newChild)) {
-      return reconcileChildrenArray(returnFiber, currentFirstChild, newChild, lanes)
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling
     }
 
-    if (getIteratorFn(newChild)) {
-      return reconcileChildrenIterator(returnFiber, currentFirstChild, newChild, lanes)
+    newFiber = createFiberFromElement(newChild)
+    newFiber.return = returnFiber
+
+    if (index === 0) {
+      returnFiber.child = newFiber
+    } else {
+      prevSibling.sibling = newFiber
     }
-  }
-
-  // 处理文本节点
-  if (typeof newChild === 'string' || typeof newChild === 'number') {
-    return placeSingleChild(reconcileSingleTextNode(returnFiber, currentFirstChild, '' + newChild, lanes))
-  }
-
-  // 处理其他情况（如null，undefined等）
-  return deleteRemainingChildren(returnFiber, currentFirstChild)
-}
-```
-
-这个函数主要是处理不同类型的子节点，包括单个元素、数组、迭代器、文本节点等。
-
-### 2.3 链接Fiber节点的详细过程
-
-在构建过程中，React通过设置`child`、`sibling`和`return`属性来链接Fiber节点。
-
-```javascript
-function appendAllChildren(parent, workInProgress) {
-  let node = workInProgress.child
-  while (node !== null) {
-    if (node.tag === HostComponent || node.tag === HostText) {
-      appendInitialChild(parent.stateNode, node.stateNode)
-    } else if (node.tag === HostPortal) {
-      // 不要遍历到portal的子节点
-    } else if (node.child !== null) {
-      node.child.return = node
-      node = node.child
-      continue
-    }
-    if (node === workInProgress) {
-      return
-    }
-    while (node.sibling === null) {
-      if (node.return === null || node.return === workInProgress) {
-        return
-      }
-      node = node.return
-    }
-    node.sibling.return = node.return
-    node = node.sibling
+    prevSibling = newFiber
   }
 }
 ```
 
-这个函数展示了React如何深度优先遍历Fiber树，并在过程中建立正确的父子和兄弟关系。它还处理了特殊情况，如portal组件。
+### 3.2 实际代码例子
 
-### 2.4 实际例子
-
-让我们以一个简单的React组件树为例:
+考虑以下React组件结构:
 
 ```jsx
 function App() {
@@ -267,229 +361,235 @@ function App() {
 }
 ```
 
-现在,我们来看看React如何使用`reconcileChildFibers`函数来构建这个组件树的Fiber结构:
-
-1. 首先,React会为`App`组件创建一个Fiber节点。
-
-2. 然后,React会调用`reconcileChildFibers`来处理`App`的子元素(即`div`):
-
-   ```javascript
-   reconcileChildFibers(appFiber, null, <div>...</div>, lanes)
-   ```
-
-3. 在`reconcileChildFibers`中,React会识别出这是一个`REACT_ELEMENT_TYPE`,然后调用`reconcileSingleElement`:
-
-   ```javascript
-   case REACT_ELEMENT_TYPE:
-     return placeSingleChild(reconcileSingleElement(returnFiber, currentFirstChild, newChild, lanes))
-   ```
-
-4. `reconcileSingleElement`会创建一个新的Fiber节点表示`div`,并将其设置为`App` Fiber的child。
-
-5. 接下来,React会再次调用`reconcileChildFibers`来处理`div`的子元素:
-
-   ```javascript
-   reconcileChildFibers(divFiber, null, [<Header />, <Main>...</Main>, <Footer />], lanes)
-   ```
-
-6. 这次,因为子元素是一个数组,React会进入`isArray(newChild)`的分支:
-
-   ```javascript
-   if (isArray(newChild)) {
-     return reconcileChildrenArray(returnFiber, currentFirstChild, newChild, lanes)
-   }
-   ```
-
-7. 在`reconcileChildrenArray`中,React会为`Header`、`Main`和`Footer`各创建一个Fiber节点,并将它们链接起来形成一个兄弟链表。
-
-8. 对于`Main`组件,React会再次调用`reconcileChildFibers`来处理其子元素:
-
-   ```javascript
-   reconcileChildFibers(mainFiber, null, [<Article />, <Sidebar />], lanes)
-   ```
-
-9. 同样,这会创建`Article`和`Sidebar`的Fiber节点,并将它们链接为兄弟节点。
-
-通过这个过程,React最终会构建出如下的Fiber树结构:
-
-```
-App
- |
- +-- div
-      |
-      +-- Header
-      |
-      +-- Main
-      |    |
-      |    +-- Article
-      |    |
-      |    +-- Sidebar
-      |
-      +-- Footer
-```
-
-在这个结构中:
-
-- 每个节点都是一个Fiber对象
-- 父子关系通过`child`和`return`指针维护
-- 兄弟关系通过`sibling`指针维护
-
-## 3. Fiber链表查找
-
-这一节主要讲链表查找，然后我思考了一下时间复杂度和传统树算法差不多，但空间复杂度大大减小了且对于gc回收的话只需要断裂链表。
-
-然后另外一个考虑应该就是，链表结构使得遍历可以在任意点暂停和恢复，这其实是React实现时间切片的基础。
-
-### 3.1 向下查找特定类型的子节点
-
-有时我们需要查找特定类型的子节点，例如查找第一个类组件：
+对应的Fiber树结构可能如下:
 
 ```javascript
-function findFirstClassComponent(fiber) {
-  let child = fiber.child
-  while (child !== null) {
-    if (child.tag === ClassComponent) {
-      return child
-    }
-    if (child.tag === HostComponent || child.tag === HostText) {
-      // 跳过宿主组件
-      child = child.sibling
-    } else {
-      // 继续向下查找
-      const result = findFirstClassComponent(child)
-      if (result !== null) {
-        return result
-      }
-      child = child.sibling
-    }
-  }
-  return null
+const AppFiber = {
+  tag: FunctionComponent,
+  type: App,
+  child: DivFiber
+  // ...其他属性
+}
+
+const DivFiber = {
+  tag: HostComponent,
+  type: 'div',
+  return: AppFiber,
+  child: HeaderFiber
+  // ...其他属性
+}
+
+const HeaderFiber = {
+  tag: FunctionComponent,
+  type: Header,
+  return: DivFiber,
+  sibling: MainFiber
+  // ...其他属性
+}
+
+const MainFiber = {
+  tag: FunctionComponent,
+  type: Main,
+  return: DivFiber,
+  child: ArticleFiber,
+  sibling: FooterFiber
+  // ...其他属性
+}
+
+const ArticleFiber = {
+  tag: FunctionComponent,
+  type: Article,
+  return: MainFiber,
+  sibling: SidebarFiber
+  // ...其他属性
+}
+
+const SidebarFiber = {
+  tag: FunctionComponent,
+  type: Sidebar,
+  return: MainFiber
+  // ...其他属性
+}
+
+const FooterFiber = {
+  tag: FunctionComponent,
+  type: Footer,
+  return: DivFiber
+  // ...其他属性
 }
 ```
 
-### 3.2 向上查找特定条件的祖先节点
+这个例子展示了Fiber节点如何通过`child`、`sibling`和`return`指针相互连接,形成一个完整的树结构。
 
-在某些情况下，我们需要向上查找满足特定条件的祖先节点，例如查找最近的Provider组件：
+## 4. 双缓冲机制
+
+React Fiber 架构中的双缓冲机制是优化渲染性能的关键策略。
+
+### 4.1 双缓冲的核心概念
+
+- **current 树**: 当前在屏幕上显示的 UI 对应的 Fiber 树。
+- **workInProgress 树**: 用于构建下一个状态的 Fiber 树。
+
+每个 Fiber 节点都有一个 `alternate` 属性，指向另一棵树中对应的节点。
+
+### 4.2 双缓冲的创建和更新流程
+
+1. **初始渲染**:
+
+   - React 创建 current 树。
+   - 同时创建一个对应的 workInProgress 树，但不使用。
+
+2. **更新过程**:
+
+   - 当有更新时，React 不会创建新的 workInProgress 树。
+   - 而是重用已存在的 workInProgress 树，基于 current 树进行更新。
+
+3. **树的切换**:
+   - 更新完成后，workInProgress 树变为新的 current 树。
+   - 原来的 current 树变为新的 workInProgress 树，等待下次更新。
+
+### 4.3 源码实现
+
+React 中的 `createWorkInProgress` 函数展示了这一机制：
 
 ```javascript
-function findNearestProvider(fiber, contextType) {
-  let current = fiber.return
-  while (current !== null) {
-    if (current.tag === Provider && current.type._context === contextType) {
-      return current
-    }
-    current = current.return
+function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
+  let workInProgress = current.alternate;
+  if (workInProgress === null) {
+    // 首次渲染时创建 workInProgress
+    workInProgress = createFiber(
+      current.tag,
+      pendingProps,
+      current.key,
+      current.mode,
+    );
+    workInProgress.elementType = current.elementType;
+    workInProgress.type = current.type;
+    workInProgress.stateNode = current.stateNode;
+
+    workInProgress.alternate = current;
+    current.alternate = workInProgress;
+  } else {
+    // 后续更新时重用已存在的 workInProgress
+    workInProgress.pendingProps = pendingProps;
+    workInProgress.type = current.type;
+    workInProgress.flags = NoFlags;
+    // ... 重置其他属性
   }
-  return null
+
+  // 复制必要的属性
+  workInProgress.child = current.child;
+  workInProgress.memoizedProps = current.memoizedProps;
+  workInProgress.memoizedState = current.memoizedState;
+  workInProgress.updateQueue = current.updateQueue;
+  // ... 复制其他属性
+
+  return workInProgress;
 }
 ```
 
-### 3.3 复杂的树遍历操作
+### 4.4 实际例子：局部替换和双缓存
 
-有时我们需要进行更复杂的树遍历操作，例如同时向上和向下查找：
+让我们通过一个具体的例子来说明 React 如何使用双缓存和局部替换来更新 UI。
+
+假设我们有以下组件结构：
+
+```jsx
+function App() {
+  const [count, setCount] = useState(0)
+  return (
+    <div>
+      <Header />
+      <Main count={count} />
+      <Footer />
+    </div>
+  )
+}
+
+function Main({ count }) {
+  return (
+    <div>
+      <h2>Count: {count}</h2>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+    </div>
+  )
+}
+```
+
+初始渲染后，Fiber 树结构可能如下：
 
 ```javascript
-function findNodeBetween(start, end, predicate) {
-  let current = start
-  while (current !== null && current !== end) {
-    if (predicate(current)) {
-      return current
-    }
-    if (current.child !== null) {
-      current = current.child
-    } else {
-      while (current !== null && current !== end) {
-        if (current.sibling !== null) {
-          current = current.sibling
-          break
+// current 树
+const currentRoot = {
+  tag: HostRoot,
+  child: {
+    tag: FunctionComponent,
+    type: App,
+    child: {
+      tag: HostComponent,
+      type: 'div',
+      child: {
+        tag: FunctionComponent,
+        type: Header,
+        sibling: {
+          tag: FunctionComponent,
+          type: Main,
+          memoizedState: { count: 0 },
+          sibling: {
+            tag: FunctionComponent,
+            type: Footer
+          }
         }
-        current = current.return
       }
     }
   }
-  return null
+}
+
+// workInProgress 树（初始为 null）
+let workInProgressRoot = null
+```
+
+当用户点击 "Increment" 按钮时，React 会触发更新。这时，React 会创建或重用 workInProgress 树：
+
+```javascript
+// 更新过程中的 workInProgress 树
+workInProgressRoot = {
+  tag: HostRoot,
+  child: {
+    tag: FunctionComponent,
+    type: App,
+    child: {
+      tag: HostComponent,
+      type: 'div',
+      child: {
+        tag: FunctionComponent,
+        type: Header,
+        sibling: {
+          tag: FunctionComponent,
+          type: Main,
+          memoizedState: { count: 1 }, // 注意这里的状态更新
+          sibling: {
+            tag: FunctionComponent,
+            type: Footer
+          }
+        }
+      }
+    }
+  }
 }
 ```
 
-## 4. 实际意义
+在这个过程中，React 只需要更新 Main 组件对应的 Fiber 节点，其他节点可以直接复用 current 树中的节点。这就是局部替换的体现。
 
-理解fiber的结构能帮助我们去理解上层组件结构、避免嵌套、以及思考怎样的组件设计是最优解的性能这种问题，而不是漫无目的的有组件就套就写就好了。
+更新完成后，React 会交换 current 和 workInProgress 的引用：
 
-**示例 1：深度嵌套的结构**
-
-```jsx
-const DeeplyNestedPage = () => (
-  <div>
-    <Header>
-      <Navigation>
-        <NavItem>Home</NavItem>
-        <NavItem>About</NavItem>
-        <NavItem>Contact</NavItem>
-      </Navigation>
-    </Header>
-    <Content>
-      <Sidebar>
-        <SidebarItem>Item 1</SidebarItem>
-        <SidebarItem>Item 2</SidebarItem>
-      </Sidebar>
-      <MainContent>
-        <Article>
-          <Title>Welcome</Title>
-          <Paragraph>This is the main content.</Paragraph>
-        </Article>
-      </MainContent>
-    </Content>
-    <Footer>
-      <Copyright>© 2023</Copyright>
-    </Footer>
-  </div>
-)
+```javascript
+// 交换引用
+const temp = currentRoot
+currentRoot = workInProgressRoot
+workInProgressRoot = temp
 ```
 
-**示例 2：扁平化的结构**
+这样，新的 current 树就反映了更新后的 UI 状态，而旧的 current 树成为了新的 workInProgress 树，等待下一次更新。
 
-```jsx
-const FlatPage = () => (
-  <div>
-    <Header />
-    <Navigation />
-    <NavItem>Home</NavItem>
-    <NavItem>About</NavItem>
-    <NavItem>Contact</NavItem>
-    <Content />
-    <Sidebar />
-    <SidebarItem>Item 1</SidebarItem>
-    <SidebarItem>Item 2</SidebarItem>
-    <MainContent />
-    <Article />
-    <Title>Welcome</Title>
-    <Paragraph>This is the main content.</Paragraph>
-    <Footer />
-    <Copyright>© 2023</Copyright>
-  </div>
-)
-```
-
-这两个例子最终都能达成相同的功能，但实现结构是不同的，我们可以分析一下这两种结构对 Fiber 树和性能的影响：
-
-1. **Fiber 树的深度**：
-
-   - 深度嵌套的结构会创建一个更深的 Fiber 树。每一层嵌套都会在 Fiber 树中增加一个层级。
-   - 扁平化的结构创建的 Fiber 树更浅，大多数组件都是直接的子组件。
-
-2. **更新效率**：
-
-   - 在深度嵌套的结构中，如果顶层组件（如 `Header`）发生变化，React 需要遍历更多的 Fiber 节点来确定需要更新的内容。
-   - 扁平化的结构使得 React 可以更快地定位到需要更新的组件，因为它们大多处于同一层级。
-
-3. **组件复用和状态管理**：
-
-   - 深度嵌套的结构其实经常会导致不必要的组件重渲染。例如，如果 `Content` 组件的状态改变，它可能会导致 `Sidebar` 和 `MainContent` 都重新渲染。
-   - 而扁平化的结构允许更精确的控制哪些组件需要重新渲染。
-
-4. **代码可维护性**：
-
-   - 显然扁平化的结构通常更容易维护和重构，因为组件之间的依赖关系更清晰。
-
-5. **性能优化空间**：
-   - 扁平化的结构也更好优化。
+这个例子展示了 React 如何通过双缓存机制和局部替换来高效地管理更新。它只修改必要的部分，复用大部分现有结构。

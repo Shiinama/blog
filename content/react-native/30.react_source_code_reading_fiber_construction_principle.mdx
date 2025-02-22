@@ -1,15 +1,13 @@
 ---
-title: 2.React源码阅读-fiber核心构建原理
+title: 30. React源码阅读-fiber核心构建原理(原文)
 description: 文章主要介绍了 React 源码中 fiber 核心的构建原理
 published: true
 toc:
   visible: true
 date: 2022-11-29
-
 ---
 
 # React源码阅读(2)-fiber核心构建原理
-
 
 文章主要介绍了 React 源码中 fiber 核心的构建原理，包括执行上下文、入口函数、构建阶段（如 `performSyncWorkOnRoot` 中的树构建和提交）、提交阶段（准备、提交的三个子阶段、渲染完成后的操作）以及调度注册等，还展示了手写 fiber-dom 的部分代码。
 
@@ -23,7 +21,7 @@ AI智能总结首次生成速度较慢, 请耐心等待
 
 ## 1.react构建fiber核心代码
 
-对应源码位于[ReactFiberWorkLoop.js](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberWorkLoop.old.js "https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js")，
+对应源码位于[ReactFiberWorkLoop.js](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2Ffacebook%2Freact%2Fblob%2Fv17.0.2%2Fpackages%2Freact-reconciler%2Fsrc%2FReactFiberWorkLoop.old.js 'https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js')，
 我们先大致了解一下整体的走向图。 ![image.png](https://ik.imagekit.io/leiakito/react%20Core%20scheduling%20principles/reactFiberWorkLoop.jpeg)
 
 ### 1.1 入口
@@ -65,7 +63,7 @@ export function scheduleUpdateOnFiber(
       // 后续的更新，注册调度任务
       ensureRootIsScheduled(root, eventTime);
     }
-  } 
+  }
 }
 
 ```
@@ -141,10 +139,9 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 ```js
 function workLoopSync() {
   while (workInProgress !== null) {
-    performUnitOfWork(workInProgress);
+    performUnitOfWork(workInProgress)
   }
 }
-
 ```
 
 这里就相当于把循坏构建fiberDom树了,而前面备注中也写到了workInProgress指向当前构建的任务或者说节点更适合一些，来到构建fiberDom树的`performUnitOfWork`.
@@ -325,7 +322,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
           returnFiber.lastEffect = completedWork;
         }
       }
-    } 
+    }
 
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
@@ -354,15 +351,11 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 ```js
 function commitRoot(root) {
   // 渲染等级
-  const renderPriorityLevel = getCurrentPriorityLevel();
+  const renderPriorityLevel = getCurrentPriorityLevel()
   // 调度等级
-  runWithPriority(
-    ImmediateSchedulerPriority,
-    commitRootImpl.bind(null, root, renderPriorityLevel),
-  );
-  return null;
+  runWithPriority(ImmediateSchedulerPriority, commitRootImpl.bind(null, root, renderPriorityLevel))
+  return null
 }
-
 ```
 
 `commitRootImpl`主要工作就是遍历`effect`数组去添加对应的标记，最终交给`react-dom`执行，`commit`有三个大阶段：1.提交`准备阶段`。2.`提交阶段`,而提交阶段中的三个`while`循坏下分别又对应3个子阶段：`before mutation`阶段。`mutation`阶段。`layout`阶段。3.`提交后`。代码较长我们分成3部分解释。
@@ -382,39 +375,38 @@ function commitRootImpl(root, renderPriorityLevel) {
   // 准备提交阶段
   // 判断rootWithPendingPassiveEffects，就是说先判断是否有未执行的useEffect，如果有先执行，等待我们上一轮的useEffect执行完后才继续我们commit。
   do {
-    // 
-    flushPassiveEffects();
-  } while (rootWithPendingPassiveEffects !== null);
+    //
+    flushPassiveEffects()
+  } while (rootWithPendingPassiveEffects !== null)
   // 忽略代码
   // 再次更新副作用队列，在前面的函数式组件更新阶段后，`effct list`这条链表只有子节点，没有挂载到根节点上，默认情况下fiber节点的副作用队列是不包括自身的,如果根节点也存在 `effectTag`，那么就需要把根节点拼接到链表的末尾，形成一条完整的 `effect list`，取出第一个需要处理的fiber节点
-  let firstEffect;
+  let firstEffect
   if (finishedWork.flags > PerformedWork) {
     if (finishedWork.lastEffect !== null) {
-      finishedWork.lastEffect.nextEffect = finishedWork;
-      firstEffect = finishedWork.firstEffect;
+      finishedWork.lastEffect.nextEffect = finishedWork
+      firstEffect = finishedWork.firstEffect
     } else {
-      firstEffect = finishedWork;
+      firstEffect = finishedWork
     }
   } else {
     // There is no effect on the root.
-    firstEffect = finishedWork.firstEffect;
+    firstEffect = finishedWork.firstEffect
   }
   // 忽略代码
   if (firstEffect !== null) {
-    nextEffect = firstEffect;
+    nextEffect = firstEffect
     // 进入第二阶段
     // beforeMutation 子阶段：
     // 执行 commitBeforeMutationEffects
-    
+
     // mutation 子阶段：
     // 执行 commitMutationEffects
-    
+
     // layout 子阶段：
     // 执行 commitLayoutEffects
   }
   // 忽略代码
 }
-
 ```
 
 #### 2:提交阶段。
@@ -422,35 +414,34 @@ function commitRootImpl(root, renderPriorityLevel) {
 这里我们有三个子阶段，对应的是三个函数 `commitBeforeMutationEffects`,`commitMutationEffects`,`commitLayoutEffects`
 
 ```js
-  let firstEffect = finishedWork.firstEffect;
-  if (firstEffect !== null) {
-    const prevExecutionContext = executionContext;
-    executionContext |= CommitContext;
-    // 阶段1: dom改变之前
-    nextEffect = firstEffect;
-    do {
-      commitBeforeMutationEffects();
-    } while (nextEffect !== null);
+let firstEffect = finishedWork.firstEffect
+if (firstEffect !== null) {
+  const prevExecutionContext = executionContext
+  executionContext |= CommitContext
+  // 阶段1: dom改变之前
+  nextEffect = firstEffect
+  do {
+    commitBeforeMutationEffects()
+  } while (nextEffect !== null)
 
-    // 阶段2: dom改变, 界面发生改变
-    nextEffect = firstEffect;
-    do {
-      commitMutationEffects(root, renderPriorityLevel);
-    } while (nextEffect !== null);
-    // 恢复界面状态
-    resetAfterCommit(root.containerInfo);
-    // 切换current指针
-    root.current = finishedWork;
+  // 阶段2: dom改变, 界面发生改变
+  nextEffect = firstEffect
+  do {
+    commitMutationEffects(root, renderPriorityLevel)
+  } while (nextEffect !== null)
+  // 恢复界面状态
+  resetAfterCommit(root.containerInfo)
+  // 切换current指针
+  root.current = finishedWork
 
-    // 阶段3: layout阶段, 调用生命周期componentDidUpdate和回调函数等
-    nextEffect = firstEffect;
-    do {
-      commitLayoutEffects(root, lanes);
-    } while (nextEffect !== null);
-    nextEffect = null;
-    executionContext = prevExecutionContext;
-  }
-
+  // 阶段3: layout阶段, 调用生命周期componentDidUpdate和回调函数等
+  nextEffect = firstEffect
+  do {
+    commitLayoutEffects(root, lanes)
+  } while (nextEffect !== null)
+  nextEffect = null
+  executionContext = prevExecutionContext
+}
 ```
 
 **子阶段1**：在dom变化前,`commitBeforeMutationEffects`会主要做两件事。1、执行`getSnapshowBeforeUpdate`（`commitBeforeMutationEffectOnFiber`）生命周期方法。2、调度`useEffect`
@@ -459,44 +450,43 @@ function commitRootImpl(root, renderPriorityLevel) {
 function commitBeforeMutationEffects() {
   while (nextEffect !== null) {
     // 忽略代码
-    
-    const effectTag = nextEffect.effectTag;
+
+    const effectTag = nextEffect.effectTag
     if ((effectTag & Snapshot) !== NoEffect) {
       // 忽略代码
-      commitBeforeMutationEffectOnFiber(current, nextEffect);
+      commitBeforeMutationEffectOnFiber(current, nextEffect)
     }
- 
+
     // 忽略代码
-    nextEffect = nextEffect.nextEffect;
+    nextEffect = nextEffect.nextEffect
   }
 }
 
 // 省略代码
 function commitBeforeMutationEffects() {
   while (nextEffect !== null) {
-    const current = nextEffect.alternate;
-    const flags = nextEffect.flags;
+    const current = nextEffect.alternate
+    const flags = nextEffect.flags
     // 处理Snapshot标记
     if ((flags & Snapshot) !== NoFlags) {
-    // 这里实际就是处理2个节点，对于ClassComponent类型节点, 调用instance.getSnapshotBeforeUpdate生命周期函数，对于HostRoot类型节点, 调用clearContainer清空了容器节点(即`div#root`这个 dom 节点).
-      commitBeforeMutationEffectOnFiber(current, nextEffect);
+      // 这里实际就是处理2个节点，对于ClassComponent类型节点, 调用instance.getSnapshotBeforeUpdate生命周期函数，对于HostRoot类型节点, 调用clearContainer清空了容器节点(即`div#root`这个 dom 节点).
+      commitBeforeMutationEffectOnFiber(current, nextEffect)
     }
     // 处理Passive标记
     if ((flags & Passive) !== NoFlags) {
       // 处理useEffect
       // 用于执行useEffect的回调函数，不立即执行，放在scheduleCallBack的回调中，异步根据优先级执行这个回调函数，如果说存在Passive effect，就将rootDoesHavePassiveEffects置为true，并且加入调度，而我们整个commit是一个同步执行操作，所以useEffect会在commit完成后去异步执行。这就跟上面的对上了。
       if (!rootDoesHavePassiveEffects) {
-        rootDoesHavePassiveEffects = true;
+        rootDoesHavePassiveEffects = true
         scheduleCallback(NormalSchedulerPriority, () => {
-          flushPassiveEffects();
-          return null;
-        });
+          flushPassiveEffects()
+          return null
+        })
       }
     }
-    nextEffect = nextEffect.nextEffect;
+    nextEffect = nextEffect.nextEffect
   }
 }
-
 ```
 
 **子阶段2**：dom 变更, 界面得到更新. 处理副作用队列中带有`ContentReset`, `Ref`, `Placement`, `Update`, `Deletion`, `Hydrating`标记的`fiber`节点. 调用栈：
@@ -519,12 +509,12 @@ function commitBeforeMutationEffects() {
 function commitMutationEffects(root: FiberRoot, renderPriorityLevel) {
   while (nextEffect !== null) {
     const effectTag = nextEffect.effectTag;
-    
+
     // 如果有 ContentReset，会重置文本节点
     if (effectTag & ContentReset) {
       commitResetTextContent(nextEffect);
     }
-    
+
     // 如果有 Ref，会执行 ref 相关的更新
     if (flags & Ref) {
         const current = nextEffect.alternate;
@@ -556,7 +546,7 @@ function commitMutationEffects(root: FiberRoot, renderPriorityLevel) {
       }
       // 忽略代码
     }
-    
+
     // 取出下一个 fiber 节点，进入下一次循环
     nextEffect = nextEffect.nextEffect;
   }
@@ -570,14 +560,14 @@ function commitMutationEffects(root: FiberRoot, renderPriorityLevel) {
 function commitLayoutEffects(root: FiberRoot, committedLanes: Lanes) {
   // 忽略代码
   while (nextEffect !== null) {
-   
+
     const flags = nextEffect.flags;
     // 处理标记
     if (flags & (Update | Callback)) {
       const current = nextEffect.alternate;
       commitLayoutEffectOnFiber(root, current, nextEffect, committedLanes);
     }
-    
+
     if (flags & Ref) {
       // 重新设置ref
       commitAttachRef(nextEffect);
@@ -614,7 +604,7 @@ function commitLifeCycles(
         } finally {
           recordLayoutEffectDuration(finishedWork);
         }
-      } 
+      }
       // finishedWork指的是正在被遍历的有副作用的fiber，放入调度中
       schedulePassiveEffects(finishedWork);
       return;
@@ -694,16 +684,15 @@ export function enqueuePendingPassiveHookEffectMount(
 `清理`：清理有两个地方，一个是链表拆解的清理，因为gc没法回收，就得手动把链表拆开。第二个地方，因为我们前面保存了2个数组`unmount effect`和`mount effects`,`useEffect`会留置到 `flushPassiveEffects`()监测更新后再去清理。
 
 ```js
- nextEffect = firstEffect;
-    while (nextEffect !== null) {
-      const nextNextEffect = nextEffect.nextEffect;
-      nextEffect.nextEffect = null;
-      if (nextEffect.flags & Deletion) {
-        detachFiberAfterEffects(nextEffect);
-      }
-      nextEffect = nextNextEffect;
-    }
-
+nextEffect = firstEffect
+while (nextEffect !== null) {
+  const nextNextEffect = nextEffect.nextEffect
+  nextEffect.nextEffect = null
+  if (nextEffect.flags & Deletion) {
+    detachFiberAfterEffects(nextEffect)
+  }
+  nextEffect = nextNextEffect
+}
 ```
 
 `监测更新`:重点是在这个地方，在渲染后的更新我们只说2个必定会调用的监测函数`ensureRootIsScheduled`和`flushSyncCallbackQueue`,`ensureRootIsScheduled`这是用来处理异步任务的(走到我们前文说的流程)，`flushSyncCallbackQueue`处理同步任务，如果有就直接调用，再次进入fiber树构造，
@@ -711,13 +700,12 @@ export function enqueuePendingPassiveHookEffectMount(
 ```js
 export function flushSyncCallbackQueue() {
   if (immediateQueueCallbackNode !== null) {
-    const node = immediateQueueCallbackNode;
-    immediateQueueCallbackNode = null;
-    Scheduler_cancelCallback(node);
+    const node = immediateQueueCallbackNode
+    immediateQueueCallbackNode = null
+    Scheduler_cancelCallback(node)
   }
-  flushSyncCallbackQueueImpl();
+  flushSyncCallbackQueueImpl()
 }
-
 ```
 
 到这里就很简单了循坏去执行同步任务，再次构建。
@@ -726,71 +714,63 @@ export function flushSyncCallbackQueue() {
 function flushSyncCallbackQueueImpl() {
   if (!isFlushingSyncQueue && syncQueue !== null) {
     // Prevent re-entrancy.
-    isFlushingSyncQueue = true;
-    let i = 0;
+    isFlushingSyncQueue = true
+    let i = 0
     if (decoupleUpdatePriorityFromScheduler) {
-      const previousLanePriority = getCurrentUpdateLanePriority();
+      const previousLanePriority = getCurrentUpdateLanePriority()
       try {
-        const isSync = true;
-        const queue = syncQueue;
-        setCurrentUpdateLanePriority(SyncLanePriority);
+        const isSync = true
+        const queue = syncQueue
+        setCurrentUpdateLanePriority(SyncLanePriority)
         runWithPriority(ImmediatePriority, () => {
           for (; i < queue.length; i++) {
-            let callback = queue[i];
+            let callback = queue[i]
             do {
               //循坏执行同步任务
-              callback = callback(isSync);
-            } while (callback !== null);
+              callback = callback(isSync)
+            } while (callback !== null)
           }
-        });
-        syncQueue = null;
+        })
+        syncQueue = null
       } catch (error) {
         // If something throws, leave the remaining callbacks on the queue.
         if (syncQueue !== null) {
-          syncQueue = syncQueue.slice(i + 1);
+          syncQueue = syncQueue.slice(i + 1)
         }
         // Resume flushing in the next tick
-        Scheduler_scheduleCallback(
-          Scheduler_ImmediatePriority,
-          flushSyncCallbackQueue,
-        );
-        throw error;
+        Scheduler_scheduleCallback(Scheduler_ImmediatePriority, flushSyncCallbackQueue)
+        throw error
       } finally {
-        setCurrentUpdateLanePriority(previousLanePriority);
-        isFlushingSyncQueue = false;
+        setCurrentUpdateLanePriority(previousLanePriority)
+        isFlushingSyncQueue = false
       }
     } else {
       try {
-        const isSync = true;
-        const queue = syncQueue;
+        const isSync = true
+        const queue = syncQueue
         runWithPriority(ImmediatePriority, () => {
           for (; i < queue.length; i++) {
-            let callback = queue[i];
+            let callback = queue[i]
             do {
-              callback = callback(isSync);
-            } while (callback !== null);
+              callback = callback(isSync)
+            } while (callback !== null)
           }
-        });
-        syncQueue = null;
+        })
+        syncQueue = null
       } catch (error) {
         // If something throws, leave the remaining callbacks on the queue.
         if (syncQueue !== null) {
-          syncQueue = syncQueue.slice(i + 1);
+          syncQueue = syncQueue.slice(i + 1)
         }
         // Resume flushing in the next tick
-        Scheduler_scheduleCallback(
-          Scheduler_ImmediatePriority,
-          flushSyncCallbackQueue,
-        );
-        throw error;
+        Scheduler_scheduleCallback(Scheduler_ImmediatePriority, flushSyncCallbackQueue)
+        throw error
       } finally {
-        isFlushingSyncQueue = false;
+        isFlushingSyncQueue = false
       }
     }
   }
 }
-
-
 ```
 
 ### 1.3 ensureRootIsScheduled
@@ -845,12 +825,12 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
  * @Description:
  * @Date: 2022-11-23 22:44:29
  */
-import { arrified, getRoot, getTag, createStateNode } from '../until';
-import { commitAllWork } from './commit';
-import { scheduleCallback } from '../scheduler';
-let first = 1;
-let subTask = null;
-let pendingCommit = null;
+import { arrified, getRoot, getTag, createStateNode } from '../until'
+import { commitAllWork } from './commit'
+import { scheduleCallback } from '../scheduler'
+let first = 1
+let subTask = null
+let pendingCommit = null
 // 构建最外层的fiber对象
 function createOutFiber(jsx, root) {
   const task = {
@@ -858,11 +838,11 @@ function createOutFiber(jsx, root) {
     props: {
       children: jsx
     }
-  };
-  let outFiber;
+  }
+  let outFiber
   if (task.from === 'class_component') {
-    const root = getRoot(task.instance);
-    task.instance.__fiber.partialState = task.partialState;
+    const root = getRoot(task.instance)
+    task.instance.__fiber.partialState = task.partialState
     outFiber = {
       props: root.props,
       stateNode: root.stateNode,
@@ -870,8 +850,8 @@ function createOutFiber(jsx, root) {
       effects: [],
       child: null,
       alternate: root
-    };
-    return outFiber;
+    }
+    return outFiber
   }
   outFiber = {
     props: task.props,
@@ -880,8 +860,8 @@ function createOutFiber(jsx, root) {
     effects: [],
     child: null,
     alternate: task.root.__rootFiberContainer
-  };
-  return outFiber;
+  }
+  return outFiber
 }
 
 function reconcileChildren(fiber, children) {
@@ -889,45 +869,45 @@ function reconcileChildren(fiber, children) {
    * children 可能对象 也可能是数组
    * 将children 转换成数组
    */
-  const arrifiedChildren = arrified(children);
+  const arrifiedChildren = arrified(children)
   /**
    * 循环 children 使用的索引
    */
-  let index = 0;
+  let index = 0
   /**
    * children 数组中元素的个数
    */
-  let numberOfElements = arrifiedChildren.length;
+  let numberOfElements = arrifiedChildren.length
   /**
    * 循环过程中的循环项 就是子节点的 virtualDOM 对象
    */
-  let element = null;
+  let element = null
   /**
    * 子级 fiber 对象
    */
-  let newFiber = null;
+  let newFiber = null
   /**
    * 上一个兄弟 fiber 对象
    */
-  let prevFiber = null;
+  let prevFiber = null
 
-  let alternate = null;
+  let alternate = null
   if (fiber.alternate && fiber.alternate.child) {
-    alternate = fiber.alternate.child;
+    alternate = fiber.alternate.child
   }
-  console.log(arrifiedChildren);
+  console.log(arrifiedChildren)
   while (index < numberOfElements || alternate) {
     /**
      * 子级 virtualDOM 对象
      */
-    element = arrifiedChildren[index];
+    element = arrifiedChildren[index]
 
     if (!element && alternate) {
       /**
        * 删除操作
        */
-      alternate.effectTag = 'delete';
-      fiber.effects.push(alternate);
+      alternate.effectTag = 'delete'
+      fiber.effects.push(alternate)
     } else if (element && alternate) {
       /**
        * 更新
@@ -940,17 +920,17 @@ function reconcileChildren(fiber, children) {
         effectTag: 'update',
         parent: fiber,
         alternate
-      };
+      }
       if (element.type === alternate.type) {
         /**
          * 类型相同
          */
-        newFiber.stateNode = alternate.stateNode;
+        newFiber.stateNode = alternate.stateNode
       } else {
         /**
          * 类型不同
          */
-        newFiber.stateNode = createStateNode(newFiber);
+        newFiber.stateNode = createStateNode(newFiber)
       }
     } else if (element && !alternate) {
       /**
@@ -966,104 +946,101 @@ function reconcileChildren(fiber, children) {
         effects: [],
         effectTag: 'placement',
         parent: fiber
-      };
+      }
       /**
        * 为fiber节点添加DOM对象或组件实例对象
        */
-      newFiber.stateNode = createStateNode(newFiber);
-      newFiber.stateNode = createStateNode(newFiber);
+      newFiber.stateNode = createStateNode(newFiber)
+      newFiber.stateNode = createStateNode(newFiber)
     }
 
     if (index === 0) {
-      fiber.child = newFiber;
+      fiber.child = newFiber
     } else if (element) {
-      prevFiber.sibling = newFiber;
+      prevFiber.sibling = newFiber
     }
 
     if (alternate && alternate.sibling) {
-      alternate = alternate.sibling;
+      alternate = alternate.sibling
     } else {
-      alternate = null;
+      alternate = null
     }
 
     // 更新
-    prevFiber = newFiber;
-    index++; //保存构建fiber节点的索引，等待事件后通过索引再次进行构建
+    prevFiber = newFiber
+    index++ //保存构建fiber节点的索引，等待事件后通过索引再次进行构建
   }
 }
 
 function workLoopSync() {
   while (subTask) {
-    subTask = performUnitOfWork(subTask);
+    subTask = performUnitOfWork(subTask)
   }
   if (pendingCommit) {
-    first++;
-    commitAllWork(pendingCommit);
+    first++
+    commitAllWork(pendingCommit)
   }
 }
 
 // 构建子集的fiber对象的任务单元
 function performUnitOfWork(fiber) {
-  reconcileChildren(fiber, fiber.props.children);
+  reconcileChildren(fiber, fiber.props.children)
   /**
    * 如果子级存在 返回子级
    * 将这个子级当做父级 构建这个父级下的子级
    */
   if (fiber.child) {
-    return fiber.child;
+    return fiber.child
   }
 
   /**
    * 如果存在同级 返回同级 构建同级的子级
    * 如果同级不存在 返回到父级 看父级是否有同级
    */
-  let currentExecutelyFiber = fiber;
+  let currentExecutelyFiber = fiber
   while (currentExecutelyFiber.parent) {
-    currentExecutelyFiber.parent.effects =
-      currentExecutelyFiber.parent.effects.concat(
-        currentExecutelyFiber.effects.concat([currentExecutelyFiber])
-      );
+    currentExecutelyFiber.parent.effects = currentExecutelyFiber.parent.effects.concat(
+      currentExecutelyFiber.effects.concat([currentExecutelyFiber])
+    )
 
     if (currentExecutelyFiber.sibling) {
-      return currentExecutelyFiber.sibling;
+      return currentExecutelyFiber.sibling
     }
-    currentExecutelyFiber = currentExecutelyFiber.parent;
+    currentExecutelyFiber = currentExecutelyFiber.parent
   }
-  pendingCommit = currentExecutelyFiber;
-  console.log(pendingCommit);
+  pendingCommit = currentExecutelyFiber
+  console.log(pendingCommit)
 }
 
 // 源码地址 https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js#L674-L736
 function ensureRootIsScheduled(fiber) {
   //这里我们可以直接走到注册调度任务,暂时我们分析的是Legacy模式，Concurrent模式实现的performConcurrentWorkOnRoot实现的可中断渲染可以以后实现
-  let newCallbackNode;
+  let newCallbackNode
 
   //接下来就可以直接走到调度中心去
-  newCallbackNode = scheduleCallback(workLoopSync);
+  newCallbackNode = scheduleCallback(workLoopSync)
 }
 
 // 源码地址 https://github.com/facebook/react/blob/v17.0.2/packages/react-reconciler/src/ReactFiberWorkLoop.old.js#L517-L619
 function scheduleUpdateOnFiber(fiber) {
-  subTask = fiber;
+  subTask = fiber
   if (!first) {
     //对应暂无render上下文
     // 对于初次构建来说我们直接进行`fiber构造`.
-    workLoopSync();
+    workLoopSync()
   } else {
     //对于后续更新以及操作都选择去注册调度任务
-    ensureRootIsScheduled(subTask);
+    ensureRootIsScheduled(subTask)
   }
 }
 export function render(jsx, root) {
-  const outFiber = createOutFiber(jsx, root);
-  scheduleUpdateOnFiber(outFiber);
+  const outFiber = createOutFiber(jsx, root)
+  scheduleUpdateOnFiber(outFiber)
 }
-
-
 ```
 
 然后我们就快乐的简单实现了fiberDom的过程~~~
 
 # 总结
 
-比较多工程化和基础的东西，还没完善，有兴趣的可以[gitbub](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2F19981008%2Freact-fibertest "https://github.com/19981008/react-fibertest")拉下来试试
+比较多工程化和基础的东西，还没完善，有兴趣的可以[gitbub](https://link.juejin.cn?target=https%3A%2F%2Fgithub.com%2F19981008%2Freact-fibertest 'https://github.com/19981008/react-fibertest')拉下来试试
