@@ -2,10 +2,22 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 
 //在此引用需要导入的content/目录下的分类
-import { blog, business, easyAiTechnology, reactSourceCode, seo, timeline,independentDevelopment,vue, sdk,fontEnd,interview,flutter} from '@/.velite'
+import {
+  blog,
+  business,
+  easyAiTechnology,
+  reactSourceCode,
+  seo,
+  timeline,
+  independentDevelopment,
+  vue,
+  sdk,
+  fontEnd,
+  interview,
+  flutter
+} from '@/.velite'
 import Navbar from '@/components/navbar'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-
 
 export const metadata = {
   title: 'Documentation',
@@ -29,7 +41,6 @@ export default async function ContentPage() {
     { title: t('interview'), items: interview },
     { title: t('flutter'), items: flutter }
   ]
-  console.log('independentDevelopment:', independentDevelopment)
   return (
     <div className="flex-grow">
       <Navbar />
