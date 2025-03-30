@@ -1,0 +1,73 @@
+---
+title: 2.Coding基础篇-项目基础结构和数据库的搭建
+description: 海外AI项目-最佳实践技术选型
+published: true
+toc:
+  visible: true
+date: 2025-03-25
+---
+
+# Coding基础篇-项目基础结构和数据库的搭建
+
+在上一节中，我们进行了项目的技术选型和产品规划，那么在这一节中我们就直接开始Coding，把项目的架子搭起来。
+
+## Next的项目结构
+
+这部分有两种方式：
+
+### 根据Next的官网操作
+
+[官网Install的教程](https://nextjs.org/docs/app/getting-started/installation)，不需要过于浪费篇幅。
+
+但有的选项需要提一嘴。
+
+```terminal
+What is your project named? my-app
+Would you like to use TypeScript? No / Yes
+Would you like to use ESLint? No / Yes
+Would you like to use Tailwind CSS? No / Yes
+Would you like your code inside a `src/` directory? No / Yes
+Would you like to use App Router? (recommended) No / Yes
+Would you like to use Turbopack for `next dev`?  No / Yes
+Would you like to customize the import alias (`@/*` by default)? No / Yes
+What import alias would you like configured? @/*
+```
+
+有一写值得注意的是，`Would you like your code inside a `src/` directory?`，毕竟看个人喜欢这个选项，我喜欢选No，因为我不太喜欢再包一层，选了这个选项后后面的一些默认名称的文件也需要放在src下了。
+
+`Would you like to customize the import alias (`@/\*` by default)? No / Yes`，也比较看个人喜好，No就行了，毕竟一般引入都是编辑器语法提示的自动引入有一个便捷引入符就好了。
+
+![ai-base-template](https://ik.imagekit.io/ixou4q6nu/ai-base-template1.png)
+
+### 直接clone我的项目
+
+[Github项目地址](https://github.com/Shiinama/easy-business-ai)，我的项目最开始也是用脚手架创建的，逐渐根据项目的功能添加了一些目录，大致的目录作用如下:
+
+- actions/: 包含Next服务器端请求
+- app/: 主应用目录，包含布局和页面。
+  - (private)/: 私有路由和组件。
+  - (public)/: 公共路由和组件。
+- api/: 用于身份验证的API路由。
+- components/: 可重用的UI组件。
+- constant/: 整个应用中使用的常量值。
+- lib/: 共享库和实用工具。
+- prisma/: Prisma配置和Schema文件等
+- public/: 静态资源，如图片和图标。
+- script/: 项目设置或维护的自定义脚本。
+- store/: 状态管理文件（例如Redux）。
+- types/: TypeScript类型定义。
+- .velite/: 生成的Velite输出。
+- velite.config.ts: Velite内容管理的配置文件。
+
+主要配置文件：
+
+`Dockerfile`和`docker-compose.yml`: 用于容器化和部署。
+`next.config.mjs`: Next.js配置。
+`package.json`: 项目依赖和脚本。
+`tailwind.config.ts`: Tailwind CSS配置。
+`tsconfig.json`: TypeScript配置。
+
+紧接着
+`pnpm install`或者`npm run install`，但是到这一步我们还是缺了很多配置。
+
+## 项目的Env文件

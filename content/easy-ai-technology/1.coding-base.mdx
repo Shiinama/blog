@@ -1,0 +1,253 @@
+---
+title: 1.Coding基础篇-产品规划和技术选型
+description: 海外AI项目-最佳实践技术选型
+published: true
+toc:
+  visible: true
+date: 2025-03-25
+---
+
+# Coding基础篇-产品规划和技术选型
+
+那么正所谓万丈高楼从地起，在我们真正的开始编码之前，我们需要一些准备工作。
+
+## 做什么类别的AI产品？
+
+在很长一段时间我的思考模式都是一定要做一个`听起来就牛逼的`、`创新的`产品。说到底就是做`非共识类产品和项目`，
+但也是这次创业的时候，深深的感受到这类非共识类产品往往都基于普通的大类的产品框架下，并不是能凭空想出来的。
+
+第二点就是太累了，因为很多时候`非共识`、`创新类`项目，前面没人帮你踩坑，会遇到各种`非常规`的问题，这种问题会非常打击还在初期甚至中期踏上这条路的小伙伴信心。
+
+那既然如此，就从一个很基础很大众的AI工具类平台开始把，在我看来这种通用框架、又很基础的项目类型是比较容易起步和建立信息的。
+
+目前项目是已经完成了，大家可以体验一下他的功能和内容，[地址](https://linkai.website)。
+
+## 产品内容的构造
+
+整体构造是主要分为了几个抽象的概念：
+
+1. AI Tool工具，这部分就是用户/自己创建的用于解决人们问题的工具，内嵌AI模型和一些参数。
+2. Tools广场，这是用于分发和展示工具的广场。
+3. Tokens，这是用于计算聊天消耗的机制。
+4. 用户/鉴权。
+5. 聊天、历史消息管理、个性化设置参数。
+6. 订阅/付费。
+7. 杂项（Blog、协议等）。
+
+通过这些大的抽象部分，几乎就可以完成一个最基础的AI chatbot/tools/assistant platform，但其实每一部分有跟其他部分有关联且充满了很多细节。
+
+## 技术选型的最佳实践
+
+我们的第一部分主要是Coding基础篇。但我们要明确的一点是`技术只是商业的要素之一`，要达成这个要素目前主流又比较好的有两种方式：
+
+1. 建站工具，现在wordpress和shopify以及各种各样的AI的建站工具非常的发达，可能我们在1-5分钟就能得到一个符合主题的网站，再花30分钟雕琢（图标、文案、封面图等）就可以把它磨到生产标准。
+   但这种方案有个很致命的问题，你在真正面对一些市场和用户定制化需求的时候，要花费的代价和时间是成倍于普通的开发方式的，在功能和效果上很难拿到80分以上，生成的`垃圾`在实际环境中非常难验证商业。
+2. 自己确定框架和大致的技术选项，在这个框架内用AI辅助和修正进行编码。
+
+其实对于每个人来说，看待一个项目的技术最佳实践是有不同视角的，有的人会想我希望我的网站能健全、能尽可能的承载更大的qps，有的人会觉得我的代码要利于维护要前后端分离......
+
+那么代价是什么那？时间、精力、复杂度等等等。我们并不能兼顾所有的因素，那么在我看来最重要的事情就只有`时间`和`商业价值`这两件事。
+
+在这个情况下 `最佳实践` 就是指的能以 `最快的时间`完成 `核心功能`并验证项目 `商业性`。技术仅仅只是商业的一个要素而已。
+
+## 前后端不分离与全栈框架选择
+
+前提背景是，我是独立开发，我要通过一个项目赚钱，我并不确定这个项目能否成功，我需要先用个东西验证这件事。
+
+很多时候，我们都会 `幻想` 我们做了一个项目，上线就大卖特卖，大获成功，在一开始的时候就遵循很多的`技术最佳实践`，但显然他们在这个场景下都是`过度的`。比如服务端分三层、微服务、分布式数据库、GRPC、TRPC等。而`前后端分离` 的架构也是其中之一。
+
+在考虑框架这一点得以前端全栈框架为主。`主因` 是前端离用户近，`次因`是我不是很清楚这几年后端生态中出了哪些比较好用的全栈框架。
+
+那么选择按`生态、活跃度`选择只有两个`Nuxt`和`Next`这两个全栈框架。
+
+那就讲一讲两个框架的核心问题和好处，两个框架我用到了深水区。
+
+- **性能**: 在`ssr`的性能表现上`Nuxt`不如`Next`，在`csr`上肯定`react`不可能有`vue`的性能好的，但问题是在于大量的`seo`和`scp`等一系列`c端核心指标`都依赖于`ssr`。而`csr`在现代浏览器的场景下，差的是那一点性能吗？
+- **生态**: 在生态表现上`Next`拉`Nuxt`一条街。 就是大部分库 `React`系列有`Vue`一般会有， 但在一些库的深水区和issue数量这一点是不太经得起考验的， 再加上大多数海外各种服务的厂商对`React`系列的支持是多于`Vue`的。
+- **前端开发易用度**: 在偏前端一点的开发易用度上面一直是`V`系列的强项，狂拉`Next`一条街，它处理服务端组件和客户组件边界问题做得非常好，没有任何心智负担。
+- **后端开发易用度**: 但在`两个框架的服务侧`方面，显然`Next`的`server actions`属于是作弊级的开发体验，`Nuxt`可以进行服务端开发但体验其实比较差。
+
+那综合考量，`Next`其实是最好的出海AI项目框架，也是出海项目最多的选择框架，`生态`永远是开发中最重要的一环。
+
+[NextJs App route文档](https://nextjs.org/docs/app/getting-started/installation)
+
+## 数据库和orm选择
+
+对于数据库有大量的对比资料，但出于性能、更加现代等考虑上我们选择`Postgre`。
+
+`Orm`比较主流的有三种, [Sequelize](https://link.juejin.cn?target=https%3A%2F%2Fsequelize.org%2F 'https://sequelize.org/')、[TypeORM](https://link.juejin.cn?target=https%3A%2F%2Ftypeorm.io%2F 'https://typeorm.io/')、[Prisma](https://link.juejin.cn?target=https%3A%2F%2Fwww.prisma.io%2F 'https://www.prisma.io/')。
+
+但在 `Next`社区生态下`Prisma`是合适的。 首先 `Prisma文档` 齐全易阅读完整，其次有强大的生态和社区支持。而`Typeorm`更多的是用在纯后端场景下。最后的是`Sequelize`，它的社区活跃程度对比前两者差了一些。
+
+_**数据库：Postgre**_
+
+_**Orm：Prisma**_
+
+## 登录
+
+`Web端`上所需要的登录只需要`Twitter`、`Google`、`FaceBook`、`邮箱登录` + 一个`集成登录鉴权库或登录服务厂商`。来自动帮你处理用户`id`和信息，以及绑定关系。
+
+理论上应该选择登录服务厂商，因为完整的用户服务显然不仅仅只包含登录，还会有注销、用户监控、防刷、安全、灾备等等等，但服务厂商的代价是什么那？
+
+`~是账单`，在我历史的教训里，我用过`supabse`、`firebase`这些服务厂商等。但当我项目的用户数开始变多后，我账单的规模也是成正比增长的，而且我很难把数据迁移走。
+
+![image.png](https://ik.imagekit.io/leiakito/oversea_typeorm/%E6%B5%B7%E5%A4%96AI%E9%A1%B9%E7%9B%AE%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5.webp?updatedAt=1739896012289)
+
+因此我的选择就主要是两点`免费`、`易迁移`。要选一个能实现大部分厂商登录，`功能闭环`的鉴权库就好了。像用户监控、防刷、安全、灾备这些功能在我的初期是不需要的。
+
+当我在项目有一定收入的时候，我可以去各种`云服务`上买很好的数据库服务，来实现`监控`、`备份`、`安全`这些需求显然是更好的选择。（而不是我现在我必须得把登录厂商的数据库留着然后再+一个数据库，我的开发复杂度也加大了非常多， 有朋友肯定会问为什么我不就用登录厂商的数据库，因为它的数据库不是独享线程, 并不能作为应用数据库，就只能做纯登录鉴权数据库）。
+
+那么`next-auth`就是个完美的选择。
+
+_**登录鉴权：next-auth**_
+
+## AI API 和 AI 调用库
+
+对于 `AI API` 毋庸置疑的[Open Router](https://link.juejin.cn?target=https%3A%2F%2Fopenrouter.ai%2F 'https://openrouter.ai/'), 提供市面主流的200多个模型，在它自己的代理商层面同一个模型也有多个服务商可切换，并且价格也会更便宜。
+
+再加上支付简单、限制不多，那么这无疑就是最佳的代理商。
+
+而对于 `客户端调用库` 就是 `vecel` 的[ai](https://link.juejin.cn?target=https%3A%2F%2Fsdk.vercel.ai%2Fdocs%2Fintroduction 'https://sdk.vercel.ai/docs/introduction')库，这个库的名字就叫`ai`。他也提供多家厂商的 `sdk` 支持，`vecel`的开发实力你永远可以相信，`功能强大设计合理场景齐全`。
+![image.png](https://ik.imagekit.io/leiakito/oversea_typeorm/03b4622fd7fb45d4984598fbd8a92bfa~tplv-73owjymdk6-jj-mark-v1_0_0_0_0_5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5rqq6aWx6bG8_q75.webp?updatedAt=1739896012218)
+
+但中后期要面对更复杂的场景还是自己写sse或者webSocket把。
+
+_**AI API：Open Router**_
+
+_**AI库：ai(vecel)**_
+
+## 付款渠道
+
+`PayPal`和`Stripe`，是比较主流的收款方式，唯一很不好的是`api`很复杂，但他们有很多支付网关服务商和隔离层厂商，它们可以大规模的简化调用和回调帮你处理。
+
+推荐个很小众的[upgrade.chat](https://link.juejin.cn?target=https%3A%2F%2Fupgrade.chat%2F 'https://upgrade.chat/'), 它能处理`Palpal个人户`的订阅收款和借记卡信用卡（商户号真的很麻烦）。但是我们会在使用他的时候遇到一些比较烦恼的开发问题，最主要是开发问题是没有订单id关联。
+
+但无论如何它都是会是你初期验证商业项目的好伙伴。
+
+_**支付集成商：upgrade.chat**_
+
+_**收款方式：PayPal、Stripe**_
+
+## UI库和CSS
+
+`ui库`你自己喜欢用啥就用啥，`radix/ui`、`chakra`是我比较喜欢的。对于简单的项目我喜欢`radix/ui`。
+
+但其实`radix/ui`有一些性能问题，`chakra`的组件的成熟度和复杂度在比较复杂的项目里面更合适一些。
+
+`css`就`tailwindcss`.
+
+_**UI：radix/ui(shac)**_
+
+_**css：tailwindcss**_
+
+## 状态管理
+
+无需理由，市面状态库断层级好用，但需要小心处理状态库和水合问题。
+
+_**状态管理：zustand**_
+
+## 验证
+
+无需理由，市面验证库断层级功能强大。
+
+_**状态管理：zod**_
+
+## AI CMS SEO
+
+其实本身是不需要这个部分,但我其实有点想再次验证`ai`写文`seo`这件事，以及不靠投流的纯技术流量这种玩法。
+
+这部分我也暂时没想好怎么做，因为量需要很大(大概一天30篇3000字长文这种)，还不能被 `google`干成垃圾，这个度挺难把握的，人修的话太麻烦了。
+
+`暂时没想好完整思路。`
+
+## 依赖一览表
+
+值得注意的是
+
+- Node版本要大于18
+- React版本是`19`支持新特性
+- Next是15新版
+- 没有任何请求库，因为这部分是特意留白的，请求库没有最佳选择这一说法，只有自己喜欢哪一种。
+
+_**Source Code:**_
+
+```json
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "db:push": "prisma db push",
+    "prisma:gen": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "prisma:reload": "prisma migrate reset",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier -w ."
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.7.4",
+    "@openrouter/ai-sdk-provider": "^0.0.6",
+    "@prisma/client": "^6.1.0",
+    "@radix-ui/react-dialog": "^1.1.4",
+    "@radix-ui/react-dropdown-menu": "^2.1.4",
+    "@radix-ui/react-label": "^2.0.2",
+    "@radix-ui/react-progress": "^1.1.1",
+    "@radix-ui/react-scroll-area": "^1.0.5",
+    "@radix-ui/react-select": "^2.1.4",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-toast": "^1.1.5",
+    "@types/lodash-es": "^4.17.12",
+    "ai": "^4.0.25",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^11.15.0",
+    "immer": "^10.1.1",
+    "lodash-es": "^4.17.21",
+    "lucide-react": "^0.314.0",
+    "next": "15.1.3",
+    "next-auth": "5.0.0-beta.25",
+    "next-themes": "^0.2.1",
+    "react": "^19",
+    "react-dom": "^19",
+    "zod": "^3.22.4",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19.0.4",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "^15.1.3",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "postcss": "^8",
+    "prisma": "^6.1.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.9",
+    "tailwindcss": "^3.3.0",
+    "tailwind-merge": "^2.2.1",
+    "tailwindcss-animate": "^1.0.7",
+    "tailwind-scrollbar-hide": "^2.0.0",
+    "typescript": "^5.4.2"
+  }
+
+```
+
+## 结束
+
+这一章我们主要是讲解在初期进行项目选型和产品构造的一些思路，而在下一章我们就开始项目基础结构和数据库的搭建。
+
+对于在文章中介绍到的库的部分，有一些基础部分，需要伙伴们自己去官网和参考相关资料进行一个粗浅的了解，才能更好跟上下一节课程，了解的大概有这几个点:
+
+1. Next大概是什么东西
+2. Next中App路由的约定式路由和渲染方式。
+3. Prisma大概是个什么东西。
+
+有相关的问题，欢迎伙伴们在群中提问和讨论，问到比较多的问题，会写文章统一回答，在整个主题下不会有太多在对应官网就显而易见的知识点。

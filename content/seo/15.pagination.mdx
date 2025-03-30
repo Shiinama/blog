@@ -1,0 +1,30 @@
+# SEO分页基本功
+
+## 1. 分页器的实现
+
+### Bad Case
+
+如图，这是一个janitorai实现的分页器，他是采用div的形式。
+
+![janitorai-pagination](https://ik.imagekit.io/ixou4q6nu/janitorai-pagination.png)
+
+我们到SEMRush去查询这个页面的流量，可以观察到，这整个页面只被爬取了第一页的数据
+
+![janitorai-pagination-result](https://ik.imagekit.io/ixou4q6nu/janitorai-pageination-result.png)
+
+这其实验证了第七章1.3 Googlebot的工作原理：Googlebot会先分析HTML里的待爬取链接（a标签）和需要下载的JS文件，`选择性的`下载JS文件，然后尝试渲染和执行JS，但本身这一步资源耗费多或者JS执行错误等问题的存在，大概率是失败或者压根就不会执行的。
+
+就会导致这种分页器的写法会直接导致后续页码无法被索引。
+
+### Best Practice
+
+那比较标准的利于SEO的分页器是怎么样的那？我们以Github为例。
+
+在元素检查中，可以知道，Github的分页器直接就是链接，以query的形式跟着页面url后面。
+
+![github-pagination.png](https://ik.imagekit.io/ixou4q6nu/github-pagination.png)
+
+而在返回的document中也是直接返回了a标签，去利于爬虫索引。
+
+![github-pagination-document.png](https://ik.imagekit.io/ixou4q6nu/github-pagination-document.png)
+
