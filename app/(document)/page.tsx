@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 
 //在此引用需要导入的content/目录下的分类
-import { blog, business, easyAiTechnology, reactSourceCode, seo, timeline,independentDevelopment,vue, sdk,fontEnd,interview,flutter} from '@/.velite'
+import { blog, business, easyAiTechnology, reactSourceCode,reactNative, seo, timeline,independentDevelopment,vue, sdk,fontEnd,interview,flutter} from '@/.velite'
 import Navbar from '@/components/navbar'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -21,6 +21,7 @@ export default async function ContentPage() {
     { title: t('seo'), items: seo },
     { title: t('faqAndPath'), items: easyAiTechnology },
     { title: t('reactSourceCode'), items: reactSourceCode },
+    { title: t('reactNative'), items: reactNative },
     { title: t('business'), items: business },
     { title: t('independentDevelopment'), items: independentDevelopment },
     { title: t('vue'), items: vue },
