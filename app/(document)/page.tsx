@@ -7,6 +7,7 @@ import {
   business,
   easyAiTechnology,
   reactSourceCode,
+  reactNative,
   seo,
   timeline,
   independentDevelopment,
