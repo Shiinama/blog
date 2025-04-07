@@ -25,7 +25,7 @@ Nuxt框架内置了多个强大的SEO工具,让开发者可以轻松地优化他
 
 Nuxt有2个组合式函数,使得管理头部元标签变得更加简单和灵活:
 
-1. `useHead`: 这个函数允许你动态设置`<head>`标签的内容。
+`useHead`: 这个函数允许你动态设置`<head>`标签的内容。
 
 ```javascript
 useHead({
@@ -35,7 +35,7 @@ useHead({
 })
 ```
 
-2. `useSeoMeta`: 这个函数专门用于设置SEO相关的元标签。
+`useSeoMeta`: 这个函数专门用于设置SEO相关的元标签。
 
 ```javascript
 useSeoMeta({
@@ -46,6 +46,8 @@ useSeoMeta({
   ogImage: 'https://example.com/image.jpg'
 })
 ```
+
+> 这两者最终达成的效果是一致的，都是在head里面去设置源数据标签，并没有很特殊的区别使用场景，只是有ts类型和进行结构简化了当使用useSeoMeta的时候。
 
 ### 动态元标签管理
 
@@ -62,6 +64,20 @@ useHead(() => ({
 }))
 ```
 
+这个场景的考虑是这样的，因为有lazy标识，会直接进入页面进行客户端渲染，但因为是新进入页面此时请求还没有拿到数据，title在浏览器上方显示的就是`undefined-product`,
+而当请求结束后，因为`data`是一个响应式对象，会直接更新页面的`title`。
+
+```javascript
+const { data } = await useFetch('/api/products/[id]', {
+  lazy: true
+})
+useHead(() => ({
+  title: `${data.title}-product`
+}))
+```
+
+> 这只是个小demo，更好的做法是，当没数据的时候，有一个title的占位标志文本。
+
 ### 自动生成规范链接（canonical URLs）
 
 Nuxt可以自动为你的页面生成规范链接,这有助于防止重复内容问题。你可以在`nuxt.config.js`中配置这个功能:
@@ -76,7 +92,7 @@ export default defineNuxtConfig({
 })
 ```
 
-这些内置功能为Nuxt应用提供了坚实的SEO基础。在下一节中,我们将探讨如何使用@nuxtjs/seo模块来进一步增强你的SEO策略。
+这些语法糖能为Nuxt应用提供了坚实的SEO基础。在下一节中,我们将探讨如何使用@nuxtjs/seo模块来进一步增强你的SEO策略。
 
 ## 3. @nuxtjs/seo 模块
 
@@ -138,7 +154,7 @@ export default defineNuxtConfig({
 - `enabled`: 是否启用 site 配置（默认为 true）
 - `debug`: 是否启用调试模式（默认为 false）
 - `indexable`: 控制网站是否可以被搜索引擎索引（默认在生产环境为 true）
-- `trailingSlash`: 控制 URL 是否应该包含尾部斜杠（默认为 false）
+- `trailingSlash`: 控制 URL 是否应该包含尾部斜杠（默认为 false），尾斜杠应该是网站统一的，不然会出现索引页面分流的问题。
 
 #### schemaOrg 配置
 
@@ -190,7 +206,7 @@ export default defineNuxtConfig({
 
 ### sitemap 配置
 
-站点地图配置对于帮助搜索引擎发现和索引你的网站内容至关重要，这个配置会自动帮你生成文件路由的页面，如果你需要额外的内容，就使用sources配置
+站点地图配置会自动帮你生成文件路由的页面，如果你需要额外的内容，就使用sources配置，
 添加一个Nuxt的SeverApi返回额外的结果。
 
 ```javascript
@@ -248,7 +264,7 @@ export default defineNuxtConfig({
 
 ## 4. Nuxt Content
 
-内容是SEO的核心，Nuxt提供了强大的工具来帮助你创建和管理SEO友好的内容。
+内容是SEO的核心，Nuxt社区当然有库来帮助你创建和管理SEO友好的内容。
 
 ### 使用Nuxt Content模块管理SEO友好的内容
 
@@ -282,7 +298,7 @@ date: '2023-05-20'
 // 内容
 ```
 
-这个sitemap的配置项，会自动把这个链接添加到Sitemap中。
+> 这个sitemap的配置项，会自动把这个链接添加到Sitemap中。
 
 4. 在组件中使用内容:
 
@@ -305,24 +321,12 @@ const { data } = await useAsyncData('home', () => queryContent('/').find())
 
 ### 处理重复内容
 
-1. 使用规范链接（canonical URLs）:
+使用规范链接（canonical URLs）:
 
 ```javascript
 useHead({
   link: [{ rel: 'canonical', href: 'https://example.com/original-page' }]
 })
-```
-
-2. 实现适当的分页策略:
-
-```vue
-<template>
-  <div>
-    <ArticleList :page="currentPage" />
-    <Pagination :total-pages="totalPages" :current-page="currentPage" />
-  </div>
-</template>
->
 ```
 
 ### 管理404和301重定向
@@ -373,7 +377,8 @@ export default defineNuxtConfig({
 1. 使用服务器端渲染（SSR）:
    Nuxt默认支持SSR，确保搜索引擎可以看到完整的页面内容。
 
-2. 对于动态内容，使用`useFetch`或`useAsyncData`:
+2. 对于动态内容，使用`useFetch`或`useAsyncData`，不加`lazy`的配置项就是在任何情况下都ssr渲染。加了之后意味着如果是通过Nuxt本身的
+   路由方式跳转过来的时候，会直接先进入页面，然后变成客户端渲染。而这对于爬虫是没有影响的:
 
 ```vue
 <script setup>
@@ -388,6 +393,8 @@ const { data } = await useFetch('/api/products')
 </template>
 ```
 
+> 这一段内容本来应该是Nuxt里面最重要的一部分，但我们这个章节是讲SEO~，就稍微了解一下lazy这个对于在Nuxt请求中非常关键的配置项！
+
 3. 使用`<ClientOnly>`组件包裹仅客户端渲染的内容:
 
 ```vue
@@ -398,4 +405,4 @@ const { data } = await useFetch('/api/products')
 
 ## 6. 结论
 
-Nuxt的Seo其实非常的方便，相对Next都是配置形的，开发体验非常的好。
+Nuxt的Seo其实非常的方便，相对于Next都是配置形的，开发体验非常的好，且页面性能和一些用户体验上都会大于Next，比较中肯的说，不考虑社区问题，它几乎就是SSR前端框架的最佳实践。
