@@ -1,4 +1,4 @@
-import { reactSourceCode, blog, seo, easyAiTechnology, timeline, business,independentDevelopment,vue,sdk,fontEnd,interview,flutter} from '@/.velite'
+import { reactSourceCode,reactNative, blog, seo, easyAiTechnology, timeline, business,independentDevelopment,vue,sdk,fontEnd,interview,flutter} from '@/.velite'
 
 export type Collection =
   | typeof blog
@@ -6,6 +6,7 @@ export type Collection =
   | typeof easyAiTechnology
   | typeof timeline
   | typeof reactSourceCode
+  | typeof reactNative
   | typeof business
   | typeof independentDevelopment
   | typeof vue
@@ -14,7 +15,7 @@ export type Collection =
   | typeof interview
   | typeof flutter
 export type CollectionName = 'blog' | 'seo' | 'easyAiTechnology' | 'timeline' 
-| 'reactSourceCode' | 'business'|'independentDevelopment'|'vue'|'sdk'|'fontEnd'|'interview'|'flutter'
+| 'reactSourceCode' |'reactNative'| 'business'|'independentDevelopment'|'vue'|'sdk'|'fontEnd'|'interview'|'flutter'
 
 export const collections: Record<CollectionName, Collection> = {
   blog,
@@ -22,6 +23,7 @@ export const collections: Record<CollectionName, Collection> = {
   easyAiTechnology,
   timeline,
   reactSourceCode,
+  reactNative,
   business,
   independentDevelopment,
   vue,

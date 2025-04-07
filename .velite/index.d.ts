@@ -19,6 +19,9 @@ export declare const seo: Seo[]
 export type ReactSourceCode = Collections['reactSourceCode']['schema']['_output']
 export declare const reactSourceCode: ReactSourceCode[]
 
+export type reactNative = Collections['reactNative']['schema']['_output']
+export declare const reactNative: reactNative[]
+
 export type Business = Collections['business']['schema']['_output']
 export declare const business: Business[]
 

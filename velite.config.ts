@@ -74,6 +74,25 @@ export const reactSourceCode = defineCollection({
     .transform(computedFields)
 })
 
+export const reactNative = defineCollection({
+  name: 'reactNative',
+  pattern: 'react-native/**/*.mdx',
+  schema: s
+    .object({
+      slug: s.path(),
+      title: s.string(),
+      description: s.string(),
+      published: s.boolean().default(false),
+      date: s.coerce.date().default(new Date()),
+      label: s.enum(['New', 'Updated']).optional(),
+      body: s.mdx(),
+      toc: s.object({
+        content: s.toc(),
+        visible: s.boolean().default(true)
+      })
+    })
+    .transform(computedFields)
+})
 export const easyAiTechnology = defineCollection({
   name: 'EasyAiTechnology',
   pattern: 'easy-ai-technology/**/*.mdx',
@@ -272,6 +291,7 @@ export default defineConfig({
     timeline, 
     seo,
     reactSourceCode,
+    reactNative,
     business,
     independentDevelopment,
     vue, 
