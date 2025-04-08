@@ -111,7 +111,7 @@ const TWITTER_SOCIAL_URL = '@awesome_app'
 
 ### 1.3. 动态Meta标签
 
-对于需要根据动态数据生成元数据的页面，我们可以使用`generateMetadata`函数。这种方法特别适用于博客文章、产品页面等内容随时间或用户输入变化的场景。
+对于需要根据动态数据生成元数据的页面，我们可以使用`generateMetadata`函数。这种方法特别适用于博客文章、产品详情页面等内容随时间或用户输入变化的场景。
 
 示例代码：
 
@@ -145,6 +145,8 @@ export default function Page({ params }: Props) {
 这个函数允许我们基于动态数据（如API响应）生成元数据，确保每个页面都有独特且相关的SEO信息。
 
 ### 1.4 generateMetadata的流式渲染
+
+> 流式渲染指的就是不用等待整个ssr中的请求完毕再抛出document，通过 Transfer-Encoding: chunked 的请求头标识把整个document文档进行分块传输，来进行优化页面内容传输以及提升用户体验。
 
 `generateMetadata` 函数不会触发 Suspense，我的猜测这是由于其设计和实现方式导致的。以下是几个主要原因：
 
@@ -197,7 +199,7 @@ module.exports = {
 
 ### 1.5 generateMetadata和页面组件的请求优化
 
-在使用 `generateMetadata` 和页面组件时，一个常见的担忧是可能会导致重复的数据请求。这是一个合理的顾虑，因为 `generateMetadata` 和页面组件可能需要相同的数据。然而，Next.js 已经为此提供了优化方案。
+在使用 `generateMetadata` 和页面组件时，一个常见的担忧是可能会导致重复的数据请求。因为 `generateMetadata` 和页面组件可能需要相同的数据。
 
 #### 请求重复问题
 
@@ -320,9 +322,11 @@ Sitemap: https://www.yourwebsite.com/sitemap.xml
 Host: https://www.yourwebsite.com
 ```
 
+> 动态生成，是一个编译时操作，就是打包的时候就会调用接口生成好，并不会影响爬虫访问sitemap的速度。
+
 ### 2.4. 从类型定义理解Robot
 
-如果你使用 TypeScript，了解 `Robots` 对象的详细类型定义会很有帮助：
+我们通过TypeScript的类型定义去理解`Robots`：
 
 ```typescript
 type RobotsFile = {
@@ -352,7 +356,7 @@ type RobotsFile = {
 - `sitemap` 可以是单个 URL 或 URL 数组，允许指定多个 Sitemap。
 - `host` 是一个可选字段，用于指定网站的首选域名。
 
-### 2.5. 动态生成方法的高级应用
+### 2.5. 动态生成
 
 动态生成 robots.txt 的方法不仅灵活，还允许我们根据不同的条件生成不同的内容。例如：
 
@@ -376,26 +380,9 @@ export default function robots(): MetadataRoute.Robots {
 
 在这个例子中，我们根据环境变量动态决定是否允许搜索引擎爬取网站。在生产环境中，我们允许爬取所有内容；而在非生产环境中，我们禁止爬取任何内容。这种方法特别适用于防止测试或开发环境的网站被搜索引擎索引。
 
-### 2.6. robots.txt 的最佳实践和注意事项
+### 2.6. robots.txt 的注意事项
 
-1. **定期审查和更新**：
-   随着网站结构和内容的变化，定期检查和更新你的 robots.txt 文件是很重要的。确保它始终反映你当前的需求和网站结构。
-
-2. **使用搜索引擎的测试工具**：
-   大多数主要的搜索引擎都提供了 robots.txt 测试工具。例如，Google 搜索控制台就有一个这样的工具。定期使用这些工具来验证你的 robots.txt 文件是否正确无误。
-
-3. **不要过度依赖 robots.txt 来保护敏感信息**：
-   记住，robots.txt 文件是公开可访问的。不要用它来隐藏敏感信息或重要的目录。对于真正需要保护的内容，应该使用密码保护或其他安全措施。
-
-4. **考虑移动端爬虫**：
-   随着移动搜索的普及，一些搜索引擎使用特定的移动爬虫。你可能需要为这些爬虫设置特定的规则。例如：
-
-   ```txt
-   User-agent: Googlebot-Mobile
-   Allow: /mobile/
-   ```
-
-5. **使用通配符谨慎**：
+1. **使用通配符谨慎**：
    robots.txt 支持使用通配符，但要谨慎使用。错误的通配符可能会意外地阻止重要页面被索引。例如：
 
    ```txt
@@ -405,10 +392,10 @@ export default function robots(): MetadataRoute.Robots {
 
    这会阻止所有 PDF 文件被索引。
 
-6. **指定正确的 Sitemap 位置**：
+2. **指定正确的 Sitemap 位置**：
    始终在 robots.txt 中包含你的 Sitemap 位置。这有助于搜索引擎更全面地发现和索引你的网站页面。
 
-7. **考虑爬虫预算**：
+3. **考虑爬虫预算**：
    对于大型网站，可以使用 `Crawl-delay` 指令来控制爬虫的爬取频率，以防止服务器过载：
 
    ```txt
@@ -427,7 +414,7 @@ Sitemap 是一个 XML 文件，其中包含了网站上所有重要页面的列�
 3. 为大型或复杂的网站提供清晰的结构指引
 4. 间接提升网站的 SEO 表现
 
-在 Next.js 应用中，我们同样有两种方式来实现 Sitemap：静态文件方法和动态生成方法。
+在 Next.js 应用中，我们同样有两种方式来实现 Sitemap：静态和动态。
 
 ### 3.1. 静态 Sitemap
 
@@ -501,8 +488,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 2. 可以轻松地从数据库或 API 获取最新的页面信息。
 3. 可以根据不同的条件设置不同的优先级和更新频率。
 
-当然，我会根据我们的要求重新组织这部分内容，从类型定义的角度来解释 Sitemap。
-
 ### 3.3. 从类型定义理解 Sitemap
 
 通过分析 `SitemapFile` 的 TypeScript 类型定义，我们可以深入理解 Sitemap 的结构和功能：
@@ -561,9 +546,7 @@ type SitemapFile = Array<{
 - 它支持多语言网站的 SEO 优化（通过 `alternates`）。
 - 它允许为图片和视频内容提供额外的 SEO 信息（通过 `images` 和 `videos`）。
 
-这种结构化的 Sitemap 格式使得网站管理员可以为搜索引擎提供详细的网站结构和内容信息，从而潜在地提高网站在搜索结果中的可见性和排名。同时，它也为大型和复杂网站提供了一种有效的方式来组织和呈现其内容结构。
-
-### 3.4. 动态生成方法的高级应用
+### 3.4. 动态生成
 
 动态生成 Sitemap 的方法允许我们根据不同的条件生成不同的内容。例如：
 
@@ -593,7 +576,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 }
 ```
 
-但值得注意的是高版本默认静态渲染,如果要退出静态渲染可以这样:
+> 但值得注意的是高版本默认静态渲染,如果要退出静态渲染可以这样,在请求这个sitemaps的时候就从编译时变成运行时请求了，不需要每次重新打包。
 
 ```typescript
 import { MetadataRoute } from 'next'
@@ -684,7 +667,7 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
    单个 Sitemap 文件不应超过 50,000 个 URL。如果你的网站超过这个限制，考虑使用 generateSitemaps 索引文件。
 
 3. **提交到搜索引擎**：
-   主动将你的 Sitemap 提交到主要搜索引擎的网站管理员工具中，如 Google Search Console。
+   主动将你的 Sitemap 提交到主要搜索引擎的网站管理工具中，如 Google Search Console。
 
 4. **使用正确的 URL**：
    确保 Sitemap 中的 URL 是规范的、可访问的，并且与你网站上实际使用的 URL 一致。
@@ -745,8 +728,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 ```
-
-当然，我可以为我们介绍一些常用的 JSON-LD 结构化数据类型。这些结构化数据可以帮助搜索引擎更好地理解我们的网页内容，从而可能提高我们的搜索结果展示效果。以下是一些常见的 JSON-LD 类型及其示例：
 
 ### 4.3 常用的 ld+json 富文本类型
 
