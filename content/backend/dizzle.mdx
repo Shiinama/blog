@@ -1,0 +1,682 @@
+# Drizzle ORM：轻量级数据库工具
+
+在上一章中，我们探讨了 Cloudflare D1 如何作为一款高性能、低成本的边缘数据库解决方案，彻底改变了我们对数据库架构的认知.
+
+但一般来说，我们很少在项目里`裸写sql`，所以我们需要一个能简化操作和开发的`ORM`工具，但市面上绝大多数的`ORM`对于这种`ServerLess数据库`的适配很差，需要解决各种依赖问题。
+
+那么在尝试了一圈后，发现`Drizzle`是最好的搭配方案，选择它最核心的理由是：它没有三方依赖、且对`ServerLess`这个场景非常友好。
+
+[Drizzle地址](https://orm.drizzle.team/)，建议看文档，中文只是阅读起来快一点，精简一点。
+
+## Schema：数据模型定义
+
+Schema 是 Drizzle ORM 的基础，它定义了数据库表的结构和关系。
+
+### 基本表定义
+
+以下是一个简单的表定义示例：
+
+```typescript
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+
+// 定义用户表
+export const users = sqliteTable('users', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().defaultNow()
+})
+```
+
+### Schema 组织方式
+
+Drizzle 允许你灵活组织 Schema 文件，可以选择单文件或多文件方式：
+
+#### 单文件方式
+
+适合小型项目，将所有表定义放在一个 `schema.ts` 文件中：
+
+```typescript
+// src/db/schema.ts
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+
+export const users = sqliteTable('users', {
+  /* 列定义 */
+})
+export const posts = sqliteTable('posts', {
+  /* 列定义 */
+})
+```
+
+#### 多文件方式
+
+对于大型项目，可以将表定义分散到多个文件中：
+
+```
+📦 src
+ └ 📂 db
+    └ 📂 schema
+       ├ 📜 users.ts
+       ├ 📜 posts.ts
+       └ 📜 comments.ts
+```
+
+### 命名约定转换
+
+TypeScript 通常使用驼峰命名法（camelCase），而数据库常用蛇形命名法（snake_case）。Drizzle 提供了自动转换功能：
+
+```typescript
+// schema.ts
+export const users = sqliteTable('users', {
+  id: integer('id'),
+  firstName: text('first_name') // 显式指定数据库列名
+})
+
+// 或使用自动转换
+const db = drizzle(sqlite, {
+  schema: { users },
+  // 自动将 camelCase 转换为 snake_case
+  casing: 'snake_case'
+})
+```
+
+### 关系定义
+
+Drizzle 支持定义表之间的关系：
+
+```typescript
+export const posts = sqliteTable('posts', {
+  id: integer('id').primaryKey(),
+  title: text('title').notNull(),
+  content: text('content'),
+  userId: integer('user_id').references(() => users.id)
+})
+```
+
+### 复用列定义
+
+对于常见的列模式（如时间戳字段），可以创建可复用的定义：
+
+```typescript
+// 通用时间戳字段
+const timestamps = {
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().defaultNow(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+}
+
+// 在多个表中复用
+export const users = sqliteTable('users', {
+  id: integer('id').primaryKey(),
+  // ...其他字段
+  ...timestamps
+})
+```
+
+通过这种方式定义 Schema，Drizzle 不仅提供了类型安全的数据访问，还能自动生成迁移脚本，大大简化了数据库管理工作。
+
+## 数据库连接
+
+Drizzle ORM 通过数据库驱动执行 SQL 查询。
+
+> 数据库驱动就是指的一个中间层，负责将查询请求发送到数据库并处理返回的结果。Drizzle 支持多种数据库驱动，使其能够与各种数据库系统无缝集成。
+
+### 基本连接方式
+
+```typescript
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { users } from './schema'
+
+// 创建数据库连接
+const db = drizzle(process.env.DATABASE_URL)
+
+// 使用连接执行查询
+const usersCount = await db.$count(users)
+```
+
+Drizzle 的工作流程如下：
+
+1. 你的查询（如 `db.$count(users)`）被转换为 SQL 语句（`SELECT COUNT(*) FROM users`）
+2. SQL 语句通过数据库驱动发送到数据库
+3. 数据库返回结果，驱动将其转换为 JavaScript 对象
+4. Drizzle 将结果返回给你的应用
+
+### 访问底层驱动
+
+如果需要，你可以直接访问底层数据库驱动：
+
+```typescript
+import { drizzle } from 'drizzle-orm/node-postgres'
+
+const db = drizzle(process.env.DATABASE_URL)
+const pool = db.$client // 访问底层 node-postgres 驱动
+```
+
+### ServerLess 环境支持
+
+Drizzle 原生支持各种边缘计算和 ServerLess 环境，这也是它与 Cloudflare D1 完美配合的原因：
+
+```typescript
+// Neon 数据库（ServerLess PostgreSQL）
+import { drizzle } from 'drizzle-orm/neon-http'
+const db = drizzle(process.env.DATABASE_URL)
+
+// Cloudflare D1
+import { drizzle } from 'drizzle-orm/d1'
+export default {
+  async fetch(request, env) {
+    const db = drizzle(env.DB)
+    // 使用 db 执行查询
+  }
+}
+```
+
+### 特定运行时支持
+
+Drizzle 还支持特定运行时的数据库驱动：
+
+```typescript
+// Bun SQLite
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+const db = drizzle() // 创建内存数据库
+// 或
+const db = drizzle('./sqlite.db') // 连接文件数据库
+```
+
+### 连接 URL 格式
+
+数据库连接 URL 通常遵循以下格式：
+
+```
+postgresql://username:password@hostname/database_name
+```
+
+例如：
+
+```
+postgresql://alex:AbC123dEf@ep-cool-darkness-123456.us-east-2.aws.neon.tech/dbname
+```
+
+其中：
+
+- `username`: 数据库用户名
+- `password`: 数据库密码
+- `hostname`: 数据库服务器地址
+- `database_name`: 数据库名称
+
+通过这种简单的连接方式，Drizzle 让你能够快速开始使用数据库，而不必担心复杂的配置和设置。
+
+## 数据库查询
+
+Drizzle 提供了两种主要的查询方式：SQL 风格语法和关系式 API。这两种方式各有优势，可以根据不同场景选择使用。
+
+### SQL 风格查询
+
+Drizzle 的核心理念是"如果你懂 SQL，你就懂 Drizzle"。与其他 ORM 不同，Drizzle 不会抽象掉 SQL，而是拥抱它，提供类似 SQL 的 API：
+
+```typescript
+// 查询示例
+const result = await db.select().from(posts).leftJoin(comments, eq(posts.id, comments.postId)).where(eq(posts.id, 10))
+
+// 生成的 SQL
+// SELECT *
+// FROM posts
+// LEFT JOIN comments ON posts.id = comments.post_id
+// WHERE posts.id = 10
+```
+
+#### 基本 CRUD 操作
+
+1. **查询数据**
+
+```typescript
+// 查询所有用户
+const allUsers = await db.select().from(users)
+
+// 查询特定字段
+const userNames = await db.select({ id: users.id, name: users.name }).from(users)
+
+// 条件查询
+import { eq, like } from 'drizzle-orm'
+const filteredUsers = await db.select().from(users).where(eq(users.email, 'test@example.com'))
+```
+
+2. **插入数据**
+
+```typescript
+// 插入单条记录
+await db.insert(users).values({
+  name: '张三',
+  email: 'zhangsan@example.com'
+})
+
+// 插入多条记录
+await db.insert(users).values([
+  { name: '李四', email: 'lisi@example.com' },
+  { name: '王五', email: 'wangwu@example.com' }
+])
+```
+
+3. **更新数据**
+
+```typescript
+// 更新记录
+await db.update(users).set({ name: '张三丰' }).where(eq(users.id, 1))
+```
+
+4. **删除数据**
+
+```typescript
+// 删除记录
+await db.delete(users).where(eq(users.id, 1))
+```
+
+### 关系式查询 API
+
+对于需要获取嵌套关系数据的场景，Drizzle 提供了更简洁的关系式 API：
+
+```typescript
+// 获取用户及其所有文章
+const usersWithPosts = await db.query.users.findMany({
+  with: {
+    posts: true
+  }
+})
+
+// 结果格式
+// [
+//   { id: 1, name: '张三', posts: [{ id: 1, title: '文章1' }, ...] },
+//   ...
+// ]
+```
+
+这种方式特别适合获取嵌套数据，Drizzle 会自动处理关联和数据映射，同时保证只生成一条 SQL 查询，避免 N+1 查询问题。
+
+### 高级查询技巧
+
+Drizzle 支持查询组合和分区，让你能够构建复杂而灵活的查询：
+
+1. **组合条件查询**
+
+```typescript
+// 动态构建查询条件
+function getProductsBy({ name, category, maxPrice }) {
+  const filters = []
+  if (name) filters.push(like(products.name, `%${name}%`))
+  if (category) filters.push(eq(products.category, category))
+  if (maxPrice) filters.push(lte(products.price, maxPrice))
+
+  return db
+    .select()
+    .from(products)
+    .where(filters.length ? and(...filters) : undefined)
+}
+```
+
+2. **子查询**
+
+```typescript
+// 使用子查询
+const subquery = db.select().from(staff).leftJoin(users, eq(staff.userId, users.id)).as('staff_users')
+
+const result = await db.select().from(tickets).leftJoin(subquery, eq(subquery.staff_users.userId, tickets.assignedTo))
+```
+
+通过这些灵活的查询方式，Drizzle 既保持了 SQL 的强大表达能力，又提供了更简洁的 API 来处理常见的数据访问模式，让数据库操作变得既直观又高效。
+
+## 数据库迁移
+
+数据库迁移是开发过程中的重要环节，Drizzle 通过 Drizzle Kit 工具提供了完整的迁移解决方案。
+
+### Drizzle Kit 简介
+
+Drizzle Kit 是一个命令行工具，用于管理 SQL 数据库迁移：
+
+```bash
+npm install -D drizzle-kit
+```
+
+Drizzle Kit 提供了多种命令来满足不同的迁移需求：
+
+| 命令       | 功能描述                                    |
+| ---------- | ------------------------------------------- |
+| `generate` | 根据 Schema 生成 SQL 迁移文件               |
+| `migrate`  | 应用生成的 SQL 迁移文件到数据库             |
+| `push`     | 直接将 Schema 变更推送到数据库              |
+| `pull`     | 从数据库拉取 Schema 并转换为 Drizzle Schema |
+| `studio`   | 启动 Drizzle Studio 用于可视化数据库管理    |
+| `check`    | 检查生成的迁移文件是否存在冲突              |
+| `up`       | 升级之前生成的迁移快照                      |
+
+### 配置 Drizzle Kit
+
+Drizzle Kit 通过 `drizzle.config.ts` 文件进行配置：
+
+```typescript
+// drizzle.config.ts
+import { defineConfig } from 'drizzle-kit'
+
+export default defineConfig({
+  dialect: 'postgresql', // 数据库类型
+  schema: './src/db/schema.ts', // Schema 文件路径
+  out: './drizzle', // 迁移文件输出目录
+  dbCredentials: {
+    // 数据库连接信息（用于 migrate、push、pull 等命令）
+    url: 'postgresql://user:password@host:port/dbname'
+  }
+})
+```
+
+主要配置项包括：
+
+- `dialect`: 数据库类型（'postgresql'、'mysql'、'sqlite' 等）
+- `schema`: Schema 文件路径，支持 glob 模式匹配多个文件
+- `out`: 迁移文件输出目录，默认为 './drizzle'
+- `dbCredentials`: 数据库连接信息
+- `migrations`: 迁移相关配置，如迁移记录表名称
+
+### 迁移工作流
+
+#### 1. 生成迁移文件 (generate)
+
+当你修改 Schema 后，可以生成迁移文件：
+
+```bash
+npx drizzle-kit generate
+```
+
+这将在 `out` 目录中生成 SQL 迁移文件，包含从当前数据库状态到新 Schema 的所有必要更改。
+
+你可以通过 `--name` 参数指定迁移文件的名称：
+
+```bash
+npx drizzle-kit generate --name=init
+```
+
+这将生成类似 `0000_init.sql` 的文件。
+
+对于需要自定义 SQL 操作（如数据填充）的场景，可以生成空白迁移文件：
+
+```bash
+npx drizzle-kit generate --custom --name=seed-users
+```
+
+然后在生成的文件中添加自定义 SQL：
+
+```sql
+-- ./drizzle/0001_seed-users.sql
+INSERT INTO "users" ("name") VALUES('张三');
+INSERT INTO "users" ("name") VALUES('李四');
+```
+
+#### 2. 应用迁移 (migrate)
+
+生成迁移文件后，可以将其应用到数据库：
+
+```bash
+npx drizzle-kit migrate
+```
+
+Drizzle Kit 会在数据库中创建一个名为 `__drizzle_migrations` 的表，用于记录已应用的迁移。你可以自定义这个表：
+
+```typescript
+// drizzle.config.ts
+export default defineConfig({
+  // ...其他配置
+  migrations: {
+    table: 'my_migrations', // 默认为 __drizzle_migrations
+    schema: 'public' // PostgreSQL 专用，默认为 drizzle
+  }
+})
+```
+
+#### 3. 直接推送 Schema (push)
+
+在开发环境中，可以直接将 Schema 变更推送到数据库，跳过生成迁移文件的步骤：
+
+```bash
+npx drizzle-kit push
+```
+
+这个命令会分析当前数据库状态和 Schema 文件的差异，并直接应用变更，适合快速迭代的开发阶段。
+
+#### 4. 从数据库拉取 Schema (pull)
+
+如果你有一个现有的数据库，可以从中拉取 Schema 并转换为 Drizzle Schema：
+
+```bash
+npx drizzle-kit pull
+```
+
+这对于将现有项目迁移到 Drizzle 特别有用。
+
+### 多环境配置
+
+对于有多个环境（开发、测试、生产）的项目，可以创建多个配置文件：
+
+```
+📦 项目根目录
+ ├ 📜 drizzle-dev.config.ts
+ ├ 📜 drizzle-prod.config.ts
+```
+
+使用时指定配置文件：
+
+```bash
+npx drizzle-kit push --config=drizzle-dev.config.ts
+```
+
+### Drizzle Studio
+
+Drizzle Kit 还提供了一个可视化工具 Drizzle Studio，用于浏览和管理数据库：
+
+```bash
+npx drizzle-kit studio
+```
+
+这将启动一个本地服务器，通过浏览器界面可以查看表结构、数据记录，并执行基本的 CRUD 操作。
+
+### 完整迁移流程示例
+
+以下是一个完整的迁移流程示例：
+
+1. 定义 Schema：
+
+```typescript
+// src/schema.ts
+import { pgTable, serial, text } from 'drizzle-orm/pg-core'
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull()
+})
+```
+
+2. 配置 Drizzle Kit：
+
+```typescript
+// drizzle.config.ts
+import { defineConfig } from 'drizzle-kit'
+
+export default defineConfig({
+  dialect: 'postgresql',
+  schema: './src/schema.ts',
+  dbCredentials: {
+    url: 'postgresql://user:password@host:port/dbname'
+  }
+})
+```
+
+3. 生成迁移文件：
+
+```bash
+npx drizzle-kit generate --name=init
+```
+
+4. 应用迁移：
+
+```bash
+npx drizzle-kit migrate
+```
+
+## 完整配置示例
+
+以下是一个包含所有可用选项的扩展配置示例：
+
+```typescript
+import { defineConfig } from 'drizzle-kit'
+
+export default defineConfig({
+  out: './drizzle', // 迁移文件输出目录
+  dialect: 'postgresql', // 数据库类型
+  schema: './src/schema.ts', // Schema 文件路径
+  driver: 'pglite', // 特定数据库驱动
+  dbCredentials: {
+    // 数据库连接信息
+    url: './database/'
+  },
+  extensionsFilters: ['postgis'], // 忽略特定扩展的表
+  schemaFilter: 'public', // 要管理的 schema
+  tablesFilter: '*', // 要管理的表
+  introspect: {
+    // pull 命令的配置
+    casing: 'camel' // 列名命名风格
+  },
+  migrations: {
+    // 迁移记录配置
+    prefix: 'timestamp', // 迁移文件前缀
+    table: '__drizzle_migrations__', // 迁移记录表名
+    schema: 'public' // 迁移记录表所在 schema
+  },
+  entities: {
+    // 实体管理配置
+    roles: {
+      // 角色管理
+      provider: '', // 数据库提供商
+      exclude: [], // 排除的角色
+      include: [] // 包含的角色
+    }
+  },
+  breakpoints: true, // 是否在 SQL 中添加断点
+  strict: true, // push 命令是否需要确认
+  verbose: true // 是否打印详细日志
+})
+```
+
+### 多配置文件支持
+
+对于管理多个数据库或环境的项目，可以创建多个配置文件：
+
+```
+📦 项目根目录
+ ├ 📜 drizzle-dev.config.ts
+ ├ 📜 drizzle-prod.config.ts
+```
+
+使用时指定配置文件：
+
+```bash
+npx drizzle-kit generate --config=drizzle-dev.config.ts
+```
+
+### 主要配置项详解
+
+1. **dialect**：数据库类型
+
+   - 可选值：`postgresql`、`mysql`、`sqlite`、`turso`、`singlestore`
+   - 适用命令：`generate`、`migrate`、`push`、`pull`、`check`、`up`
+
+2. **schema**：Schema 文件路径
+
+   - 类型：`string | string[]`（支持 glob 模式）
+   - 适用命令：`generate`、`push`
+   - 示例：`'./src/schema.ts'` 或 `'./src/schema/*.ts'`
+
+3. **out**：迁移文件输出目录
+
+   - 类型：`string`
+   - 默认值：`'drizzle'`
+   - 适用命令：`generate`、`migrate`、`push`、`pull`、`check`、`up`
+
+4. **dbCredentials**：数据库连接信息
+
+   - 类型：URL 字符串或连接参数对象
+   - 适用命令：`migrate`、`push`、`pull`
+   - 示例：
+     ```typescript
+     dbCredentials: {
+       url: 'postgresql://user:password@host:port/db'
+     }
+     // 或
+     dbCredentials: {
+       host: 'host',
+       port: 5432,
+       user: 'user',
+       password: 'password',
+       database: 'dbname',
+       ssl: true
+     }
+     ```
+
+5. **migrations**：迁移记录配置
+
+   - 类型：`{ table: string, schema: string }`
+   - 默认值：`{ table: '__drizzle_migrations', schema: 'drizzle' }`
+   - 适用命令：`migrate`
+
+6. **tablesFilter**：表过滤器
+
+   - 类型：`string | string[]`
+   - 适用命令：`generate`、`push`、`pull`
+   - 示例：`['users', 'posts', 'project1_*']`
+
+7. **schemaFilter**：Schema 过滤器
+
+   - 类型：`string[]`
+   - 默认值：`['public']`
+   - 适用命令：`generate`、`push`、`pull`
+
+8. **extensionsFilters**：扩展过滤器
+
+   - 类型：`string[]`
+   - 默认值：`[]`
+   - 适用命令：`push`、`pull`
+   - 示例：`['postgis']`（忽略 PostGIS 扩展创建的表）
+
+9. **entities.roles**：角色管理配置
+
+   - 类型：`boolean | { provider: string, include: string[], exclude: string[] }`
+   - 默认值：`false`
+   - 适用命令：`push`、`pull`、`generate`
+   - 示例：
+     ```typescript
+     entities: {
+       roles: {
+         provider: 'supabase',  // 使用 Supabase 预定义角色
+         exclude: ['admin']     // 排除 admin 角色
+       }
+     }
+     ```
+
+10. **strict**：严格模式
+
+    - 类型：`boolean`
+    - 默认值：`false`
+    - 适用命令：`push`
+    - 作用：执行 `push` 命令时是否需要确认 SQL 语句
+
+11. **verbose**：详细日志
+
+    - 类型：`boolean`
+    - 默认值：`true`
+    - 适用命令：`generate`、`pull`
+    - 作用：是否打印详细的 SQL 语句
+
+12. **breakpoints**：SQL 断点
+    - 类型：`boolean`
+    - 默认值：`true`
+    - 适用命令：`generate`、`pull`
+    - 作用：是否在生成的 SQL 中添加 `--> statement-breakpoint` 断点（对于不支持在一个事务中执行多个 DDL 语句的数据库如 MySQL 和 SQLite 很重要）
+
+## 结束
+
+讲这个的主要目的是为了给大家普及一下`海外批量应用`的基础套件的知识，欢迎[加群](https://bento.me/xibaoyu)。

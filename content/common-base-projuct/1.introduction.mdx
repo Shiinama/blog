@@ -1,0 +1,170 @@
+---
+title: 1.Coding基础篇-产品规划和技术选型
+description: 海外AI项目-最佳实践技术选型
+published: true
+toc:
+  visible: true
+date: 2025-03-25
+---
+
+# 最简AI项目：第一章-产品模式的思考
+
+在我们开始实际的编码之前，我们需要先思考这样一个问题：做什么类别的AI产品？
+
+## 做什么类别的AI产品？
+
+毕竟适合我们做的有两类。
+
+1. 纯工具类AI产品。
+2. 平台类AI产品。
+
+但在我看来工具类AI产品，是最好起步的，比如前几天的讲的[aibarbie](https://aibarbie.ai)，一个文生图功能解决具体的需求 + 整体的产品付费闭环。非常快就能搞定，又比较能提供信心。
+
+因此我想的是这样的，我写个大致的框架例子，把这一套逻辑写通，大家只需要关注具体的`需求点`。
+
+> 需求点指的是：只关注使用AI解决用户的需求。
+
+## 产品内容的构造
+
+整体构造是主要分为了几个抽象的概念：
+
+1. 需求点
+2. Tokens，这是用于计算消耗的机制。
+3. 用户/鉴权。
+4. 订阅/付费。
+5. 杂项（Blog、协议等）。
+
+通过这些大的抽象部分，几乎就可以完成一个最基础的AI产品。
+
+## 全栈框架选择
+
+首先要快一定是全栈框架，
+
+那么选择按`生态、活跃度`选择只有两个`Nuxt`和`Next`这两个全栈框架。
+
+那就讲一讲两个框架的核心问题和好处，两个框架我用到了深水区。
+
+- **性能**: 在`ssr`的性能表现上`Nuxt`不如`Next`，在`csr`上肯定`react`不可能有`vue`的性能好的，但问题是在于大量的`seo`和`scp`等一系列`c端核心指标`都依赖于`ssr`。而`csr`在现代浏览器的场景下，差的是那一点性能吗？
+- **生态**: 在生态表现上`Next`拉`Nuxt`一条街。 就是大部分库 `React`系列有`Vue`一般会有， 但在一些库的深水区和issue数量这一点是不太经得起考验的， 再加上大多数海外各种服务的厂商对`React`系列的支持是多于`Vue`的。
+- **前端开发易用度**: 在偏前端一点的开发易用度上面一直是`V`系列的强项，狂拉`Next`一条街，它处理服务端组件和客户组件边界问题做得非常好，没有任何心智负担。
+- **后端开发易用度**: 但在`两个框架的服务侧`方面，显然`Next`的`server actions`属于是作弊级的开发体验，`Nuxt`可以进行服务端开发但体验其实比较差。
+
+那综合考量，`Next`其实是最好的出海AI项目框架，也是出海项目最多的选择框架，`生态`永远是开发中最重要的一环。
+
+[NextJs App route文档](https://nextjs.org/docs/app/getting-started/installation)
+
+> 其实写这么简单的东西，用哪种框架都无所谓的，能完成就好啦。
+
+## 数据库和orm选择
+
+对于数据库有大量的对比资料，但出于性能、更加现代等考虑上我们选择`Postgre`。
+
+`Orm`比较主流的有三种, [Sequelize](https://link.juejin.cn?target=https%3A%2F%2Fsequelize.org%2F 'https://sequelize.org/')、[TypeORM](https://link.juejin.cn?target=https%3A%2F%2Ftypeorm.io%2F 'https://typeorm.io/')、[Prisma](https://link.juejin.cn?target=https%3A%2F%2Fwww.prisma.io%2F 'https://www.prisma.io/')。
+
+但在 `Next`社区生态下`Prisma`是合适的。 首先 `Prisma文档` 齐全易阅读完整，其次有强大的生态和社区支持。而`Typeorm`更多的是用在纯后端场景下。最后的是`Sequelize`，它的社区活跃程度对比前两者差了一些。
+
+_**数据库：Postgre**_
+
+_**Orm：Prisma**_
+
+## 登录
+
+`Web端`上所需要的登录只需要`Twitter`、`Google`、`FaceBook`、`邮箱登录` + 一个`集成登录鉴权库或登录服务厂商`。来自动帮你处理用户`id`和信息，以及绑定关系。
+
+理论上应该选择登录服务厂商，因为完整的用户服务显然不仅仅只包含登录，还会有注销、用户监控、防刷、安全、灾备等等等，但服务厂商的代价是什么那？
+
+`~是账单`，在我历史的教训里，我用过`supabse`、`firebase`这些服务厂商等。但当我项目的用户数开始变多后，我账单的规模也是成正比增长的，而且我很难把数据迁移走。
+
+![image.png](https://ik.imagekit.io/leiakito/oversea_typeorm/%E6%B5%B7%E5%A4%96AI%E9%A1%B9%E7%9B%AE%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5.webp?updatedAt=1739896012289)
+
+因此我的选择就主要是两点`免费`、`易迁移`。要选一个能实现大部分厂商登录，`功能闭环`的鉴权库就好了。像用户监控、防刷、安全、灾备这些功能在我的初期是不需要的。
+
+当我在项目有一定收入的时候，我可以去各种`云服务`上买很好的数据库服务，来实现`监控`、`备份`、`安全`这些需求显然是更好的选择。（而不是我现在我必须得把登录厂商的数据库留着然后再+一个数据库，我的开发复杂度也加大了非常多， 有朋友肯定会问为什么我不就用登录厂商的数据库，因为它的数据库不是独享线程, 并不能作为应用数据库，就只能做纯登录鉴权数据库）。
+
+那么`next-auth`就是个完美的选择。
+
+_**登录鉴权：next-auth**_
+
+## AI API 和 AI 调用库
+
+对于 `AI API` 毋庸置疑的[Open Router](https://link.juejin.cn?target=https%3A%2F%2Fopenrouter.ai%2F 'https://openrouter.ai/'), 提供市面主流的200多个模型，在它自己的代理商层面同一个模型也有多个服务商可切换，并且价格也会更便宜。
+
+再加上支付简单、限制不多，那么这无疑就是最佳的代理商。
+
+而对于 `客户端调用库` 就是 `vecel` 的[ai](https://link.juejin.cn?target=https%3A%2F%2Fsdk.vercel.ai%2Fdocs%2Fintroduction 'https://sdk.vercel.ai/docs/introduction')库，这个库的名字就叫`ai`。他也提供多家厂商的 `sdk` 支持，`vecel`的开发实力你永远可以相信，`功能强大设计合理场景齐全`。
+![image.png](https://ik.imagekit.io/leiakito/oversea_typeorm/03b4622fd7fb45d4984598fbd8a92bfa~tplv-73owjymdk6-jj-mark-v1_0_0_0_0_5o6Y6YeR5oqA5pyv56S-5Yy6IEAg5rqq6aWx6bG8_q75.webp?updatedAt=1739896012218)
+
+但中后期要面对更复杂的场景还是自己写sse或者webSocket把。
+
+_**AI API：Open Router**_
+
+_**AI库：ai(vecel)**_
+
+## 付款渠道
+
+`PayPal`和`Stripe`，是比较主流的收款方式，唯一很不好的是`api`很复杂，但他们有很多支付网关服务商和隔离层厂商，它们可以大规模的简化调用和回调帮你处理。
+
+推荐个很小众的[upgrade.chat](https://link.juejin.cn?target=https%3A%2F%2Fupgrade.chat%2F 'https://upgrade.chat/'), 它能处理`Palpal个人户`的订阅收款和借记卡信用卡（商户号真的很麻烦）。但是我们会在使用他的时候遇到一些比较烦恼的开发问题，最主要是开发问题是没有订单id关联。
+
+但无论如何它都是会是你初期验证商业项目的好伙伴。
+
+当然[Lemonsqueezy](https://www.lemonsqueezy.com)也是一个很好的选择，国内用户也可以申请，不需要公司资质，但唯一的问题就是它的费率太高了。这里有一篇[文章](https://juejin.cn/post/7218916901593415736)是关于它的接入和使用。
+
+_**支付集成商：upgrade.chat**_
+
+_**收款方式：PayPal、Stripe、Lemonsqueezy**_
+
+## UI库和CSS
+
+`ui库`你自己喜欢用啥就用啥，`radix/ui`、`chakra`是我比较喜欢的。对于简单的项目我喜欢`radix/ui`。
+
+但其实`radix/ui`有一些性能问题，`chakra`的组件的成熟度和复杂度在比较复杂的项目里面更合适一些。
+
+`css`就`tailwindcss`.
+
+_**UI：radix/ui(shac)**_
+
+_**css：tailwindcss**_
+
+## 状态管理
+
+无需理由，市面状态库断层级好用，但需要小心处理状态库和水合问题。
+
+_**状态管理：zustand**_
+
+## 验证
+
+无需理由，市面验证库断层级功能强大。
+
+_**状态管理：zod**_
+
+## 部署
+
+常规有两个选择：
+
+1. ServerLess，代表是：Vecel，Cloudflare，S3
+2. 实例Docker，代表是：AWS EC2实例
+
+而显然，这里是教大家成本最低的部署方式（Vecel真的很贵），最便宜的是`Cloudflare`，即使它是对代码入侵最大的一个（因为需要使用整个Cloudflare的生态套件）。
+
+> 还有一个考虑是因为我们后期需要起量，Cloudflare毫无疑问是开发侧起量的神器。
+
+_**部署生态：Cloudflare**_
+
+## 结束
+
+这一章我们主要是讲解在初期进行项目选型和产品构造的一些思路，而在下一章我们就开始项目基础结构和数据库的搭建。
+
+对于在文章中介绍到的库的部分，有一些基础部分，需要伙伴们自己去官网和参考相关资料进行一个粗浅的了解，才能更好跟上下一章，了解的大概有这几个点:
+
+1. Next大概是什么东西
+2. Next中App路由的约定式路由和渲染方式。
+3. Cloudflare。
+
+因为不讲开发基础了，有相关的问题，欢迎伙伴们在群中提问和讨论，问到比较多的问题，会写文章统一回答，在整个主题下不会有在官网就`显而易见`的知识点。
+
+基础背景知识的补充是在:
+
+[Drizzle](https://juejin.cn/post/7496753117024075786)
+
+[D1](https://juejin.cn/post/7496528481843691555)
