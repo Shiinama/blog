@@ -39,10 +39,10 @@
     "reactNative": "reactNative",
     "business": "商业",
     "independentDevelopment": "独立开发",
-    "vue":"Vue",
-    "sdk":"Sdk",
-    "fontEnd":"前端",
-    "interview":"面试",
-    "flutter":"flutter移动开发"
+    "vue": "Vue",
+    "sdk": "Sdk",
+    "fontEnd": "前端",
+    "interview": "面试",
+    "flutter": "flutter移动开发"
   }
 }

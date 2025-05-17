@@ -254,8 +254,72 @@ AUTH_GOOGLE_SECRET=""
 
 那么当我们成功登录之后，就可以到检查数据库的步骤了，我们用更友好的`GUI`的方式去检查本地数据库。
 
-`"db:studio:local": "LOCAL_DB_PATH=$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -type f -name '*.sqlite' -print -quit) drizzle-kit studio"`这段`package.json`里的脚本给大家解释一下，
-LOCAL_DB_PATH环境变量的声明，是为了区别线上和测试环境+找到对应的本地`sqlite`文件，而`drizzle-kit studio`是drizzle启动可视化数据库窗的命令。
+`"db:studio:local": "tsx scripts/db-studio-local.ts"`, 这段`package.json`里的脚本会执行 `db-studio-local` 的脚本，以通过设置环境变量的方式，去控制启动本地/远程数据库。
+
+```typescript
+import { execSync } from 'child_process'
+import { join } from 'path'
+import { existsSync, readdirSync } from 'fs'
+import { platform } from 'os'
+
+function findSqliteFile(): string | null {
+  const basePath = join('.wrangler', 'state', 'v3', 'd1', 'miniflare-D1DatabaseObject')
+
+  if (!existsSync(basePath)) {
+    console.error(`Base path does not exist: ${basePath}`)
+    return null
+  }
+
+  try {
+    function findFile(dir: string): string | null {
+      const files = readdirSync(dir, { withFileTypes: true })
+
+      for (const file of files) {
+        const path = join(dir, file.name)
+        if (file.isDirectory()) {
+          const found = findFile(path)
+          if (found) return found
+        } else if (file.name.endsWith('.sqlite')) {
+          return path
+        }
+      }
+
+      return null
+    }
+
+    return findFile(basePath)
+  } catch (error) {
+    console.error('Error finding SQLite file:', error)
+    return null
+  }
+}
+
+function main() {
+  const sqliteFilePath = findSqliteFile()
+
+  if (!sqliteFilePath) {
+    console.error('Could not find SQLite database file. Make sure you have run the local database first.')
+    process.exit(1)
+  }
+
+  console.log(`Found SQLite database at: ${sqliteFilePath}`)
+
+  // Set environment variable and run drizzle-kit studio
+  const command =
+    platform() === 'win32'
+      ? `set "LOCAL_DB_PATH=${sqliteFilePath}" && drizzle-kit studio`
+      : `LOCAL_DB_PATH="${sqliteFilePath}" drizzle-kit studio`
+
+  try {
+    execSync(command, { stdio: 'inherit' })
+  } catch (error) {
+    console.error('Failed to run drizzle-kit studio:', error)
+    process.exit(1)
+  }
+}
+
+main()
+```
 
 ```typescript
 // drizzle.config.ts
