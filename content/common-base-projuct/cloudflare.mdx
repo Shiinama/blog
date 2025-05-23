@@ -2,7 +2,7 @@
 
 起源在于[第七章AI自动生成内容](https://articles.zsxq.com/id_zxblkmgnaf2w.html)解决`Page Functions`单请求不能长时间执行的问题。我尝试用`Cloudflare Queue`去处理大批量任务和长时间执行的情况，但发现任务没有消费和通知机制。
 
-于是我就开始查找答案，最终的解法是采用`Cloudflare Workers`解决，而不是用`Cloudflare Pages`进行部署。整个基建的重构具体代码会在最简AI项目中的第九章。
+于是我就开始查找答案，最终的解法是采用`Cloudflare Workers`解决，而不是用`Cloudflare Pages`进行部署。整个基建的重构具体代码会在最简AI项目中的[第九章](https://articles.zsxq.com/id_v5pelubbff78.html)。
 
 但要理解这个问题，得从起源`Serverless`架构说起了。
 
