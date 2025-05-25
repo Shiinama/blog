@@ -1,0 +1,534 @@
+# **Next.js面试题：API深度解析**
+
+Next.js 通过 App Router 的引入彻底改变了 Web 开发范式。在这个新时代，深入理解 Next.js 的 API 函数不再只是锦上添花，而是技术面试中的关键区分点。这些函数构成了构建高性能、可扩展、现代化 Web 应用的基石。
+
+本文将系统地解析 Next.js 的各类函数，不仅阐述它们的基本功能，更深入探讨实际应用场景、细微差别以及面试中可能出现的问题。我们将着重于理解每个函数背后的实现原理与设计思路。
+
+## **Next.js 缓存函数与应用性能优化**
+
+缓存是 Next.js 性能策略的核心。面试中，候选人需要清晰阐述不同缓存层级和控制机制。
+
+### **扩展的 fetch API**
+
+Next.js 对原生 fetch API 进行了扩展，为数据获取提供了精细的服务器端缓存控制。
+
+在实际开发中，我们可以通过几个关键配置选项来控制缓存行为：
+
+```javascript
+// 默认行为，开发环境每次请求获取，生产环境静态路由只获取一次
+const data = await fetch('https://api.example.com/data')
+
+// 始终从服务器获取最新数据，不使用缓存
+const freshData = await fetch('https://api.example.com/data', { cache: 'no-store' })
+
+// 优先使用缓存，设置60秒的重新验证时间
+const cachedData = await fetch('https://api.example.com/data', {
+  next: { revalidate: 60 }
+})
+
+// 使用缓存标签，便于精确失效
+const taggedData = await fetch('https://api.example.com/products', {
+  next: { tags: ['products'] }
+})
+```
+
+这些缓存控制选项让开发者能够根据数据的性质和更新频率来优化应用性能。
+
+### **缓存失效机制**
+
+Next.js 提供了两种主要的缓存失效方法：
+
+1. **按路径失效**：`revalidatePath` 允许我们清除特定路径的缓存数据。
+
+```javascript
+// 在Server Action中使用
+async function updateProduct(formData) {
+  await saveProduct(formData)
+  // 失效产品列表页面的缓存
+  revalidatePath('/products')
+  // 注意：目前在Server Action中使用会使客户端路由缓存中的所有路由失效
+}
+```
+
+2. **按标签失效**：`revalidateTag` 让我们能够更精确地失效与特定标签关联的缓存数据。
+
+```javascript
+// 在Server Action中使用
+async function updateProduct(formData) {
+  await saveProduct(formData)
+  // 只失效带有'products'标签的缓存数据
+  revalidateTag('products')
+}
+```
+
+面试中，理解这些缓存机制的工作原理以及何时使用哪种方法是展示你对 Next.js 深入理解的好机会。
+
+## **Next.js 中的 HTTP 请求处理**
+
+Next.js 在标准 Web API 之上提供了强大的抽象，用于处理 cookies、headers 和构建响应。
+
+### **cookies 函数**
+
+`cookies()` 函数是一个异步函数，用于在 Server Components 中读取请求 cookies，以及在 Server Actions 或 Route Handlers 中读取/写入 cookies。
+
+```javascript
+// 在Server Component中读取cookie
+async function UserProfile() {
+  const cookieStore = await cookies()
+  const theme = cookieStore.get('theme')
+
+  return <div>Current theme: {theme?.value || 'default'}</div>
+}
+
+// 在Server Action中设置cookie
+async function setTheme(theme) {
+  'use server'
+
+  cookies().set('theme', theme, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 7, // 一周
+    path: '/'
+  })
+
+  // 重定向或返回数据
+}
+```
+
+值得注意的是，从 Next.js 15 开始，`cookies()` 函数变为异步，这是一个重要变化。使用此函数会使路由动态渲染，因为它依赖于运行时请求信息。
+
+### **headers 与请求处理**
+
+`headers()` 函数让我们能够在 Server Component 中访问传入请求的头部信息：
+
+```javascript
+async function UserAgentComponent() {
+  const headers = await headers()
+  const userAgent = headers.get('user-agent')
+
+  return <div>Your browser: {userAgent}</div>
+}
+```
+
+在 Middleware 和 Route Handlers 中，Next.js 提供了增强的 `NextRequest` 和 `NextResponse` 对象，它们扩展了标准 Web API：
+
+```javascript
+// 在Middleware中使用
+export function middleware(request: NextRequest) {
+  // 检查用户代理
+  const userAgent = request.headers.get('user-agent');
+
+  // 基于移动设备重定向
+  if (userAgent && userAgent.includes('Mobile')) {
+    return NextResponse.redirect(new URL('/mobile', request.url));
+  }
+
+  // 添加自定义头部并继续
+  const response = NextResponse.next();
+  response.headers.set('x-custom-header', 'my-value');
+  return response;
+}
+```
+
+面试中，理解这些 API 的异步特性以及它们如何影响渲染策略是关键点。例如，你可以解释如何在需要保持页面大部分静态的同时访问 cookies 或 headers 信息。
+
+## **Next.js 路由导航与控制**
+
+Next.js 提供了一套完整的路由系统，相关钩子和函数让开发者能够精确控制导航和访问路由信息。
+
+### **客户端导航钩子**
+
+`useRouter` 是最常用的客户端导航钩子，提供了编程式路由控制：
+
+```javascript
+'use client'
+
+import { useRouter } from 'next/navigation'
+
+export default function NavigationButtons() {
+  const router = useRouter()
+
+  return (
+    <div>
+      <button onClick={() => router.push('/dashboard')}>Go to Dashboard</button>
+      <button onClick={() => router.back()}>Go Back</button>
+      <button onClick={() => router.refresh()}>Refresh Current Page</button>
+    </div>
+  )
+}
+```
+
+`useRouter.refresh()` 特别值得注意，它会重新获取数据并重新渲染 Server Components，但保留客户端状态，这与完整页面刷新有很大不同。
+
+其他有用的导航钩子包括：
+
+- `usePathname()`: 获取当前URL路径
+- `useParams()`: 访问动态路由参数
+- `useSearchParams()`: 读取URL查询字符串
+- `useSelectedLayoutSegment(s)`: 了解活动路由段
+
+```javascript
+'use client'
+
+import { usePathname, useParams, useSearchParams } from 'next/navigation'
+
+export function RouteInfo() {
+  const pathname = usePathname()
+  const params = useParams()
+  const searchParams = useSearchParams()
+
+  return (
+    <div>
+      <p>Current path: {pathname}</p>
+      <p>Route params: {JSON.stringify(params)}</p>
+      <p>Search query: {searchParams.get('q')}</p>
+    </div>
+  )
+}
+```
+
+### **重定向与错误处理**
+
+Next.js 提供了几个用于控制导航流程的函数：
+
+```javascript
+// 临时重定向
+redirect('/login')
+
+// 永久重定向（对SEO更友好）
+permanentRedirect('/new-page')
+
+// 显示404页面
+notFound()
+```
+
+这些函数在不同上下文中的行为略有不同。例如，`redirect` 在 Server Actions 中使用 303 状态码，而在其他情况下使用 307 状态码。了解这些细微差别对于处理表单提交和保留请求方法非常重要。
+
+## **元数据优化与SEO**
+
+Next.js 提供了强大的工具来管理元数据，这对SEO和社交媒体分享至关重要。
+
+### **动态元数据生成**
+
+`generateMetadata` 函数允许我们基于路由参数或外部数据动态生成页面元数据：
+
+```javascript
+// app/products/[id]/page.tsx
+export async function generateMetadata({ params }) {
+  const product = await getProduct(params.id)
+
+  return {
+    title: product.name,
+    description: product.description,
+    openGraph: {
+      images: [{ url: product.imageUrl }]
+    }
+  }
+}
+
+export default function ProductPage({ params }) {
+  // 页面组件
+}
+```
+
+Next.js 会自动记忆化 `generateMetadata` 中的数据获取，并在构建时（对静态路由）或请求时（对动态路由）生成元数据。
+
+### **动态图像生成**
+
+对于社交媒体分享图像，`ImageResponse` 提供了使用JSX和CSS动态生成图像的能力：
+
+```javascript
+// app/products/[id]/opengraph-image.tsx
+import { ImageResponse } from 'next/og'
+
+export const runtime = 'edge'
+
+export async function GET(request, { params }) {
+  const product = await getProduct(params.id)
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          display: 'flex',
+          fontSize: 48,
+          background: 'white',
+          width: '100%',
+          height: '100%',
+          padding: 32,
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <img src={product.imageUrl} width="200" height="200" />
+        <h1>{product.name}</h1>
+      </div>
+    ),
+    {
+      width: 1200,
+      height: 630
+    }
+  )
+}
+```
+
+这种方法比静态图像更灵活，可以为每个产品或文章生成独特的社交媒体预览图像。
+
+## **服务器端逻辑与构建优化**
+
+Next.js 使用特定函数来指导其构建过程，特别是在静态生成和处理服务器端任务方面。
+
+### **静态路由生成**
+
+`generateStaticParams` 函数是静态站点生成的核心，它允许我们在构建时预渲染动态路由：
+
+```javascript
+// app/blog/[slug]/page.tsx
+export async function generateStaticParams() {
+  const posts = await getPosts()
+
+  return posts.map((post) => ({
+    slug: post.slug
+  }))
+}
+
+export default function BlogPost({ params }) {
+  // 页面组件
+}
+```
+
+这个函数在构建时运行，为每个返回的参数集生成一个静态路由。它可以与 `dynamicParams` 配置结合使用，控制未预生成路径的处理方式：
+
+```javascript
+// 允许按需生成未预渲染的路径（默认行为）
+export const dynamicParams = true
+
+// 仅允许访问预生成的路径，其他返回404
+export const dynamicParams = false
+```
+
+### **响应后任务**
+
+`after` 函数允许我们调度在响应完成后执行的任务，这对于不应阻塞初始响应的操作（如日志记录、分析）非常有用：
+
+```javascript
+import { after } from 'next/server'
+
+export async function GET() {
+  // 主要响应逻辑
+  const data = await fetchData()
+
+  // 调度响应后任务
+  after(() => {
+    // 这不会阻塞响应
+    logAccess()
+    updateAnalytics()
+  })
+
+  return Response.json(data)
+}
+```
+
+`after` 不会使路由动态化，即使对于静态页面，回调也会在构建时或重新验证时执行。这使得它成为处理副作用的理想选择，同时保持性能优势。
+
+### **内容预览模式**
+
+`draftMode` 函数为内容创建者提供了查看未发布内容的能力，这对于与无头CMS集成特别有用：
+
+```javascript
+// app/api/enable-draft/route.ts
+import { draftMode } from 'next/headers'
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url)
+  const secret = searchParams.get('secret')
+
+  // 验证预览请求
+  if (secret !== process.env.PREVIEW_SECRET) {
+    return new Response('Invalid token', { status: 401 })
+  }
+
+  // 启用草稿模式
+  draftMode().enable()
+
+  return new Response('Draft mode enabled')
+}
+```
+
+在页面组件中，我们可以检查草稿模式状态并相应地获取内容：
+
+```javascript
+// app/page.tsx
+import { draftMode } from 'next/headers'
+
+export default async function Page() {
+  const { isEnabled } = await draftMode()
+
+  // 根据草稿模式状态获取内容
+  const content = await getContent({ draft: isEnabled })
+
+  return (
+    <div>
+      {isEnabled && <div className="draft-banner">Draft Mode</div>}
+      <h1>{content.title}</h1>
+      <div>{content.body}</div>
+    </div>
+  )
+}
+```
+
+## **授权与错误状态管理**
+
+Next.js 提供了几个实验性函数来处理常见的授权和错误状态，使开发者能够创建一致的用户体验。
+
+### **授权状态处理**
+
+`forbidden` 和 `unauthorized` 函数（实验性）提供了一种声明式方法来处理授权失败：
+
+```javascript
+// app/admin/page.tsx
+import { forbidden } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+
+export default async function AdminPage() {
+  const user = await getCurrentUser()
+
+  if (!user) {
+    // 用户未登录，显示401页面
+    unauthorized()
+  }
+
+  if (!user.isAdmin) {
+    // 用户无权访问，显示403页面
+    forbidden()
+  }
+
+  return <AdminDashboard user={user} />
+}
+```
+
+这些函数会抛出错误，触发渲染相应的错误页面（`unauthorized.js` 或 `forbidden.js`），可以在这些页面中提供自定义UI，如登录表单。
+
+### **错误传播控制**
+
+`unstable_rethrow` 函数解决了一个微妙但重要的问题：确保 Next.js 内部错误（如从 `notFound()` 或 `redirect()` 抛出的错误）不会被用户的 try/catch 块意外捕获：
+
+```javascript
+import { unstable_rethrow } from 'next/dist/client/components/error-boundary'
+
+async function fetchAndDisplayProduct(id) {
+  try {
+    const product = await fetchProduct(id)
+
+    if (!product) {
+      notFound()
+    }
+
+    return <ProductDetails product={product} />
+  } catch (error) {
+    // 清理资源
+    closeConnections()
+
+    // 确保 Next.js 错误继续传播
+    unstable_rethrow(error)
+
+    // 这里的代码永远不会执行
+  }
+}
+```
+
+这确保了 Next.js 的控制流机制能够正常工作，同时仍然允许开发者在错误处理中执行必要的清理。
+
+## **性能监控与Web Vitals**
+
+监控核心 Web 指标对于了解真实用户体验和识别性能问题至关重要。
+
+### **Web Vitals 报告**
+
+`useReportWebVitals` 钩子使我们能够收集和报告关键性能指标：
+
+```javascript
+'use client'
+
+import { useReportWebVitals } from 'next/web-vitals'
+
+export function WebVitalsReporter() {
+  useReportWebVitals((metric) => {
+    // 根据指标类型进行处理
+    switch (metric.name) {
+      case 'FCP':
+        // 首次内容绘制
+        console.log('FCP:', metric.value)
+        break
+      case 'LCP':
+        // 最大内容绘制
+        console.log('LCP:', metric.value)
+        break
+      case 'CLS':
+        // 累积布局偏移
+        console.log('CLS:', metric.value)
+        break
+      case 'FID':
+        // 首次输入延迟
+        console.log('FID:', metric.value)
+        break
+      case 'TTFB':
+        // 首字节时间
+        console.log('TTFB:', metric.value)
+        break
+      case 'INP':
+        // 交互到下一次绘制
+        console.log('INP:', metric.value)
+        break
+    }
+
+    // 发送到分析服务
+    sendToAnalytics({
+      id: metric.id,
+      name: metric.name,
+      value: metric.value,
+      rating: metric.rating // 'good', 'needs-improvement', 'poor'
+    })
+  })
+
+  return null // 这个组件不渲染任何UI
+}
+```
+
+通常，我们会在根布局中包含这个组件，以跟踪整个应用程序的性能：
+
+```javascript
+// app/layout.tsx
+import { WebVitalsReporter } from '@/components/web-vitals'
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <WebVitalsReporter />
+        {children}
+      </body>
+    </html>
+  )
+}
+```
+
+通过收集这些指标，我们可以识别性能瓶颈，衡量优化的影响，并确保为用户提供流畅的体验。
+
+## **总结：掌握 Next.js API 函数的关键**
+
+深入理解 Next.js 的 API 函数不仅是应对面试的关键，更是构建高性能、可维护应用的基础。这些函数反映了 Next.js 的核心设计理念：
+
+1. **性能优先**：通过精细的缓存控制、静态生成和响应后任务等机制，Next.js 优化了应用性能。
+
+2. **开发体验**：函数 API 提供了直观的接口，使复杂任务变得简单，如动态元数据生成和路由控制。
+
+3. **渐进增强**：从基本功能到高级特性，Next.js 提供了一系列可组合的 API，让开发者能够根据需要逐步采用。
+
+4. **标准对齐**：许多 API 都基于 Web 标准，如 fetch、Headers 和 Response，使学习曲线更平缓。
+
+在面试中，不仅要展示对这些函数的了解，更要展示对它们背后原理的理解，以及如何在实际项目中应用它们来解决具体问题。考虑各种权衡，如静态生成与动态渲染、客户端与服务器状态管理等，将使你的回答更加全面和深入。
+
+随着 Next.js 的不断发展，保持对新特性和最佳实践的了解也很重要。实验性 API（如 `forbidden` 和 `unauthorized`）表明了框架未来的发展方向，了解这些可以让你在面试中展示前瞻性思维。
+
+最后，精通这些函数可以显著增强应聘者在面试中的信心和表现。通过深入理解 Next.js 的核心概念和 API，你将能够自信地应对各种技术挑战，并展示自己作为现代 Web 开发者的专业素养。

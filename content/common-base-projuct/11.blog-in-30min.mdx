@@ -1,0 +1,51 @@
+# 开始一个项目的完整流
+
+在最简项目的前十章完成后，我们就可以很快的完成一个项目了。我以博客项目这个最通用的场景为例（永远的保底项目hhh），给大家过一遍这个流程。
+
+## 项目配置
+
+首先在`Github`上，点击`Use this template` -> `create a new repository`。
+
+![](https://ik.imagekit.io/ixou4q6nu/project-start.png?updatedAt=1747979485505)
+
+在创建新项目成功后，`git clone https://github.com/Shiinama/blog-demo.git`，紧接着在文件夹下`pnpm install`。
+
+### 创建Cloudflare全生态应用
+
+创建D1数据库，`pnpm wrangler d1 create blog`，并复制到`wrangler.jsonc`。
+
+绑个虚拟卡，开通R2，创建用于上传图片的R2桶存储，`pnpm wrangler r2 bucket create static`，并复制到`wrangler.jsonc`
+
+创建用于缓存的R2存储桶，`pnpm wrangler r2 bucket create next-inc-cache`
+
+将Jsonc配置的项目名和服务自引用名都改为`blog`。
+
+剩余部分将在部署时自动绑定。
+
+### 配置环境变量
+
+`AUTH_SECRET`、`AUTH_GOOGLE_ID`、`AUTH_GOOGLE_SECRET`、`AUTH_RESEND_KEY`是可以直接复制过来，因为前面的课程已经实践过了，只需要在google cloud上面再次添加域名和回调地址。
+
+`DATABASE_NAME`、`DATABASE_ID`、`PROJECT_NAME`需要更改，参造创建的项目名称。
+
+```bash
+AUTH_SECRET="用于加密会话和令牌的密钥，用于NextAuth.js认证系统"
+AUTH_GOOGLE_ID="Google OAuth认证的客户端ID，用于实现Google登录功能"
+AUTH_GOOGLE_SECRET="Google OAuth认证的客户端密钥，配合ID使用"
+AUTH_RESEND_KEY="Resend服务的API密钥，用于发送电子邮件（如验证邮件、密码重置等）"
+AUTH_TRUST_HOST="true"
+CLOUDFLARE_ACCOUNT_ID="你的Cloudflare账户ID，用于部署和访问Cloudflare服务"
+CLOUDFLARE_API_TOKEN="Cloudflare API令牌，用于授权对Cloudflare资源的访问"
+PROJECT_NAME="项目名称，用于在Cloudflare中标识你的项目"
+DATABASE_NAME="Cloudflare D1数据库的名称"
+DATABASE_ID="Cloudflare D1数据库的唯一标识符"
+GMI_API_KEY="可能是用于GEM AI的API密钥"
+
+NEXT_PUBLIC_BASE_URL="应用的基础URL，用于构建完整的URL路径"
+NEXT_PUBLIC_ADMIN_ID="管理员用户的ID，用于权限控制"
+NEXT_PUBLIC_R2_DOMAIN="Cloudflare R2存储服务的域名，用于访问存储的文件"
+```
+
+### 启动项目、编写主页核心功能
+
+会有一个Durable的报错，因为本地环境没这东西，但并不影响开发，[参考](https://opennext.js.org/cloudflare/known-issues)。
