@@ -1,0 +1,239 @@
+# 最简AI项目：第十一章-完成统计和消耗机制
+
+因为我们是做AI应用，就需要对于用户的消耗进行统计，以便限制无限的刷量，而现在市面上有两种最主流对于用户消耗限制的方法：
+
+- **基于Token的计算**：
+
+  - 这种方法主要用于大语言模型（LLM）API的计费，如OpenAI的GPT系列模型
+  - Token是文本的基本单位，通常一个单词约为1.3个token，一个汉字约为2个token
+  - 优点：精确反映模型处理的实际计算量，与模型的计算成本直接相关
+  - 缺点：对于用户来说较难理解，不同语言的token数量差异较大
+  - 实现方式：通过模型返回的token消耗，累计计费
+
+- **基于次数的计算**：
+  - 这种方法以用户的请求次数为基础进行计费
+  - 优点：简单直观，用户容易理解自己的使用情况
+  - 缺点：自己在计算成本和消耗的时候会比较困难，并且太透明了
+  - 实现方式：记录API调用次数，可以按不同功能或模型分别统计
+
+而我比较倾向Token的计算消耗机制，举个例子：你某个功能最开始让用户用5次，但这时候我们发现消耗成本太大了，发现你要削减次数，你一削减次数用户就抱怨。
+如果采用Token机制，你可以自己调控消耗倍率，原本是一倍的消耗，如果这时候要提高收益率就可以提升到2倍的消耗，这比较隐形（大多数用户是不会去算的），并且使用Token的机制会更好的统计成本。
+
+[本章Tag](https://github.com/Shiinama/next-cloudflare-template/tree/v9.0.0)
+
+## 完成表结构
+
+非常简单，只需要加一个关联用户消耗的关联表即可，跑一下`pnpm db:generate`和`pnpm db:migrate-local`。
+
+```typescript
+// next-cloudflare-template/lib/db/schema.ts
+export const userUsage = sqliteTable('userUsage', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  usedTokens: integer('usedTokens').notNull().default(0),
+  totalTokens: integer('totalTokens').notNull().default(0)
+})
+```
+
+表里有二个字段解释一下：
+
+1. `usedTokens`：消耗的总Token数量
+2. `totalTokens`：拥有的总Token数量
+
+实际上，更完备的做法是两张表、一张是总消耗的聚合表、一张是每一条消耗的具体信息（包含各种模型参数、输入、输出）。但在初期这是没必要的，只需要一张消耗聚合表（`userUsage`）就够了，一条记录对应一个用户的消耗。
+
+> 有一件非常讨厌的事情，就是D1是不支持事务的，所以在表结构设计（尽量单表、幂等、补偿）的时候要去尽量避免事务，这里有一个为什么不支持的[文档](https://blog.cloudflare.com/whats-new-with-d1/)。
+
+## 完成API和基本逻辑
+
+### 插入逻辑
+
+这张表适插入新的数据时机是当用户注册创建的时候（因为会需要展示用户一共有多少用量），在Auth添加一个 createUser 事件处理器
+
+```typescript
+//lib/auth.ts
+events: {
+  createUser: async ({ user }) => {
+    db.insert(userUsage).values({
+      userId: user.id!,
+      usedTokens: 0,
+      totalTokens: 1000
+    })
+  }
+}
+```
+
+简单尝试一下，本地新注册一下，可以看到是正常插入的。
+
+![](https://ik.imagekit.io/ixou4q6nu/insert-usage.png?updatedAt=1750497093998)
+
+### 添加Google生态的API
+
+因为要做模型消耗的统计，正好就把Google生态的AI接入，最近他们的表现非常好。`pnpm add @google/genai`，紧接着`https://cloud.google.com/`去领取300$，最后去`https://aistudio.google.com/apikey`创建API Key。
+
+后续的调试模型也是直接在`Studio`里调试，在开发之前，我们需要把上一步得到的`key`贴到`env`中（我的变量名是叫`GEMINI_API_KEY`），同样先完成Actions。
+
+```typescript
+'use server'
+
+import { GoogleGenAI } from '@google/genai'
+
+export type GeminiGenerationParams = {
+  prompt: string
+  userId: string
+  model?: string
+  temperature?: number
+  maxOutputTokens?: number
+  systemPrompt?: string
+  userPrompt?: string
+}
+
+const genAI = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY
+})
+
+export async function getModelsWithGemini() {
+  const modelIterator = await genAI.models.list()
+  const models = []
+
+  for await (const model of modelIterator) {
+    models.push(model)
+  }
+
+  return models
+}
+
+export async function generateWithGemini({
+  prompt,
+  userPrompt,
+  model = 'gemini-pro',
+  temperature = 0.7,
+  maxOutputTokens = 2048,
+  systemPrompt
+}: GeminiGenerationParams) {
+  const chats = genAI.chats.create({
+    model: model,
+    config: {
+      maxOutputTokens: maxOutputTokens || 65535,
+      temperature: temperature || 0.7,
+      topP: 0.9,
+      tools: [
+        {
+          googleSearch: {
+            timeRangeFilter: {
+              startTime: '2025-01-01T00:00:00Z',
+              endTime: '2026-01-01T00:00:00Z'
+            }
+          }
+        }
+      ],
+      systemInstruction: systemPrompt
+        ? {
+            parts: [
+              {
+                text: systemPrompt
+              }
+            ]
+          }
+        : undefined
+    }
+  })
+
+  const result = await chats.sendMessage({
+    message: [{ text: userPrompt || prompt }]
+  })
+
+  return {
+    usageData: result.usageMetadata,
+    text: result.text
+  }
+}
+```
+
+前端的访问页面在`/gemini-playground`。
+
+### 添加消耗模块
+
+同样先完成`Actions`，最基础的功能只需要更新用户消耗、检查消耗是否超出这两个最核心的Api。
+
+```typescript
+// actions/token-management.ts
+import { eq, sql } from 'drizzle-orm'
+
+import { createDb } from '@/lib/db'
+import { userUsage } from '@/lib/db/schema'
+
+// 更新用户使用的 tokens
+export async function updateUserTokenUsage(userId: string, tokensUsed: number) {
+  const db = createDb()
+  try {
+    await db
+      .update(userUsage)
+      .set({
+        usedTokens: sql`usedTokens + ${tokensUsed}`
+      })
+      .where(eq(userUsage.userId, userId))
+  } catch (error) {
+    console.error(`Failed to update token usage for user ${userId}:`, error)
+    throw error
+  }
+}
+
+// 检查用户是否有足够的 tokens
+export async function hasEnoughTokens(userId: string, requiredTokens: number) {
+  const db = createDb()
+  try {
+    const [usage] = await db.select().from(userUsage).where(eq(userUsage.userId, userId))
+
+    if (!usage) return false
+
+    const remainingTokens = usage.totalTokens - usage.usedTokens
+    return remainingTokens >= requiredTokens
+  } catch (error) {
+    console.error(`Failed to check tokens for user ${userId}:`, error)
+    return false
+  }
+}
+```
+
+> 这里的SQL就是后续我们可以调整倍数的地方~
+
+在完成Api后，回到写模型输出的位置，首先进入函数前先检查当前是否有足够的Token，如果没有足够的Token，直接返回错误，在模型返回后，输出消耗的Token数量。
+
+```typescript
+// 省略上文
+const hasTokens = await hasEnoughTokens(userId, 0)
+
+if (!hasTokens) {
+  throw new Error('Not enough tokens')
+}
+
+if (!hasTokens) {
+  throw new Error('Not enough tokens')
+}
+
+// 省略下文
+let tokensUsed = 0
+
+if (result.usageMetadata) {
+  const inputTokens = result.usageMetadata.promptTokenCount || 0
+  const outputTokens = result.usageMetadata.candidatesTokenCount || 0
+  tokensUsed = inputTokens + outputTokens
+}
+
+await updateUserTokenUsage(userId, tokensUsed)
+```
+
+最后测试一下
+
+![](https://ik.imagekit.io/ixou4q6nu/usage-tokens.png?updatedAt=1750514629336)
+
+正确消耗！
+
+## 总结
+
+从这一章开始的模块，就进入业务模块的基建了，这后面的内容会更多的跟订阅、支付、会员这些相关。

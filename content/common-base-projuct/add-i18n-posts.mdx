@@ -1,0 +1,210 @@
+# （补）18N文章页面
+
+在前面的自动根据关键词生成文章的架构中，最理想的是根据不同国家的关键词生成不同的文章，但这样做对人的要求太高了，市面上也少有工具能提供多语言的关键词。
+
+因此这是有问题的，不能白白放着十几倍的I18N页面索引量和小语种流量不管。所以关于文章的I18N，是需要重新设计的。
+
+[当前版本](https://github.com/Shiinama/next-cloudflare-template/tree/v12.1.1)
+
+## 关于翻译方案
+
+首先，需要一个翻译的API，最开始其实我踩了很多坑，我还想过用大模型来翻译，但发现最适合的还是用Google的免费翻译API + 动静结合。
+
+动静结合指的就是：文章内容在第一次访问的时候，采用Google翻译API翻译一次，并将翻译结果保存在数据库中，下次再次访问的时候，直接从数据库中读取翻译结果，这样就不需要再翻译了。
+
+这主要有两个核心因素：1. 防止并发后Google免费的API直接限额了。2. 直接查库的翻译结果更快一些。
+
+## 翻译实现
+
+第一步就是新增一张翻译表，非常简单关联一下主Post表，然后存一个内容即可。
+
+```typescript
+export const postTranslations = sqliteTable('postTranslations', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  postId: text('postId')
+    .notNull()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  locale: text('locale').notNull(),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+})
+```
+
+第二步实现翻译的API，这步的难点是在于， 1. 找到这个API。 2.试出来API到底怎么用，网上的信息和写法太垃圾了，这就是试出来的MarkDown长文本翻译最佳实践。
+
+```typescript
+// 全角符号转半角符号的映射
+const FULLWIDTH_TO_HALFWIDTH_MAP: Record<string, string> = {
+  '＃': '#',
+  '（': '(',
+  '）': ')',
+  '"': '"',
+  '【': '[',
+  '】': ']',
+  '｛': '{',
+  '｝': '}'
+}
+
+// 转换全角符号为半角符号
+const normalizeText = (text: string): string => {
+  return Object.entries(FULLWIDTH_TO_HALFWIDTH_MAP).reduce(
+    (result, [fullwidth, halfwidth]) => result.replace(new RegExp(fullwidth, 'g'), halfwidth),
+    text
+  )
+}
+
+// 调用翻译API
+const translateContent = async (content: string, locale: string): Promise<string | null> => {
+  const translateUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=en&tl=${locale}`
+
+  try {
+    const response = await fetch(translateUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: 'q=' + encodeURIComponent(content)
+    })
+
+    if (!response.ok) {
+      console.error(`Translation API error: ${response.status} ${response.statusText}`)
+      return null
+    }
+
+    const data: Array<string[]> = await response.json()
+    const translatedText = data[0]
+      .map((item) => item[0])
+      .join('')
+      .trim()
+
+    return normalizeText(translatedText)
+  } catch (error) {
+    console.error('Translation API request failed:', error)
+    return null
+  }
+}
+```
+
+第三步实现动静结合和异常捕捉（翻译很容易报错）的逻辑：
+
+```typescript
+export const postTranslate = async ({
+  postId,
+  content,
+  locale,
+  originalTitle,
+  originalDescription
+}: PostTranslateParams): Promise<TranslationResult> => {
+  const db = createDb()
+
+  // 如果是英文，直接返回原内容
+  if (locale === 'en') {
+    return {
+      title: originalTitle,
+      description: originalDescription,
+      fullText: content
+    }
+  }
+
+  try {
+    // 检查数据库中是否已有该文章的该语言翻译
+    const existingTranslation = await db
+      .select()
+      .from(postTranslations)
+      .where(and(eq(postTranslations.postId, postId), eq(postTranslations.locale, locale)))
+      .limit(1)
+
+    if (existingTranslation.length > 0) {
+      // 如果已有翻译，直接返回数据库中的内容
+      const translatedContent = existingTranslation[0].content
+      const { title, description } = extractTitleAndDescription(translatedContent, originalTitle, originalDescription)
+
+      return {
+        title,
+        description,
+        fullText: translatedContent
+      }
+    }
+
+    // 如果没有翻译，进行翻译
+    const translatedText = await translateContent(content, locale)
+
+    if (translatedText) {
+      await db.insert(postTranslations).values({
+        postId,
+        locale,
+        content: translatedText,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+
+      const { title, description } = extractTitleAndDescription(translatedText, originalTitle, originalDescription)
+
+      return {
+        title,
+        description,
+        fullText: translatedText
+      }
+    }
+  } catch (error) {
+    console.error('Database operation failed:', error)
+  }
+
+  // 如果翻译失败或数据库操作失败，返回原内容
+  return {
+    title: originalTitle,
+    description: originalDescription,
+    fullText: content
+  }
+}
+```
+
+第四步实现一个route，这里不用Actions的核心原因是在于，Nextjs在处理Actions的时候没有做同组件生命周期同一个请求只调用一次的优化（Actions里面有存库操作，会造成双写）。而fetch是会自动处理的，也就是在同一组件生命周期只调用一次同样的请求，不管函数调用了多少次。
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+
+import { getArticleBySlug } from '@/actions/ai-content'
+import { postTranslate } from '@/actions/post-translate'
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  try {
+    const { slug } = await params
+    const { searchParams } = new URL(request.url)
+    const locale = searchParams.get('locale') || 'en'
+
+    const article = await getArticleBySlug(slug)
+
+    if (!article) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 })
+    }
+
+    const data = await postTranslate({
+      postId: article.id,
+      content: article.content,
+      locale,
+      originalTitle: article.title,
+      originalDescription: article.excerpt
+    })
+
+    return NextResponse.json({
+      ...article,
+      ...data
+    })
+  } catch (error) {
+    console.error('Error fetching blog post:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+```
+
+## 结束
+
+前端的代码无需多言，这个东西挺重要的，能让网页的SEO流量成倍数增长。
