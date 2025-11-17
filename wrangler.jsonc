@@ -20,7 +20,8 @@
 		{
 			"binding": "blog",
 			"database_name": "blog",
-			"database_id": "ce73ae09-d75b-4701-99bd-8dda6de6816e"
+			"database_id": "ce73ae09-d75b-4701-99bd-8dda6de6816e",
+			"migrations_dir": "./drizzle/migrations"
 		}
 	],
 	"ai": {

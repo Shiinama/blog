@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { PostStatus } from '@/lib/db'
 import type { PostStatus as PostStatusType } from '@/lib/db'
 import type { getPaginatedPosts } from '@/lib/posts'
+import { formatCategoryLabel } from '@/lib/categories'
 
 type PostListItem = Awaited<ReturnType<typeof getPaginatedPosts>>['posts'][number]
 
@@ -103,7 +104,7 @@ export function PostTable({ posts }: PostTableProps) {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">{post.category?.name ?? '未分类'}</td>
+                <td className="px-4 py-3">{formatCategoryLabel(post.category?.key) || '未分类'}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs ${

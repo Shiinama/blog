@@ -1,12 +1,14 @@
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 
 import { ContentSidebar } from '@/components/content-sidebar'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
 import { DashboardTableOfContents } from '@/components/mdx/toc'
 import { siteConfig } from '@/config/site.config'
+import { formatCategoryLabel } from '@/lib/categories'
 import { buildToc } from '@/lib/markdown/toc'
-import { getAllPublishedPostSlugs, getPostBySlug, getSidebarPosts } from '@/lib/posts'
+import { getPostBySlug, getSidebarPosts } from '@/lib/posts'
 import { absoluteUrl } from '@/lib/utils'
 
 import type { Metadata } from 'next'
@@ -59,33 +61,30 @@ export async function generateMetadata({ params }: { params: Promise<DocPageProp
   }
 }
 
-export async function generateStaticParams(): Promise<{ slug: string[] }[]> {
-  const slugs = await getAllPublishedPostSlugs()
-
-  return slugs.map((slug) => ({
-    slug: slug.split('/').filter(Boolean)
-  }))
-}
-
 export default async function DocPage({ params }: { params: Promise<DocPageProps> }) {
-  const post = await getPostFromParams({ params })
+  const [post, t] = await Promise.all([getPostFromParams({ params }), getTranslations('article')])
 
   if (!post) {
     notFound()
   }
 
   const readingTime = Math.max(1, post.readingTime || 0)
+  const fallbackCategoryLabel = formatCategoryLabel(post.category.key) || 'Uncategorized'
+  let categoryLabel = fallbackCategoryLabel
+  if (post.category.key) {
+    try {
+      categoryLabel = t(post.category.key as any)
+    } catch {
+      categoryLabel = fallbackCategoryLabel
+    }
+  }
 
-  const [sidebarItems, toc] = await Promise.all([
-    getSidebarPosts(post.categoryId),
-    buildToc(post.content)
-  ])
+  const [sidebarItems, toc] = await Promise.all([getSidebarPosts(post.categoryId), buildToc(post.content)])
 
   return (
     <div className="flex w-full">
       <ContentSidebar
-        categoryKey={post.category.i18nKey}
-        fallbackLabel={post.category.name}
+        categoryKey={post.category.key}
         items={sidebarItems.map((item) => ({
           id: item.id,
           title: item.title,
@@ -96,9 +95,9 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
         <article className="relative flex flex-1 px-4">
           <div className="mx-auto w-full min-w-0">
             <header className="mb-8 space-y-3 border-b pb-6">
-              <p className="text-sm uppercase tracking-wide text-muted-foreground">{post.category.name}</p>
+              <p className="text-muted-foreground text-sm tracking-wide uppercase">{categoryLabel}</p>
               <h1 className="font-heading text-3xl font-bold md:text-4xl">{post.title}</h1>
-              <div className="flex flex-col gap-2 text-sm text-muted-foreground md:flex-row md:items-center md:gap-4">
+              <div className="text-muted-foreground flex flex-col gap-2 text-sm md:flex-row md:items-center md:gap-4">
                 {post.publishedAt && <span>{new Date(post.publishedAt).toLocaleDateString()}</span>}
                 <span>{readingTime} min read</span>
               </div>

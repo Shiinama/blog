@@ -1,59 +1,153 @@
+import 'dotenv/config'
+
+import Database from 'better-sqlite3'
+import { eq } from 'drizzle-orm'
+import { existsSync, readdirSync } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 
+import { drizzle as drizzleBetter } from 'drizzle-orm/better-sqlite3'
 import matter from 'gray-matter'
 
 import { CATEGORY_PRESETS } from '../constant/category-presets'
-import { categories as categoriesTable, createDb, posts as postsTable, type Category, PostStatus } from '../lib/db'
+import { createDb, type DB } from '../lib/db'
+import * as schema from '../drizzle/schema'
 import { calculateReadingTime, extractSummary, normalizeSlug } from '../lib/posts/utils'
 
-const CONTENT_DIR = path.join(process.cwd(), 'content')
+const categoriesTable = schema.categories
+const postsTable = schema.posts
+type Category = schema.Category
+type PostStatus = schema.PostStatus
 
-if (!process.env.NEXT_PUBLIC_DB_PROXY) {
-  process.env.NEXT_PUBLIC_DB_PROXY = '1'
+const CONTENT_DIR = path.join(process.cwd(), 'content')
+const LOCAL_DB_BASE = path.join(process.cwd(), '.wrangler', 'state', 'v3', 'd1', 'miniflare-D1DatabaseObject')
+
+interface PostUpsertPayload {
+  title: string
+  slug: string
+  summary: string
+  content: string
+  coverImageUrl: string | null
+  status: PostStatus
+  publishedAt: Date | null
+  categoryId: string
+  sortOrder: number
+  tags: string[]
+  language: string
+  readingTime: number
+  isSubscriptionOnly: boolean
 }
 
-const db = createDb()
+type Frontmatter = Record<string, unknown>
 
 const categoryCache = new Map<string, Category>()
 let dynamicCategoryIndex = 0
 
+type DatabaseContext = {
+  db: DB
+  close?: () => void
+}
+
+function findLocalSqliteFile(): string | null {
+  const manualPath = process.env.LOCAL_DB_PATH || process.env.SQLITE_PATH
+  if (manualPath) {
+    if (!existsSync(manualPath)) {
+      throw new Error(`Local database file not found at "${manualPath}". Check LOCAL_DB_PATH/SQLITE_PATH.`)
+    }
+    return manualPath
+  }
+
+  if (!existsSync(LOCAL_DB_BASE)) {
+    return null
+  }
+
+  const stack = [LOCAL_DB_BASE]
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    const entries = readdirSync(current, { withFileTypes: true })
+
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        stack.push(fullPath)
+        continue
+      }
+
+      if (entry.isFile() && entry.name.endsWith('.sqlite')) {
+        return fullPath
+      }
+    }
+  }
+
+  return null
+}
+
+function createDatabaseContext(): DatabaseContext {
+  const localFile = findLocalSqliteFile()
+
+  if (localFile) {
+    console.log(`Using local SQLite database: ${localFile}`)
+    const sqlite = new Database(localFile)
+    return {
+      db: drizzleBetter(sqlite, { schema }) as unknown as DB,
+      close: () => sqlite.close()
+    }
+  }
+
+  if (!process.env.NEXT_PUBLIC_DB_PROXY) {
+    process.env.NEXT_PUBLIC_DB_PROXY = '1'
+  }
+
+  const requiredEnv = ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'DATABASE_ID'] as const
+  const missingEnv = requiredEnv.filter((key) => !process.env[key])
+
+  if (missingEnv.length > 0) {
+    throw new Error(
+      `Missing ${missingEnv.join(
+        ', '
+      )}. Provide LOCAL_DB_PATH/SQLITE_PATH or ensure a local Miniflare D1 database exists, or set Cloudflare credentials.`
+    )
+  }
+
+  console.log('Using remote Cloudflare D1 database via HTTP driver.')
+  return { db: createDb() }
+}
+
+const databaseContext = createDatabaseContext()
+const db = databaseContext.db
+
 async function ensurePresetCategories() {
   for (const preset of CATEGORY_PRESETS) {
+    const now = new Date()
     const result = await db
       .insert(categoriesTable)
       .values({
-        slug: preset.slug,
-        name: preset.name,
-        i18nKey: preset.i18nKey ?? null,
-        sortOrder: preset.sortOrder ?? 0,
-        isVisible: preset.isVisible ?? false
+        key: preset.i18nKey,
+        sortOrder: preset.sortOrder,
+        isVisible: preset.isVisible,
+        createdAt: now,
+        updatedAt: now
       })
       .onConflictDoUpdate({
-        target: categoriesTable.slug,
+        target: categoriesTable.key,
         set: {
-          name: preset.name,
-          i18nKey: preset.i18nKey ?? null,
-          sortOrder: preset.sortOrder ?? 0,
-          isVisible: preset.isVisible ?? false,
-          updatedAt: new Date()
+          sortOrder: preset.sortOrder,
+          isVisible: preset.isVisible,
+          updatedAt: now
         }
       })
       .returning()
 
-    const category = result[0]
+    const category =
+      result[0] ??
+      (await db.query.categories.findFirst({
+        where: (category, { eq }) => eq(category.key, preset.i18nKey)
+      }))
     if (category) {
       categoryCache.set(preset.folder, category)
-      categoryCache.set(preset.slug, category)
+      categoryCache.set(preset.i18nKey, category)
     }
   }
-}
-
-function toTitleCase(value: string) {
-  return value
-    .split(/[\s-]+/)
-    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
-    .join(' ')
 }
 
 async function getCategoryForFolder(folder: string) {
@@ -61,30 +155,45 @@ async function getCategoryForFolder(folder: string) {
     return categoryCache.get(folder)!
   }
 
-  const slug = folder
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '-')
+  const preset = CATEGORY_PRESETS.find((item) => item.folder === folder)
+  if (preset && categoryCache.has(preset.folder)) {
+    return categoryCache.get(preset.folder)!
+  }
+
+  const categoryKey =
+    folder
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || folder
   const result = await db
     .insert(categoriesTable)
     .values({
-      slug,
-      name: toTitleCase(folder),
-      i18nKey: null,
+      key: categoryKey,
       sortOrder: CATEGORY_PRESETS.length + dynamicCategoryIndex,
-      isVisible: false
+      isVisible: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
     })
     .onConflictDoUpdate({
-      target: categoriesTable.slug,
+      target: categoriesTable.key,
       set: {
-        name: toTitleCase(folder),
         updatedAt: new Date()
       }
     })
     .returning()
 
-  const category = result[0]!
+  const category =
+    result[0] ??
+    (await db.query.categories.findFirst({
+      where: (category, { eq }) => eq(category.key, categoryKey)
+    }))
+  if (!category) {
+    throw new Error(`Failed to resolve category for folder "${folder}"`)
+  }
   categoryCache.set(folder, category)
+  categoryCache.set(category.key, category)
   dynamicCategoryIndex += 1
   return category
 }
@@ -142,6 +251,69 @@ function parseTags(raw: unknown): string[] {
   return []
 }
 
+function parseBooleanField(value: unknown): boolean | null {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value === 'number') {
+    if (value === 1) return true
+    if (value === 0) return false
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) {
+      return true
+    }
+    if (['false', '0', 'no', 'n', 'off'].includes(normalized)) {
+      return false
+    }
+  }
+  return null
+}
+
+interface BuildPostPayloadOptions {
+  frontmatter: Frontmatter
+  content: string
+  slug: string
+  categoryId: string
+  sortOrder: number
+}
+
+function buildPostPayload({
+  frontmatter,
+  content,
+  slug,
+  categoryId,
+  sortOrder
+}: BuildPostPayloadOptions): PostUpsertPayload {
+  const titleCandidate = typeof frontmatter.title === 'string' ? frontmatter.title.trim() : ''
+  const title = titleCandidate || extractHeading(content) || ''
+  const summaryCandidate = typeof frontmatter.description === 'string' ? frontmatter.description.trim() : ''
+  const summary = summaryCandidate || extractSummary(content)
+  const readingTime = calculateReadingTime(content)
+  const coverImageCandidate = frontmatter.coverImageUrl ?? frontmatter.coverImage ?? frontmatter.cover
+  const coverImageUrl = typeof coverImageCandidate === 'string' ? coverImageCandidate.trim() || null : null
+  const tags = parseTags(frontmatter.tags)
+  const languageCandidate = typeof frontmatter.language === 'string' ? frontmatter.language.trim() : ''
+  const language = languageCandidate || 'zh'
+
+  return {
+    title,
+    slug,
+    summary,
+    content,
+    coverImageUrl,
+    status: 'PUBLISHED',
+    publishedAt: new Date(),
+    categoryId,
+    sortOrder,
+    tags,
+    language,
+    readingTime,
+    isSubscriptionOnly: false
+  }
+}
+
 async function importMdxFile(filePath: string) {
   const relative = path.relative(CONTENT_DIR, filePath)
   const folder = relative.split(path.sep)[0]
@@ -149,64 +321,43 @@ async function importMdxFile(filePath: string) {
 
   const fileRaw = await fs.readFile(filePath, 'utf-8')
   const { data, content } = matter(fileRaw)
+  const frontmatter = data as Frontmatter
 
   const slugPath = relative.replace(/\\/g, '/').replace(/\.mdx?$/, '')
   const slug = normalizeSlug(slugPath)
-  const title = (data.title as string) ?? extractHeading(content) ?? toTitleCase(path.basename(slug))
-  const summary = (data.description as string) ?? extractSummary(content)
-  const readingTime = calculateReadingTime(content)
-  const coverImageCandidate = (data.coverImageUrl ?? data.coverImage ?? data.cover) as string | undefined
-  const coverImageUrl = typeof coverImageCandidate === 'string' ? coverImageCandidate : null
-  const publishedFlag = data.published === undefined ? true : Boolean(data.published)
-  const status = publishedFlag ? PostStatus.PUBLISHED : PostStatus.DRAFT
-  const publishedAt = status === PostStatus.PUBLISHED ? (parseDate(data.date as string) ?? new Date()) : null
   const sortOrder =
-    typeof data.sortOrder === 'number'
-      ? data.sortOrder
-      : Number.isFinite(Number(data.sortOrder))
-        ? Number(data.sortOrder)
+    typeof frontmatter.sortOrder === 'number'
+      ? frontmatter.sortOrder
+      : Number.isFinite(Number(frontmatter.sortOrder))
+        ? Number(frontmatter.sortOrder)
         : deriveSortOrder(filePath)
-  const tags = parseTags(data.tags)
+
+  const postPayload = buildPostPayload({
+    frontmatter,
+    content,
+    slug,
+    categoryId: category.id,
+    sortOrder
+  })
 
   const now = new Date()
 
   await db
     .insert(postsTable)
     .values({
-      title,
-      slug,
-      summary,
-      content,
-      coverImageUrl,
-      status,
-      publishedAt,
-      categoryId: category.id,
-      sortOrder,
-      tags,
-      language: (data.language as string) ?? 'zh',
-      readingTime,
+      ...postPayload,
       createdAt: now,
       updatedAt: now
     })
     .onConflictDoUpdate({
       target: postsTable.slug,
       set: {
-        title,
-        summary,
-        content,
-        coverImageUrl,
-        status,
-        publishedAt,
-        categoryId: category.id,
-        sortOrder,
-        tags,
-        readingTime,
-        language: (data.language as string) ?? 'zh',
+        ...postPayload,
         updatedAt: now
       }
     })
 
-  console.log(`Imported: ${slug}`)
+  console.log(`Imported: ${slug}${postPayload.isSubscriptionOnly ? ' (subscription only)' : ''}`)
 }
 
 async function main() {
@@ -222,7 +373,11 @@ async function main() {
   console.log('Content import complete.')
 }
 
-main().catch(async (error) => {
-  console.error('Import failed:', error)
-  process.exit(1)
-})
+main()
+  .catch((error) => {
+    console.error('Import failed:', error)
+    process.exitCode = 1
+  })
+  .finally(() => {
+    databaseContext.close?.()
+  })

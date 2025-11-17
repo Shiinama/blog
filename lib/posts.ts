@@ -1,21 +1,12 @@
+'use server'
+
 import { and, count, desc, eq, like, or } from 'drizzle-orm'
 
-import {
-  categories,
-  createDb,
-  posts,
-  type Category,
-  type Post,
-  type PostStatus,
-  users
-} from '@/lib/db'
+import { categories, createDb, posts, type Category, type Post, type PostStatus, users } from '@/lib/db'
 
 import { normalizeSlug } from './posts/utils'
 
-export type CategorySummary = Pick<
-  Category,
-  'id' | 'name' | 'slug' | 'i18nKey' | 'description' | 'sortOrder' | 'isVisible'
->
+export type CategorySummary = Pick<Category, 'id' | 'key' | 'sortOrder' | 'isVisible'>
 export type SidebarPost = Pick<Post, 'id' | 'title' | 'slug' | 'sortOrder' | 'publishedAt' | 'createdAt' | 'status'>
 
 export async function getVisibleCategoriesWithPosts() {
@@ -67,10 +58,7 @@ export async function getPostBySlug(slug: string, options?: { includeDrafts?: bo
       category: {
         columns: {
           id: true,
-          name: true,
-          slug: true,
-          i18nKey: true,
-          description: true,
+          key: true,
           sortOrder: true,
           isVisible: true
         }
@@ -102,10 +90,7 @@ export async function getAllCategories() {
     orderBy: (category, { asc }) => asc(category.sortOrder),
     columns: {
       id: true,
-      name: true,
-      slug: true,
-      i18nKey: true,
-      description: true,
+      key: true,
       sortOrder: true,
       isVisible: true
     }
@@ -146,10 +131,7 @@ export async function getPaginatedPosts({
       post: posts,
       category: {
         id: categories.id,
-        name: categories.name,
-        slug: categories.slug,
-        i18nKey: categories.i18nKey,
-        description: categories.description,
+        key: categories.key,
         sortOrder: categories.sortOrder,
         isVisible: categories.isVisible
       },
@@ -188,10 +170,7 @@ export async function getPaginatedPosts({
 
 export async function getAllPublishedPostSlugs() {
   const db = createDb()
-  const rows = await db
-    .select({ slug: posts.slug })
-    .from(posts)
-    .where(eq(posts.status, 'PUBLISHED'))
+  const rows = await db.select({ slug: posts.slug }).from(posts).where(eq(posts.status, 'PUBLISHED'))
 
   return rows.map((row) => row.slug)
 }

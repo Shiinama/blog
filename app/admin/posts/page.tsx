@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { PostTable } from '@/components/posts/post-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { formatCategoryLabel } from '@/lib/categories'
 import { getAllCategories, getPaginatedPosts } from '@/lib/posts'
 
 import type { PostStatus } from '@/lib/db'
@@ -83,7 +84,7 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
             <option value="all">全部</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name}
+                {formatCategoryLabel(category.key) || category.key}
               </option>
             ))}
           </select>

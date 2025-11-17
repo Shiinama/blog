@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import { integer, primaryKey, sqliteTable, text, real } from 'drizzle-orm/sqlite-core'
 
 import type { AdapterAccountType } from 'next-auth/adapters'
@@ -82,16 +82,13 @@ export const authenticators = sqliteTable(
   ]
 )
 
-export const posts = sqliteTable('posts', {
+export const categories = sqliteTable('categories', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  slug: text('slug').notNull().unique(),
-  title: text('title').notNull(),
-  coverImageUrl: text('cover_image_url'),
-  excerpt: text('excerpt').notNull(),
-  content: text('content').notNull(),
-  publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
+  key: text('key').notNull().unique(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: integer('is_visible', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -100,6 +97,44 @@ export const posts = sqliteTable('posts', {
     .notNull()
 })
 
+export type Category = typeof categories.$inferSelect
+
+export const postStatusEnum = ['DRAFT', 'PUBLISHED'] as const
+export type PostStatus = (typeof postStatusEnum)[number]
+
+export const posts = sqliteTable('posts', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  summary: text('summary').notNull(),
+  coverImageUrl: text('cover_image_url'),
+  content: text('content').notNull(),
+  status: text('status', { enum: postStatusEnum }).$type<PostStatus>().notNull().default('DRAFT'),
+  publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
+  authorId: text('author_id').references(() => users.id, { onDelete: 'set null' }),
+  categoryId: text('category_id')
+    .notNull()
+    .references(() => categories.id, { onDelete: 'restrict' }),
+  isSubscriptionOnly: integer('is_subscription_only', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  tags: text('tags', { mode: 'json' })
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'`),
+  language: text('language').notNull().default('zh'),
+  readingTime: integer('reading_time').notNull().default(1),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+})
+
+export type Post = typeof posts.$inferSelect
+
 export const postTranslations = sqliteTable('postTranslations', {
   id: text('id')
     .primaryKey()
@@ -107,9 +142,8 @@ export const postTranslations = sqliteTable('postTranslations', {
   postId: text('postId')
     .notNull()
     .references(() => posts.id, { onDelete: 'cascade' }),
-  slug: text('slug').notNull(),
   title: text('title').notNull(),
-  excerpt: text('excerpt').notNull(),
+  summary: text('summary').notNull(),
   coverImageUrl: text('cover_image_url'),
   locale: text('locale').notNull(),
   content: text('content').notNull(),
@@ -158,8 +192,8 @@ export const orders = sqliteTable('orders', {
   productId: text('productId')
     .notNull()
     .references(() => products.id),
-  amount: real('amount').notNull(),
   status: text('status').$type<OrderStatus>().notNull().default('pending'),
+  transactionType: text('transactionType').$type<TransactionType>(),
   paymentMethod: text('paymentMethod').$type<PaymentMethod>(),
   paymentIntentId: text('paymentIntentId'), // 支付网关的交易ID
   metadata: text('metadata'), // 存储JSON格式的额外信息
@@ -192,3 +226,26 @@ export const subscriptions = sqliteTable('subscriptions', {
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
 })
+
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  posts: many(posts)
+}))
+
+export const postsRelations = relations(posts, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [posts.categoryId],
+    references: [categories.id]
+  }),
+  author: one(users, {
+    fields: [posts.authorId],
+    references: [users.id]
+  }),
+  translations: many(postTranslations)
+}))
+
+export const postTranslationsRelations = relations(postTranslations, ({ one }) => ({
+  post: one(posts, {
+    fields: [postTranslations.postId],
+    references: [posts.id]
+  })
+}))

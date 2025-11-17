@@ -4,10 +4,6 @@ import type { Config } from 'drizzle-kit'
 
 const { LOCAL_DB_PATH, DATABASE_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID } = process.env
 
-if (!LOCAL_DB_PATH && (!DATABASE_ID || !CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID)) {
-  throw new Error('Set LOCAL_DB_PATH for local SQLite files or provide CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, and DATABASE_ID for Cloudflare D1.')
-}
-
 const baseConfig = {
   schema: './drizzle/schema.ts',
   out: './drizzle/migrations',

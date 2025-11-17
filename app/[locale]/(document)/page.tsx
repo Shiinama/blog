@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import Navbar from '@/components/navbar'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getVisibleCategoriesWithPosts } from '@/lib/posts'
+import { formatCategoryLabel } from '@/lib/categories'
 
 export const metadata = {
   title: 'Documentation',
@@ -21,7 +22,15 @@ export default async function ContentPage() {
         {categories
           .filter((category) => category.posts.length > 0)
           .map((category) => {
-            const label = category.i18nKey ? t(category.i18nKey as any) : category.name
+            const fallbackLabel = formatCategoryLabel(category.key) || 'Uncategorized'
+            let label = fallbackLabel
+            if (category.key) {
+              try {
+                label = t(category.key as any)
+              } catch {
+                label = fallbackLabel
+              }
+            }
             return (
               <div key={category.id} className="my-4">
                 <h2 className="mb-4 text-3xl font-bold">{label}</h2>

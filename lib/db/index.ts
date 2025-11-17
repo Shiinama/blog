@@ -20,19 +20,11 @@ const wrappedDriver: AsyncRemoteCallback = async (sql, params, method) => {
 const createProxyDb = () => drizzleProxy(wrappedDriver, { schema }) as DrizzleD1Database<typeof schema>
 
 const getEnvDb = () => {
-  try {
-    const context = getCloudflareContext()
-    if (!context?.env?.DB) {
-      throw new Error('Cloudflare D1 binding `DB` is not available on this request.')
-    }
-    return drizzleD1(context.env.DB as D1Database, { schema })
-  } catch (error) {
-    if (process.env.NEXT_PUBLIC_DB_PROXY === '1') {
-      return createProxyDb()
-    }
-
-    throw error instanceof Error ? error : new Error('Failed to initialize Cloudflare D1 client.')
+  const context = getCloudflareContext()
+  if (!context?.env?.blog) {
+    throw new Error('Cloudflare D1 binding `DB` is not available on this request.')
   }
+  return drizzleD1(context.env.blog, { schema })
 }
 
 export const createDb = (): DrizzleD1Database<typeof schema> => {

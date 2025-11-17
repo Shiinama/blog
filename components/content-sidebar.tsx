@@ -16,6 +16,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator
 } from '@/components/ui/sidebar'
+import { formatCategoryLabel } from '@/lib/categories'
 
 type SidebarItem = {
   id: string
@@ -25,11 +26,10 @@ type SidebarItem = {
 
 interface ContentSidebarProps {
   categoryKey?: string | null
-  fallbackLabel: string
   items: SidebarItem[]
 }
 
-export function ContentSidebar({ categoryKey, fallbackLabel, items }: ContentSidebarProps) {
+export function ContentSidebar({ categoryKey, items }: ContentSidebarProps) {
   const t = useTranslations('article')
   const common = useTranslations('common')
   const pathname = usePathname()
@@ -39,7 +39,17 @@ export function ContentSidebar({ categoryKey, fallbackLabel, items }: ContentSid
     setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
-  const currentCategoryLabel = categoryKey ? t(categoryKey as any) : fallbackLabel
+  let currentCategoryLabel = formatCategoryLabel(categoryKey) || 'Uncategorized'
+  if (categoryKey) {
+    try {
+      const translated = t(categoryKey as any)
+      if (translated) {
+        currentCategoryLabel = translated
+      }
+    } catch {
+      currentCategoryLabel = formatCategoryLabel(categoryKey) || currentCategoryLabel
+    }
+  }
 
   return (
     <Sidebar>
