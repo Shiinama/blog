@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1763384154813,
+      "tag": "0000_clumsy_morgan_stark",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1763389611557,
+      "tag": "0002_thankful_eternals",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1763389914615,
+      "tag": "0002_cute_terror",
+      "breakpoints": true
+    }
+  ]
+}
