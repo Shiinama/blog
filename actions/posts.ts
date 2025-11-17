@@ -1,22 +1,19 @@
 'use server'
 
+import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
 
 import { assertAdmin } from '@/lib/authz'
-import { createDb, postStatusEnum, posts, PostStatus as PostStatusValue, type DB, type PostStatus } from '@/lib/db'
+import { createDb, postStatusEnum, posts, type DB, type PostStatus } from '@/lib/db'
+import { getExplorerPosts, type ExplorerFilterInput } from '@/lib/posts'
 import { calculateReadingTime, extractSummary, normalizeSlug } from '@/lib/posts/utils'
 
-export type PostFormState = {
+type PostFormState = {
   status: 'idle' | 'success' | 'error'
   message?: string
   errors?: Record<string, string[]>
   redirectTo?: string
-}
-
-export const initialPostFormState: PostFormState = {
-  status: 'idle'
 }
 
 const postStatusValues = [...postStatusEnum] as [PostStatus, ...PostStatus[]]
@@ -40,8 +37,11 @@ function formatFieldErrors(error: z.ZodError): Record<string, string[]> {
   const formatted: Record<string, string[]> = {}
   const fieldErrors = error.flatten().fieldErrors
   Object.entries(fieldErrors).forEach(([key, value]) => {
-    if (value) {
-      formatted[key] = value.filter(Boolean) as string[]
+    if (Array.isArray(value)) {
+      const messages = value.filter(Boolean) as string[]
+      if (messages.length) {
+        formatted[key] = messages
+      }
     }
   })
   return formatted
@@ -65,7 +65,7 @@ async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: 
   const sortOrder = Number.isFinite(data.sortOrder) ? (data.sortOrder as number) : 0
 
   const publishedAt =
-    data.status === PostStatusValue.PUBLISHED
+    data.status === 'PUBLISHED'
       ? (() => {
           const parsedDate = data.publishedAt ? new Date(data.publishedAt) : new Date()
           return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate
@@ -98,7 +98,7 @@ async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: 
     }
 
     const updatedPublishedAt =
-      data.status === PostStatusValue.PUBLISHED ? baseData.publishedAt ?? existing.publishedAt ?? new Date() : null
+      data.status === 'PUBLISHED' ? (baseData.publishedAt ?? existing.publishedAt ?? new Date()) : null
 
     const updated = await db
       .update(posts)
@@ -130,6 +130,10 @@ function revalidatePostRoutes(slug: string) {
   revalidatePath('/content')
   revalidatePath(`/content/${slug}`)
   revalidatePath('/admin/posts')
+}
+
+export async function fetchExplorerPostsAction(params: ExplorerFilterInput) {
+  return getExplorerPosts(params)
 }
 
 export async function savePostAction(prevState: PostFormState, formData: FormData): Promise<PostFormState> {
@@ -185,10 +189,7 @@ export async function savePostAction(prevState: PostFormState, formData: FormDat
 export async function deletePostAction(postId: string) {
   await assertAdmin()
   const db = createDb()
-  const deleted = await db
-    .delete(posts)
-    .where(eq(posts.id, postId))
-    .returning({ slug: posts.slug })
+  const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ slug: posts.slug })
 
   if (!deleted[0]) {
     return { status: 'error', message: '文章不存在' }
@@ -210,7 +211,7 @@ export async function togglePostStatusAction(postId: string, status: PostStatus)
     return { status: 'error', message: '文章不存在' }
   }
 
-  const publishedAt = status === PostStatusValue.PUBLISHED ? existing.publishedAt ?? new Date() : null
+  const publishedAt = status === 'PUBLISHED' ? (existing.publishedAt ?? new Date()) : null
 
   const updated = await db
     .update(posts)

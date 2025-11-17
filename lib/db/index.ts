@@ -1,14 +1,13 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare'
-import type { D1Database } from '@cloudflare/workers-types'
-import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { drizzle as drizzleD1 } from 'drizzle-orm/d1'
 import { drizzle as drizzleProxy } from 'drizzle-orm/sqlite-proxy'
 
-import type { AsyncRemoteCallback } from 'drizzle-orm/sqlite-proxy'
-
-import { d1HttpDriver } from '@/lib/db/d1-http-driver'
 
 import * as schema from '@/drizzle/schema'
+import { d1HttpDriver } from '@/lib/db/d1-http-driver'
+
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import type { AsyncRemoteCallback } from 'drizzle-orm/sqlite-proxy'
 
 const wrappedDriver: AsyncRemoteCallback = async (sql, params, method) => {
   if (method === 'values') {

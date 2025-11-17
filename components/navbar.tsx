@@ -21,7 +21,7 @@ export default async function Navbar({
   return (
     <nav
       className={cn(
-        'sticky top-0 z-50 flex w-full flex-row items-center px-5 py-2 backdrop-blur-lg md:px-10 md:py-4',
+        'sticky top-0 z-50 flex w-full flex-row items-center px-4 py-1.5 text-sm backdrop-blur-lg md:px-8 md:py-2.5',
         className
       )}
     >
@@ -34,7 +34,7 @@ export default async function Navbar({
         <Link
           href={'/'}
           className={buttonVariants({
-            className: 'md:text-xl',
+            className: 'px-2 text-sm font-medium',
             variant: 'link',
             size: 'sm'
           })}
@@ -44,7 +44,7 @@ export default async function Navbar({
         <Link
           href={'/about'}
           className={buttonVariants({
-            className: 'md:text-xl',
+            className: 'px-2 text-sm font-medium',
             variant: 'link',
             size: 'sm'
           })}

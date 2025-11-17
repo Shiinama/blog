@@ -7,11 +7,12 @@ import { useState, useTransition } from 'react'
 import { deletePostAction, togglePostStatusAction } from '@/actions/posts'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
-
+import { formatCategoryLabel } from '@/lib/categories'
 import { PostStatus } from '@/lib/db'
+
 import type { PostStatus as PostStatusType } from '@/lib/db'
 import type { getPaginatedPosts } from '@/lib/posts'
-import { formatCategoryLabel } from '@/lib/categories'
+
 
 type PostListItem = Awaited<ReturnType<typeof getPaginatedPosts>>['posts'][number]
 

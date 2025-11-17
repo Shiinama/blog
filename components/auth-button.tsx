@@ -24,7 +24,7 @@ export function AuthButton() {
 
   if (session.status === 'unauthenticated')
     return (
-      <Button className="md:text-xl" onClick={handleSignInOrOut} variant="link" size="sm">
+      <Button className="px-2 text-sm font-medium" onClick={handleSignInOrOut} variant="link" size="sm">
         {t('common.loginIn')}
       </Button>
     )
@@ -35,7 +35,7 @@ export function AuthButton() {
         <Link
           href="/admin/posts"
           className={buttonVariants({
-            className: 'md:text-xl',
+            className: 'px-2 text-sm font-medium',
             variant: 'link',
             size: 'sm'
           })}
@@ -45,7 +45,7 @@ export function AuthButton() {
       )}
       <Dialog>
         <DialogTrigger asChild>
-          <Button className="md:text-xl" variant="link" size="sm">
+          <Button className="px-2 text-sm font-medium" variant="link" size="sm">
             {t('common.myAccount')}
           </Button>
         </DialogTrigger>
