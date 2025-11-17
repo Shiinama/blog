@@ -1,0 +1,190 @@
+# 4.2 Google Play Billing 生态体系 - Google Play 支付落地全解
+
+上一节我们把 Apple IAP 的 ID 关系与落地实践梳理了一遍，接下来这篇文章就把镜头切向另外半边天：Google Play Billing（后面简称 GPB）。想要在 Android 端获得可持续的订阅收入，GPB 的四个环节必须拉通：客户端票据、Play 服务、Google Play Developer API、我们自己的服务端。本文按照“结构 → 商品 → 流程 → 监控”的顺序展开，整个篇幅会比苹果章节稍长，因为 Google 在 Billing 6 之后对订阅拓扑、Base plan/Offer 的定义更加复杂。
+
+![](https://developer.android.com/static/images/google/play/billing/overview-arch.svg)
+_谷歌官方 Billing 架构示意，客户端只是触发器，真正的结算和票据解释都在 Play 服务与服务端完成_([Google Developer][1])
+
+## Google Play Billing 的三环
+
+我仍然把 GPB 看成“三环流”。当你把职责拆得足够清楚时，排查问题的效率会大幅提升。
+
+1. **客户端（Play Billing Library / Play Integrity）**：负责拉取商品、发起购买、拿到 `Purchase` 对象并交给服务端，同时要在成功后调用 `acknowledge` 或 `consume`。([Google Developer][2])
+2. **Google Play 服务**：Play Store App、Play 后台、Billing 服务以及 Real-time Developer Notifications（RTDN），负责扣款、生成 `purchaseToken`、推送交易状态、允许 API 查询历史。([Google Developer][3])
+3. **服务端**：接收客户端上传的 `purchaseToken`，调用 `Purchases.products`/`Purchases.subscriptions` 校验，做 `acknowledge`、`consume`、发权益，并把 RTDN 和对账数据串起来。
+
+代码示例：
+
+```typescript
+export const finishTransaction: MutationField<'finishTransaction'> = async ({ purchase, isConsumable = false }) => {
+  if (Platform.OS === 'ios') {
+    await ExpoIapModule.finishTransaction(purchase, isConsumable)
+    return
+  }
+
+  if (Platform.OS === 'android') {
+    const token = purchase.purchaseToken ?? undefined
+
+    if (!token) {
+      throw createPurchaseError({
+        message: 'Purchase token is required to finish transaction',
+        code: ErrorCode.DeveloperError,
+        productId: purchase.productId,
+        platform: 'android'
+      })
+    }
+
+    if (isConsumable) {
+      await ExpoIapModule.consumePurchaseAndroid(token)
+      return
+    }
+
+    await ExpoIapModule.acknowledgePurchaseAndroid(token)
+    return
+  }
+
+  throw new Error('Unsupported Platform')
+}
+```
+
+这三环只要任何一环欠账，都会造成“买了没给”“退款未收回”这类事故。GPB 里所有的 ID（`purchaseToken`、`orderId`、`linkedPurchaseToken`、`profileId` 等）都可以按这三环分门别类，调试时别混。
+
+> 要注意的是RTDN是在[Google Cloud](https://console.cloud.google.com/)上配置， 而配置App、添加沙盒环境、商品、订阅是在[Google Play Console](https://play.google.com)上配置。
+
+## Play Console 管理与角色
+
+Google 的权限体系看似简单，其实隐含了两个系统：**Play Console 角色**与**结算中心（Payments profile）**权限。要把支付跑起来，至少要满足：
+
+- `Admin` 或 `Release Manager` 才能创建/发布商品；([Google Developer][4])
+- `Financial` 或 `Payments Manager` 角色才能看收入和退款数据；
+- `Play Console > Setup > License Testing` 里要添加测试账号，否则沙箱测试会被拦；
+- Merchant account（商户中心）必须通过 KYC，订阅才会自动扣款；
+
+## Product 与 Subscription 的组合
+
+### Managed Product
+
+一次性商品（`inapp`）在 GPB 里叫 Managed Product。它的生命周期只有“购买 → 消费”两步，一旦开发者没有在 3 天内 `consumePurchase`，Google 会把钱退给用户。几条经验：
+
+![](https://ik.imagekit.io/ixou4q6nu/one-time-product.png?updatedAt=1762848065054)
+
+- 产品 ID 创建后不可修改，与苹果一样；
+- 价格可以按“地区模版”批量设定，避免逐个国家改；
+- `Package name + SKU` 唯一组合，不允许在多个包名复用；
+- 真实环境消费逻辑必须和服务端幂等处理绑定，否则 RTDN 重放会重复发道具。
+
+### Subscription = Base plan + Offer
+
+GPB 的订阅结构是“产品（Subscription）→ Base plan → Offer”。要把这三层的职责搞清楚：
+
+- **Subscription**：产品外壳，不关心计费方式；
+  ![](https://ik.imagekit.io/ixou4q6nu/create-subscription.png?updatedAt=1762844322246)
+- **Base plan**：定义计费周期（按月/年/预付）、国家可见性、价格层级、是否预付（Prepaid）；
+- **Offer**：具体优惠，例如试用、捆绑促销、Win-back。Offer 必须挂在某个 base plan 之下，可以设置 eligibility（新用户/回流账号/自定义标签），并可以配置多个 phase（trial → discount → full)。([Google Developer][5])
+  ![](https://ik.imagekit.io/ixou4q6nu/create-plan-offer.png?updatedAt=1762844323094)
+  我会把 Base plan 看成“计费管线”，Offer 看成“触发条件”。比如一个年订阅 product，可以创建两个 base plan：`yearly_auto`（自动续订）和 `yearly_prepaid`（预付），然后再为 `yearly_auto` 挂 3 个 offer：新用户 7 天试用、家庭包折扣、失效回流价。客户端只需要请求 Play 商店的 `ProductDetails` 就能拿到全部 phase 信息。
+
+## 测试环境
+
+谷歌的测试顺序是：`license tester`（这里主要是添加人）、`Internal app sharing`（灰度 APK）和 `Play Billing Test Card`（支付页面显示 `Test`）。建议步骤：
+
+1. 在 Play Console 添加测试账号并等待同步（通常 1 小时）；
+   ![](https://ik.imagekit.io/ixou4q6nu/one-time-product.png?updatedAt=1762848065054)
+2. 在 Internal App sharing上添加App；
+   ![](https://ik.imagekit.io/ixou4q6nu/internal-test.png?updatedAt=1762848594165)
+3. 在手机上使用测试账号登录 Play 商店（这里需要海外的安卓手机）；
+
+订阅测试的扣款周期是加速的：1 周订阅 ≈ 5 分钟、1 月订阅 ≈ 10 分钟。([Google Developer][6])
+
+测试阶段最好写好测试用例，覆盖：首购、续订、取消、恢复、换 SKU（`subscriptionUpgradeDowngradePolicy`）、Grace period、Account hold（主要还是复杂）。
+
+## 客户端到服务端的票据流
+
+整个链路分七步：
+
+1. 客户端通过 `billingClient.queryProductDetailsAsync` 拉取商品，并使用 `ProductDetails.subscriptionOfferDetails`；
+2. 用户点击购买 → Play 商店弹出支付页 → 成功后返回 `Purchase`；
+3. 客户端立刻把 `purchaseToken`、`orderId`、`obfuscatedAccountId` 等字段上传到服务端；
+4. 服务端调用 `Purchases.products.get` 或 `Purchases.subscriptions.get` 校验，并记录 `acknowledgementState`、`purchaseType`；([Google Developer][7])
+5. 服务端根据商品类型调用 `Purchases.products.acknowledge` 或 `Purchases.subscriptions.acknowledge`，订阅也可调用 `defer`、`cancel` 等接口；
+6. 服务端写订单表、权益表，并把原始 `Purchase` JSON 备份；
+7. 等待 RTDN 推送增量事件（续订、退款、暂停等），用 `linkedPurchaseToken` 维系历次交易。
+
+需要注意的细节：
+
+- `acknowledge` 必须在 3 天内完成，否则 Google 会自动退款。
+- `purchaseToken` 在订阅升级/降级时会变更，并通过 RTDN 的 `linkedPurchaseToken` 串联；
+- 对于多设备场景，要在服务端绑定用户 ID 与 `obfuscatedAccountId`，方便后续恢复。
+
+## 实时开发者通知（RTDN）
+
+在前面我们配置了商品之后，我们需要去配置RTDN，请参造[文档](https://developer.android.com/google/play/billing/getting-ready#configure_rtdn)。
+
+整个大致思路是：Google Cloud 项目里创建 Pub/Sub topic + subscription、给 google-play-developer-notifications@system.gserviceaccount.com 赋 Publisher 角色，然后在 Play Console（Monetize → Monetization setup → Real-time developer notifications）里填入 Cloud Project Number、Topic 名称，把两边关联起来，最后用 pubsub.topics.publish 测试是否能收到回调。
+
+RTDN 把 Play 的状态变动通过 Pub/Sub 推送给我们。整体流程：Play → Pub/Sub Topic → 我们的订阅者（HTTP/Worker）。
+
+- Topic 与 App 绑定，消息体包含 `messageId`、`publishTime`、`data`（Base64 字符串）；
+- `data` 解码后是 `DeveloperNotification`，包含 `version`, `packageName`, `eventTimeMillis` 和 `testNotification` 或 `oneTimeProductNotification` / `subscriptionNotification`；
+- 每种通知都有 `notificationType`（1=SUBSCRIPTION_RECOVERED, 2=RENEWED, 3=CANCELED, ...），还有 `purchaseToken`、`subscriptionId`。([Google Developer][8])
+
+示例：
+
+```json
+{
+  "message": {
+    "data": "eyJtdWx0aV90ZW5hbnRf...",
+    "messageId": "927403733761451",
+    "publishTime": "2025-05-20T03:20:45.123Z"
+  },
+  "subscription": "projects/demo/subscriptions/gpb-prod"
+}
+```
+
+解码后的 `DeveloperNotification`：
+
+```json
+{
+  "version": "1.0",
+  "packageName": "com.demo.app",
+  "eventTimeMillis": "1758123645123",
+  "subscriptionNotification": {
+    "notificationType": 2,
+    "purchaseToken": "lpoabfmcdpbgfalkdk....",
+    "subscriptionId": "premium.yearly",
+    "linkedPurchaseToken": "cldefij..."
+  }
+}
+```
+
+Tips：
+
+- RTDN 要求 200 OK，失败会指数退避 7 天；
+- Play 会对同一个事件推送多次（尤其是价格调整、账号冻结），处理逻辑一定要基于 `purchaseToken + notificationType` 幂等。
+
+## 一些边界场景与策略
+
+| 场景           | 处理策略                                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Grace period   | `paymentState=0` → `1`/`2` 转换时要延长权益，但要在 UI 上提示剩余时间；                                                              |
+| Account hold   | `subscriptionNotification.notificationType=12`，用户需要重新授权付款，发邮件 + 站内信提醒；                                          |
+| Pause / Resume | 用户可在 Play 中暂停订阅，`notificationType=13/14`，权益需要在暂停当天截止，恢复后再重放；                                           |
+| Prepaid plan   | `pricingType=PREPAID`，每次购买都是新的 `purchaseToken`，要用 `linkedPurchaseToken` 串接；                                           |
+| 升级/降级      | 调用 `billingClient.launchBillingFlow` 时传 `SubscriptionUpdateParams`，服务端要根据 `linkedPurchaseToken` 把老订阅设为 `REPLACED`； |
+| 多登录         | 同一 Google 账号在多台设备使用，要在服务端按 `obfuscatedAccountId` 聚合，避免权益串号；                                              |
+| 退款/撤销      | `voidedpurchases.list` + RTDN `17/18`（REVOKED），收到后立即回收权益并记录退款渠道；                                                 |
+| 合规           | 某些市场要求展示订阅中心入口（比如欧盟的取消路径），在 App 内提供「管理订阅」跳转链接。                                              |
+
+## 结束
+
+GPB 的难点不在代码实现，而在于对生态细节的理解：Base plan/Offer 的映射、`acknowledge` 窗口、RTDN 幂等、对账链路。只要把“能买、能验证、能恢复、能审计”四件事都按本文拆成 checklist，Android 端的订阅稳定性就会和 iOS 一样可靠。
+
+[1]: https://developer.android.com/google/play/billing/billing_overview 'Google Play Billing Overview'
+[2]: https://developer.android.com/google/play/billing/integrate 'Integrate Google Play Billing'
+[3]: https://developer.android.com/google/play/billing/realtime_developer_notifications 'Real-time Developer Notifications'
+[4]: https://support.google.com/googleplay/android-developer/answer/9859348 'Manage Play Console users\\u200b'
+[5]: https://developer.android.com/google/play/billing/subscriptions 'Subscriptions with base plans and offers'
+[6]: https://developer.android.com/google/play/billing/test 'Test Google Play Billing'
+[7]: https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptions.get 'purchases.subscriptions.get'
+[8]: https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2 'DeveloperNotification and RTDN'
+[9]: https://developers.google.com/android-publisher/reporting/reference/rest 'Play Developer Reporting API'

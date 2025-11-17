@@ -20,9 +20,9 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
 
 7. **Theme Support**: Includes both light and dark theme options for enhanced user experience.
 
-8. **MDX Support**: Utilizes MDX for writing documentation and content, allowing for rich, interactive content with embedded React components.
+8. **Database-Backed Knowledge Base**: Articles live in Cloudflare D1 (SQLite) via Drizzle ORM, enabling search, filtering, translations, and automation beyond the limits of static files.
 
-9. **Content Management with Velite**: Integrates Velite for efficient content management, enabling easy creation and organization of documentation and other content.
+9. **Built-In Editor**: An authenticated admin workspace lets you create, edit, publish, and delete posts with a live Markdown preview—no external CMS or MDX pipeline required.
 
 ## Tech Stack
 
@@ -30,12 +30,11 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
 - React
 - TypeScript
 - Radix UI
-- Prisma
+- Drizzle ORM
 - NextAuth
 - OpenAI / OpenRouter
-- PostgreSQL
+- Cloudflare D1 (SQLite)
 - Docker
-- Velite
 
 ## Getting Started
 
@@ -44,7 +43,7 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
 - Node.js (v18 or later)
 - npm, yarn, or pnpm
 - Docker and docker-compose (for deployment)
-- PostgreSQL database
+- Cloudflare account with Wrangler CLI configured (for D1 database access)
 
 ### Installation
 
@@ -68,14 +67,43 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
 3. Set up environment variables:
    Create a `.env` file in the root directory and add the necessary environment variables (database URL, API keys, etc.).
 
-4. Set up the database:
+### Cloudflare D1 Setup
+
+1. Install the [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) and run `wrangler login`.
+2. Create a D1 database (or reuse an existing one):
 
    ```bash
-   npx prisma prisma generate
-   npx prisma db push
+   wrangler d1 create link-ai-db
    ```
 
-5. Run the development server:
+3. Copy the output values into your `.env` file:
+
+   ```bash
+   DATABASE_NAME="link-ai-db"
+   DATABASE_ID="<the UUID shown by Wrangler>"
+   CLOUDFLARE_ACCOUNT_ID="<your account id>"
+   CLOUDFLARE_API_TOKEN="<an API token with D1 access>"
+   NEXT_PUBLIC_DB_PROXY="1" # required for `next dev` and local CLI scripts
+   ```
+
+   The HTTP proxy automatically sends local Node.js queries (Next.js dev server, scripts, etc.) to Cloudflare's D1 API, so you no longer need a local Postgres service.
+
+4. Set up the Cloudflare D1 schema (one-time). Generate SQL (optional) and push it to your database (Wrangler credentials are picked up from `.env`):
+
+   ```bash
+   pnpm db:generate   # optional – creates a migration snapshot
+   pnpm db:push       # applies the schema using Drizzle Kit
+   ```
+
+5. (Optional) Import the legacy MDX articles into the database:
+
+   ```bash
+   pnpm content:import
+   ```
+
+   > **Note:** Content import runs from Node.js, so it relies on the HTTP proxy (`NEXT_PUBLIC_DB_PROXY=1`) and the Cloudflare credentials listed above.
+
+6. Run the development server:
 
    ```bash
    npm run dev
@@ -85,9 +113,11 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
    pnpm dev
    ```
 
-6. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+7. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Deployment
+
+### Docker / Traditional VM
 
 1. Build the Docker image:
 
@@ -105,81 +135,85 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
 
 4. Add an A record in Cloudflare pointing to your server's IP address.
 
+### Cloudflare Workers (OpenNext)
+
+This repo now ships with the same OpenNext + Cloudflare architecture as `next-cloudflare-template`. To deploy to Workers:
+
+1. Edit `wrangler.jsonc` with your Cloudflare account/binding names.
+2. Generate typed bindings when they change (optional, but helpful):
+
+   ```bash
+   pnpm cf:typegen
+   ```
+
+3. Build and run a local Worker preview (uses `.open-next` outputs and Wrangler):
+
+   ```bash
+   pnpm preview
+   ```
+
+4. Deploy the latest build to Cloudflare:
+
+   ```bash
+   pnpm deploy
+   ```
+
+5. To upload the Worker bundle without deployment (CI/bucket workflows), run:
+
+   ```bash
+   pnpm upload
+   ```
+
+Behind the scenes `opennextjs-cloudflare` generates `.open-next/worker.js`, and `worker.ts` simply forwards requests to it while exposing any custom Durable Objects when needed.
+
 Certainly! I'll update the Project Structure section of the README based on the current project structure. Here's the updated section:
 
 **File: /Users/weishunyu/ChatGPT/README.md**
 
 ## Project Structure
 
-The project follows a well-organized structure:
-
 ```
-
-easy-business-ai/
-├── .velite/
-├── actions/
+.
+├── actions/                  # Next server actions (auth, posts, AI helpers)
 ├── app/
-│ ├── (private)/
-│ │ └── chat/
-│ ├── (public)/
-│ │ ├── login/
-│ │ └── register/
-│ ├── api/
-│ └── layout.tsx
-├── content/
-│   └── docs/
+│   ├── (document)/           # Public blog UI
+│   ├── admin/                # Database-backed editor + dashboard
+│   └── api/                  # NextAuth routes and other APIs
 ├── components/
-│ ├── ui/
-│ └── [other component folders]
+│   ├── markdown/             # Runtime Markdown renderer
+│   ├── mdx/                  # Legacy helpers (TOC, sidebar shell)
+│   └── posts/                # Admin form + table components
 ├── constant/
+│   └── category-presets.ts   # Central definition of blog categories
+├── content/                  # Legacy MDX sources (import with `pnpm content:import`)
+├── hooks/                    # Reusable client hooks
 ├── lib/
-├── prisma/
-│ └── schema.prisma
+│   ├── auth.ts               # NextAuth config
+│   ├── authz.ts              # Admin guards
+│   ├── db/                   # Cloudflare D1 driver + schema exports
+│   ├── markdown/             # TOC + slug helpers
+│   └── posts.ts              # Drizzle queries for posts/categories
+├── drizzle/
+│   ├── schema.ts             # Drizzle ORM schema (shared across runtimes)
+│   └── migrations/           # Generated SQL snapshots
 ├── public/
-├── script/
-├── store/
-├── types/
-├── .env
-├── .gitignore
-├── Dockerfile
-├── LICENSE
-├── README.md
-├── components.json
-├── docker-compose.yml
+├── scripts/
+│   └── import-content.ts     # CLI to migrate MDX into the database
+├── styles/
+├── constant.json / messages/
+├── cloudflare-env.d.ts       # Worker bindings (type-safe)
+├── worker.ts                 # Cloudflare Worker entry that delegates to OpenNext
+├── wrangler.jsonc            # Wrangler configuration/bindings
 ├── next.config.mjs
 ├── package.json
-├── postcss.config.js
 ├── tailwind.config.ts
-├── velite.config.ts
 └── tsconfig.json
-
 ```
 
-- `actions/`: Contains Next Server Actions and Clint Actions.
-- `app/`: Main application directory with layouts and pages.
-  - `(private)/`: Private routes and components.
-  - `(public)/`: Public routes and components.
-  - `api/`: API routes for auth.
-- `components/`: Reusable UI components.
-- `constant/`: Constant values used throughout the application.
-- `lib/`: Shared libraries and utilities.
-- `prisma/`: Prisma ORM configuration and schema.
-- `public/`: Static assets like images and icons.
-- `script/`: Custom scripts for project setup or maintenance.
-- `store/`: State management files (e.g., Redux).
-- `types/`: TypeScript type definitions.
-- `content/`: Contains MDX files for documentation and other content.
-  - `docs/`: MDX files for documentation pages.
-- `.velite/`: Generated Velite output.
-- `velite.config.ts`: Configuration file for Velite content management.
-
-Key configuration files:
-
-- `Dockerfile` and `docker-compose.yml`: For containerization and deployment.
-- `next.config.mjs`: Next.js configuration.
-- `package.json`: Project dependencies and scripts.
-- `tailwind.config.ts`: Tailwind CSS configuration.
-- `tsconfig.json`: TypeScript configuration.
+- `content/` now serves only as an import source. Once `pnpm content:import` has been run, day-to-day writing happens in the admin UI and the database.
+- `app/admin` contains the gated dashboard for listing, creating, editing, publishing, and deleting posts.
+- `scripts/import-content.ts` normalizes the legacy MDX tree, keeps existing slugs, and hydrates the new Drizzle tables.
+- `constant/category-presets.ts` is the single source of truth for category metadata (slug, translation key, visibility, order).
 
 ## Contributing
 

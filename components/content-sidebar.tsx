@@ -16,47 +16,47 @@ import {
   SidebarMenuItem,
   SidebarSeparator
 } from '@/components/ui/sidebar'
-import { CollectionName, getCollections } from '@/lib/collections'
 
-type ContentSidebarProps = {
-  group: CollectionName
+type SidebarItem = {
+  id: string
+  title: string
+  href: string
 }
 
-export function ContentSidebar({ group }: ContentSidebarProps) {
-  const { byName } = getCollections()
+interface ContentSidebarProps {
+  categoryKey?: string | null
+  fallbackLabel: string
+  items: SidebarItem[]
+}
+
+export function ContentSidebar({ categoryKey, fallbackLabel, items }: ContentSidebarProps) {
   const t = useTranslations('article')
   const common = useTranslations('common')
-
+  const pathname = usePathname()
   const { setTheme, theme } = useTheme()
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light')
   }
-  const pathname = usePathname()
-  const collection = byName[group]
+
+  const currentCategoryLabel = categoryKey ? t(categoryKey as any) : fallbackLabel
 
   return (
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{t(group as any)}</SidebarGroupLabel>
+          <SidebarGroupLabel>{currentCategoryLabel}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {collection
-                .sort((a, b) => {
-                  const aNum = parseInt(a.title.split('.')[0])
-                  const bNum = parseInt(b.title.split('.')[0])
-                  return aNum - bNum
-                })
-                .map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={item.slug === pathname}>
-                      <Link href={item.slug}>
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+              {items.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton asChild isActive={item.href === pathname}>
+                    <Link href={item.href}>
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -1,0 +1,36 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "blog",
+	"main": "worker.ts",
+	"compatibility_date": "2025-04-24",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"observability": {
+		"logs": {
+			"enabled": true
+		}
+	},
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		{
+			"binding": "blog",
+			"database_name": "blog",
+			"database_id": "ce73ae09-d75b-4701-99bd-8dda6de6816e"
+		}
+	],
+	"ai": {
+		"remote": true,
+		"binding": "AI"
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "blog"
+		}
+	]
+}

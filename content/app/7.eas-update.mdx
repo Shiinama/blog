@@ -1,0 +1,118 @@
+# 7. 热更新与维护（EAS Update）
+
+当产品节奏要求“今天修、明天见”，而又不希望每次都走商店审核，EAS Update 就是理想工具。它允许你在不变更原生代码的前提下，向已安装用户下发 JS 与静态资源更新。本章详解 Branch/Channel/RuntimeVersion 的协作关系、前置配置、发布与回滚、代码签名与安全边界、在线检查与用户体验，以及典型多环境/灰度策略。
+
+## 一、核心概念与关系
+
+- Branch：更新的“版本线”。每次 `eas update` 会生成一个更新组（Update Group）归属某个 Branch；
+- Channel：面向客户端的“发布通道”。每个 Channel 指向某个 Branch，可随时调整指向；
+- Runtime Version：原生包的“运行时版本”。只有 runtimeVersion 匹配的更新才会被下发到该原生包。
+
+关系综述：原生包内记录了 `channel` 与 `runtimeVersion`。App 启动时会根据 Channel 指向的 Branch，选择“与当前 runtimeVersion 兼容”的最新更新。
+
+## 二、前置配置
+
+在 `app.config.ts` 启用 Update 并设置运行时版本策略：
+
+```ts
+updates: { url: 'https://u.expo.dev/<your-project-id>' },
+runtimeVersion: { policy: 'appVersion' },
+version: '1.3.0',
+```
+
+在 `eas.json` 为构建 Profile 绑定 Channel：
+
+```json
+{
+  "build": {
+    "preview": { "channel": "staging" },
+    "production": { "channel": "production" }
+  }
+}
+```
+
+这样，内测包只接收 `staging`，生产包只接收 `production` 的更新。
+
+## 三、创建 Branch/Channel 与发布流程
+
+创建：
+
+```bash
+eas branch:create staging
+eas channel:create production --branch main
+```
+
+发布：
+
+```bash
+# 向 staging 发布
+eas update --branch staging --message "Fix push logic"
+
+# 向生产发布（main 分支）
+eas update --branch main --message "Hotfix: crash on startup"
+```
+
+更新将上传到 CDN，App 下次冷启动拉取并生效（也可在应用内手动触发）。
+
+## 四、在应用内检查与应用更新
+
+提供“立即更新”体验（谨慎使用）：
+
+```ts
+import * as Updates from 'expo-updates'
+
+export async function checkAndUpdate() {
+  try {
+    const { isAvailable, manifest } = await Updates.checkForUpdateAsync()
+    if (isAvailable) {
+      await Updates.fetchUpdateAsync()
+      // 立即重载或提示用户稍后重启
+      await Updates.reloadAsync()
+    }
+  } catch (e) {
+    console.warn('检查/更新失败', e)
+  }
+}
+```
+
+体验建议：
+
+- 不要频繁强制重启；在用户空闲或下次冷启动应用更新；
+- 对需要“强修”的问题采用“提示 + 倒计时重启”的方式，减少打断；
+- 在“关于/设置”页提供“检查更新”入口。
+
+## 五、回滚与审计
+
+- 回滚：
+  - 将 Channel 指回到上一组稳定更新；
+  - 或 `eas update:republish --group <update-group-id>` 将旧更新组重发到另一 Branch；
+- 审计：
+  - `expo.dev` 查看每次更新的提交者、时间、消息与差异；
+  - 强制要求 `--message` 清晰描述，关联变更单号或问题编号。
+
+## 六、兼容性与安全边界
+
+- 仅更新 JS 与静态资源：任何原生代码/权限/链接变化必须重新发包；
+- `runtimeVersion` 策略：
+  - 推荐 `appVersion`，当原生依赖升级时同步提升应用版本；
+  - 也可使用自定义哈希（例如原生依赖列表计算），严格界定兼容边界；
+- 代码签名：
+  - EAS Update 支持签名校验，防篡改；
+  - 建议在生产环境启用，并将证书安全保存于 EAS Secrets。
+
+## 七、多环境与灰度发布
+
+- 多环境：`staging` 与 `production` Channel 分离，开发/预发/生产三段式；
+- 小流量验证：先发到 `staging`；在生产环境可通过切换 Channel 指向进行“软回滚”；
+- 配置管理：配合 `extra` 或远端配置平台调整阈值与开关，配合 Update 形成“功能开关 + 代码热更新”的双保险。
+
+## 八、常见问题与排查
+
+- 更新未生效：当前包的 `channel` 与 `runtimeVersion` 不匹配；冷启动再试；
+- 更新后白屏：检查打包资源路径与 lazy import；尽量在 QA 环境充分验证；
+- 频繁更新触发用户反感：合并更新，优化节奏；
+- 与商店审核边界：不能通过 Update 引入新权限或绕过审核引入敏感功能。
+
+## 小结
+
+EAS Update 让“快速修复与小步快跑”成为常态。通过 Channel/Branch 的清晰规划、严格的运行时版本控制、签名与审计、以及合理的应用内触发策略，你可以在保障安全与体验的同时获得接近 Web 的发布速度。当更新触及原生边界时，回到 EAS Build 发版，这就是健康的节奏。

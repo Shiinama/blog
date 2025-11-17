@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
@@ -8,7 +9,7 @@ import { DialogContent, DialogHeader, DialogTitle, Dialog, DialogTrigger } from 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-import { Button } from './ui/button'
+import { Button, buttonVariants } from './ui/button'
 
 export function AuthButton() {
   const session = useSession()
@@ -27,8 +28,21 @@ export function AuthButton() {
         {t('common.loginIn')}
       </Button>
     )
-  else
-    return (
+
+  return (
+    <div className="flex items-center gap-2">
+      {user?.role === 'ADMIN' && (
+        <Link
+          href="/admin/posts"
+          className={buttonVariants({
+            className: 'md:text-xl',
+            variant: 'link',
+            size: 'sm'
+          })}
+        >
+          管理后台
+        </Link>
+      )}
       <Dialog>
         <DialogTrigger asChild>
           <Button className="md:text-xl" variant="link" size="sm">
@@ -64,5 +78,6 @@ export function AuthButton() {
           </div>
         </DialogContent>
       </Dialog>
-    )
+    </div>
+  )
 }

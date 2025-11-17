@@ -1,12 +1,19 @@
+import typography from '@tailwindcss/typography'
 import hideScrollBar from 'tailwind-scrollbar-hide'
-import { fontFamily } from 'tailwindcss/defaultTheme'
+import defaultTheme from 'tailwindcss/defaultTheme'
 import animatePlugin from 'tailwindcss-animate'
 
 import type { Config } from 'tailwindcss'
 
 export default {
-  darkMode: ['class'],
-  content: ['./pages/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
+  darkMode: 'class',
+  content: [
+    './app/**/*.{ts,tsx,mdx}',
+    './components/**/*.{ts,tsx,mdx}',
+    './pages/**/*.{ts,tsx,mdx}',
+    './src/**/*.{ts,tsx,mdx}',
+    './content/**/*.{md,mdx}'
+  ],
   theme: {
     container: {
       center: true,
@@ -73,8 +80,8 @@ export default {
         sm: 'calc(var(--radius) - 4px)'
       },
       fontFamily: {
-        sans: ['var(--font-sans)', ...fontFamily.sans],
-        heading: ['var(--font-heading)', ...fontFamily.sans]
+        sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
+        heading: ['var(--font-heading)', ...defaultTheme.fontFamily.sans]
       },
       keyframes: {
         'accordion-down': {
@@ -100,5 +107,5 @@ export default {
       }
     }
   },
-  plugins: [animatePlugin, hideScrollBar]
+  plugins: [animatePlugin, hideScrollBar, typography]
 } satisfies Config

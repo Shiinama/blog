@@ -1,4 +1,4 @@
-import { PlanType, SubscriptionStatus } from '@prisma/client'
+import { PlanType, SubscriptionStatus } from '@/lib/db'
 
 export const FreePlan = {
   planType: PlanType.FREE,

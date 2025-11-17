@@ -1,0 +1,233 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+import { eq } from 'drizzle-orm'
+
+import { assertAdmin } from '@/lib/authz'
+import { createDb, postStatusEnum, posts, PostStatus as PostStatusValue, type DB, type PostStatus } from '@/lib/db'
+import { calculateReadingTime, extractSummary, normalizeSlug } from '@/lib/posts/utils'
+
+export type PostFormState = {
+  status: 'idle' | 'success' | 'error'
+  message?: string
+  errors?: Record<string, string[]>
+  redirectTo?: string
+}
+
+export const initialPostFormState: PostFormState = {
+  status: 'idle'
+}
+
+const postStatusValues = [...postStatusEnum] as [PostStatus, ...PostStatus[]]
+
+const postFormSchema = z.object({
+  postId: z.string().optional(),
+  title: z.string().min(3, '标题至少 3 个字符'),
+  slug: z.string().min(1, 'Slug 不能为空'),
+  summary: z.string().optional(),
+  content: z.string().min(50, '内容需要至少 50 个字符'),
+  coverImageUrl: z.string().url('封面链接格式不正确').optional().or(z.literal('')),
+  categoryId: z.string().min(1, '请选择分类'),
+  tags: z.string().optional(),
+  status: z.enum(postStatusValues).default('DRAFT'),
+  sortOrder: z.coerce.number().optional(),
+  publishedAt: z.string().optional(),
+  language: z.string().optional()
+})
+
+function formatFieldErrors(error: z.ZodError): Record<string, string[]> {
+  const formatted: Record<string, string[]> = {}
+  const fieldErrors = error.flatten().fieldErrors
+  Object.entries(fieldErrors).forEach(([key, value]) => {
+    if (value) {
+      formatted[key] = value.filter(Boolean) as string[]
+    }
+  })
+  return formatted
+}
+
+function parseTags(value?: string) {
+  if (!value) return []
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+}
+
+async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: string) {
+  const slug = normalizeSlug(data.slug)
+  const summary = data.summary?.trim() || extractSummary(data.content)
+  const coverImageUrl = data.coverImageUrl?.trim() ? data.coverImageUrl.trim() : null
+  const tags = parseTags(data.tags)
+  const readingTime = calculateReadingTime(data.content)
+  const language = data.language?.trim() || 'zh'
+  const sortOrder = Number.isFinite(data.sortOrder) ? (data.sortOrder as number) : 0
+
+  const publishedAt =
+    data.status === PostStatusValue.PUBLISHED
+      ? (() => {
+          const parsedDate = data.publishedAt ? new Date(data.publishedAt) : new Date()
+          return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate
+        })()
+      : null
+
+  const baseData = {
+    title: data.title.trim(),
+    slug,
+    summary,
+    content: data.content,
+    coverImageUrl,
+    categoryId: data.categoryId,
+    status: data.status,
+    tags,
+    readingTime,
+    language,
+    sortOrder,
+    authorId: userId,
+    publishedAt
+  }
+
+  if (data.postId) {
+    const existing = await db.query.posts.findFirst({
+      where: (post, { eq }) => eq(post.id, data.postId!)
+    })
+
+    if (!existing) {
+      throw new Error('Post not found')
+    }
+
+    const updatedPublishedAt =
+      data.status === PostStatusValue.PUBLISHED ? baseData.publishedAt ?? existing.publishedAt ?? new Date() : null
+
+    const updated = await db
+      .update(posts)
+      .set({
+        ...baseData,
+        publishedAt: updatedPublishedAt,
+        updatedAt: new Date()
+      })
+      .where(eq(posts.id, data.postId))
+      .returning()
+
+    return updated[0]!
+  }
+
+  const created = await db
+    .insert(posts)
+    .values({
+      ...baseData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    .returning()
+
+  return created[0]!
+}
+
+function revalidatePostRoutes(slug: string) {
+  revalidatePath('/')
+  revalidatePath('/content')
+  revalidatePath(`/content/${slug}`)
+  revalidatePath('/admin/posts')
+}
+
+export async function savePostAction(prevState: PostFormState, formData: FormData): Promise<PostFormState> {
+  const db = createDb()
+  try {
+    const user = await assertAdmin()
+    const entries = Object.fromEntries(formData.entries()) as Record<string, string>
+    const payload = postFormSchema.safeParse(entries)
+
+    if (!payload.success) {
+      return {
+        status: 'error',
+        errors: formatFieldErrors(payload.error),
+        message: '请检查表单信息'
+      }
+    }
+
+    const post = await upsertPost(db, payload.data, user.id)
+
+    revalidatePostRoutes(post.slug)
+
+    return {
+      status: 'success',
+      message: '文章已保存',
+      redirectTo: `/admin/posts/${post.slug}`
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        status: 'error',
+        errors: formatFieldErrors(error),
+        message: '请检查表单信息'
+      }
+    }
+
+    if (error instanceof Error && /UNIQUE constraint failed: posts\.slug/i.test(error.message)) {
+      return {
+        status: 'error',
+        errors: {
+          slug: ['Slug 已存在，请更换一个唯一的地址']
+        }
+      }
+    }
+
+    console.error('Failed to save post', error)
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : '保存失败，请稍后重试'
+    }
+  }
+}
+
+export async function deletePostAction(postId: string) {
+  await assertAdmin()
+  const db = createDb()
+  const deleted = await db
+    .delete(posts)
+    .where(eq(posts.id, postId))
+    .returning({ slug: posts.slug })
+
+  if (!deleted[0]) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  revalidatePostRoutes(deleted[0].slug)
+
+  return { status: 'success' }
+}
+
+export async function togglePostStatusAction(postId: string, status: PostStatus) {
+  await assertAdmin()
+  const db = createDb()
+  const existing = await db.query.posts.findFirst({
+    where: (post, { eq }) => eq(post.id, postId)
+  })
+
+  if (!existing) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  const publishedAt = status === PostStatusValue.PUBLISHED ? existing.publishedAt ?? new Date() : null
+
+  const updated = await db
+    .update(posts)
+    .set({
+      status,
+      publishedAt,
+      updatedAt: new Date()
+    })
+    .where(eq(posts.id, postId))
+    .returning({ slug: posts.slug, status: posts.status })
+
+  const updatedPost = updated[0]
+  if (!updatedPost) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  revalidatePostRoutes(updatedPost.slug)
+
+  return { status: 'success', statusValue: updatedPost.status }
+}

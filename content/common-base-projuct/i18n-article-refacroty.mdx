@@ -1,0 +1,336 @@
+# I18N文章的重构
+
+这一轮迭代把「单表多语言」的博客系统拆成了「默认语言主表 + 翻译副本表」的组合，同时把后台列表、服务端接口和翻译脚本拉通。现在可以用一份主内容驱动所有语言版本，也能更清晰地维护各语种的状态。
+
+## 1. 改造目标
+
+- 主语言文章独立存储，翻译语言变成附属记录，避免 slug、发布时间互相覆盖。
+- 列表与编辑接口支持语言、状态、搜索等筛选，保证文章量增多后仍能维护。
+- 抽离通用的 SQL / 对象工具，减少在服务端文件里重复堆积基础逻辑。
+- 一条翻译链路同时满足后台实时触发、脚本批量补齐两种场景。
+
+## 2. 数据层：拆表与迁移
+
+### 2.1 Schema 调整
+
+`lib/db/schema.ts` 去掉了 `posts.locale`，转而在 `postTranslations` 上记录 `postId + locale + slug`。翻译表保留独立的 `createdAt/updatedAt`，便于追踪翻译更新时间：
+
+```ts
+export const posts = sqliteTable('posts', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  coverImageUrl: text('cover_image_url'),
+  excerpt: text('excerpt').notNull(),
+  content: text('content').notNull(),
+  publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+})
+
+export const postTranslations = sqliteTable('postTranslations', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  postId: text('postId')
+    .notNull()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  excerpt: text('excerpt').notNull(),
+  coverImageUrl: text('cover_image_url'),
+  locale: text('locale').notNull(),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+})
+```
+
+### 2.2 数据迁移脚本
+
+`migrations/0009_clever_fallen_one.sql` 先把非默认语言数据备份到新表，再重建 `posts`：
+
+```sql
+INSERT INTO `postTranslations` (
+  `id`,
+  `postId`,
+  `slug`,
+  `title`,
+  `excerpt`,
+  `cover_image_url`,
+  `locale`,
+  `content`,
+  `created_at`,
+  `updated_at`
+)
+SELECT
+  lower(hex(randomblob(16))),
+  p.`id`,
+  p.`slug`,
+  p.`title`,
+  p.`excerpt`,
+  p.`cover_image_url`,
+  p.`locale`,
+  p.`content`,
+  COALESCE(p.`created_at`, CAST(strftime('%s','now') AS INTEGER) * 1000),
+  COALESCE(p.`updated_at`, CAST(strftime('%s','now') AS INTEGER) * 1000)
+FROM `posts` p
+WHERE p.`locale` IS NOT NULL
+  AND p.`locale` <> 'en'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM `postTranslations` pt
+    WHERE pt.`postId` = p.`id`
+      AND pt.`locale` = p.`locale`
+  );
+
+PRAGMA foreign_keys=off;
+CREATE TABLE `__new_posts` (... 无 locale 列 ...);
+INSERT INTO `__new_posts` SELECT ... FROM `posts`;
+DROP TABLE `posts`;
+ALTER TABLE `__new_posts` RENAME TO `posts`;
+CREATE UNIQUE INDEX `posts_slug_unique` ON `posts` (`slug`);
+PRAGMA foreign_keys=on;
+```
+
+## 3. 基础工具抽象
+
+### 3.1 数值 / 对象工具
+
+`lib/utils/value.ts`、`lib/utils/object.ts` 把常用的空值判断和可选字段赋值抽离出来，支持可选的转换函数及空值判断：
+
+```ts
+export const isDefined = <T>(value: T | undefined): value is T => value !== undefined
+export const isNullish = (value: unknown): value is null | undefined => value == null
+export const isPresent = <T>(value: T | null | undefined): value is T => !isNullish(value)
+export const normalizeNullable = <T>(value: T | null | undefined): T | null => (value === undefined ? null : value)
+export const ensureArray = <T>(input: T | T[] | null | undefined): T[] =>
+  Array.isArray(input) ? input : isNullish(input) ? [] : [input]
+export const coalesce = <T>(...values: Array<T | null | undefined>): T | undefined => values.find(isPresent)
+
+export const withOptionalField = <T extends object, K extends keyof T>(
+  target: Partial<T>,
+  key: K,
+  value: T[K] | undefined,
+  transform?: (current: NonNullable<T[K]>) => T[K]
+) => {
+  if (!isDefined(value)) return
+  const nextValue = transform && value !== null ? transform(value as NonNullable<T[K]>) : value
+  target[key] = nextValue as T[K]
+}
+export const assignIfPresent = <T extends object, K extends keyof T>(
+  target: Partial<T>,
+  key: K,
+  value: T[K] | null | undefined
+) => {
+  if (isNullish(value)) return
+  target[key] = value as T[K]
+}
+```
+
+### 3.2 SQL 条件工具
+
+`lib/db/sql-utils.ts` 统一分页、模糊搜索与条件拼装，`buildLikeSearch` 改成了带配置对象的形式：
+
+```ts
+export const pushCondition = (conditions: SQL[], condition?: SQL) => {
+  if (condition) {
+    conditions.push(condition)
+  }
+}
+
+export const combineConditions = (conditions: SQL[]) => (conditions.length ? and(...conditions) : undefined)
+
+export const escapeLikePattern = (value: string) => value.replace(/[%_]/g, '\\$&')
+
+export interface PaginationOptions {
+  page?: number
+  pageSize?: number
+  minPageSize?: number
+  maxPageSize?: number
+}
+
+export const resolvePagination = ({
+  page = 1,
+  pageSize = 10,
+  minPageSize = 1,
+  maxPageSize = Number.POSITIVE_INFINITY
+}: PaginationOptions = {}) => {
+  const normalizedPage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1
+  const lowerBound = Math.max(1, Math.floor(minPageSize))
+  const upperBound = Math.max(lowerBound, Math.floor(maxPageSize))
+
+  let normalizedPageSize = Number.isFinite(pageSize) && pageSize > 0 ? Math.floor(pageSize) : lowerBound
+  if (normalizedPageSize < lowerBound) normalizedPageSize = lowerBound
+  if (normalizedPageSize > upperBound) normalizedPageSize = upperBound
+
+  const offset = (normalizedPage - 1) * normalizedPageSize
+
+  return {
+    page: normalizedPage,
+    pageSize: normalizedPageSize,
+    limit: normalizedPageSize,
+    offset
+  }
+}
+
+export const calculateTotalPages = (totalItems: number, pageSize: number) => {
+  if (!Number.isFinite(totalItems) || totalItems <= 0) return 0
+  if (!Number.isFinite(pageSize) || pageSize <= 0) return 0
+  return Math.ceil(totalItems / pageSize)
+}
+
+export const buildLikeSearch = (
+  columns: AnyColumn[],
+  { value, caseInsensitive = true }: { value?: string | null; caseInsensitive?: boolean }
+) => {
+  if (!value?.trim()) return undefined
+  const normalized = caseInsensitive ? value.trim().toLowerCase() : value.trim()
+  const escapedPattern = `%${escapeLikePattern(normalized)}%`
+  const escapeLiteral = sql.raw("'\\\\'")
+  const comparators = columns.map((column) =>
+    caseInsensitive
+      ? sql`lower(${column}) LIKE ${escapedPattern} ESCAPE ${escapeLiteral}`
+      : sql`${column} LIKE ${escapedPattern} ESCAPE ${escapeLiteral}`
+  )
+  return comparators.length === 1 ? comparators[0] : or(...comparators)
+}
+```
+
+## 4. 服务端接口：`actions/ai-content.ts`
+
+### 4.1 分页列表（语言 / 状态 / 搜索）
+
+`getPaginatedArticles` 根据 `filters.language`、`filters.status`、`filters.search` 组装查询。分页逻辑统一走 `resolvePagination`，模糊搜索通过 `buildLikeSearch` 同时匹配标题、slug、摘要。
+
+```ts
+const { page: currentPage, pageSize: itemsPerPage, offset } = resolvePagination({ page, pageSize })
+
+const buildPostSearchCondition = () =>
+  hasSearch ? buildLikeSearch([posts.title, posts.slug, posts.excerpt], { value: normalizedSearch }) : undefined
+
+const buildTranslationSearchCondition = () =>
+  hasSearch
+    ? buildLikeSearch(
+        [postTranslations.title, postTranslations.slug, postTranslations.excerpt, posts.title, posts.slug],
+        { value: normalizedSearch }
+      )
+    : undefined
+
+const fetchPosts = async (limit?: number, queryOffset?: number) => {
+  const conditions: SQL[] = []
+  pushCondition(conditions, buildPostSearchCondition())
+  pushCondition(conditions, buildPostStatusCondition())
+
+  const whereCondition = combineConditions(conditions)
+  const selectBase = database.select({ post: posts }).from(posts)
+  const selectFiltered = whereCondition ? selectBase.where(whereCondition) : selectBase
+  const selectOrdered = selectFiltered.orderBy(desc(posts.createdAt))
+  const selectLimited = typeof limit === 'number' ? selectOrdered.limit(limit) : selectOrdered
+  const selectPaginated = typeof queryOffset === 'number' ? selectLimited.offset(queryOffset) : selectLimited
+
+  const countBase = database.select({ count: count() }).from(posts)
+  const countQuery = whereCondition ? countBase.where(whereCondition) : countBase
+
+  const [rows, countResult] = await Promise.all([selectPaginated, countQuery])
+  const totalItems = countResult[0]?.count || 0
+
+  const articles = rows.map(({ post }) => mapToArticleListItem(post))
+
+  return { articles, totalItems }
+}
+```
+
+当语言筛选为 `ALL_LANGUAGES` 时，主语言与翻译语言各自查询后合并再按创建时间排序；指定语种时只走对应分支。分页信息统一由 `calculateTotalPages` 计算。
+
+### 4.2 详情读取与基线数据
+
+`getArticleBySlug` 左连接 `postTranslations`，再用 `mapToArticleDetail` 把 `baseArticle` 一并返回。这样前端无论查看默认语言还是翻译，都能拿到基准内容用于对照或回退。
+
+### 4.3 更新逻辑：区分默认语言与翻译
+
+默认语言直接更新 `posts`（允许同步修改 slug 与发布时间）；翻译语言则更新或插入 `postTranslations`，不会碰主表的发布时间。
+
+```ts
+if (targetLocale === DEFAULT_LOCALE) {
+  const updatePayload: Partial<PostRow> = { updatedAt: now }
+  withOptionalField(updatePayload, 'title', data.title)
+  withOptionalField(updatePayload, 'content', data.content)
+  withOptionalField(updatePayload, 'excerpt', data.excerpt)
+
+  if (isDefined(data.coverImageUrl)) {
+    updatePayload.coverImageUrl = normalizeNullable(data.coverImageUrl)
+  }
+
+  if (Object.prototype.hasOwnProperty.call(data, 'publishedAt')) {
+    updatePayload.publishedAt = data.publishedAt ?? null
+  }
+
+  if (isDefined(data.slug) && data.slug.trim().length > 0 && data.slug !== post.slug) {
+    updatePayload.slug = data.slug
+  }
+
+  await database.update(posts).set(updatePayload).where(eq(posts.id, post.id))
+  const nextSlug = typeof updatePayload.slug === 'string' ? updatePayload.slug : slug
+  return getArticleBySlug(nextSlug, DEFAULT_LOCALE)
+}
+
+// 翻译语言分支
+const existingTranslation = await database
+  .select()
+  .from(postTranslations)
+  .where(and(eq(postTranslations.postId, post.id), eq(postTranslations.locale, targetLocale)))
+  .limit(1)
+
+if (existingTranslation) {
+  const updatePayload: Partial<PostTranslationRow> = { updatedAt: now }
+  withOptionalField(updatePayload, 'title', data.title)
+  withOptionalField(updatePayload, 'content', data.content)
+  withOptionalField(updatePayload, 'excerpt', data.excerpt)
+  if (isDefined(data.coverImageUrl)) updatePayload.coverImageUrl = normalizeNullable(data.coverImageUrl)
+  if (isDefined(data.slug) && data.slug.trim().length > 0) updatePayload.slug = data.slug
+  await database.update(postTranslations).set(updatePayload).where(eq(postTranslations.id, existingTranslation.id))
+  return getArticleBySlug(slug, targetLocale)
+}
+```
+
+## 5. 翻译链路
+
+### 5.1 `actions/post-translate.ts`
+
+- 已有翻译会直接命中并返回，避免重复请求 API。
+- Google Translate 接口新增 `script` 标记：脚本模式下请求失败直接抛错；后台实时模式则回退到原文。
+- 翻译结果会落表并把标题 / 摘要回填，`normalizeText` 还会把全角符号转换为半角，确保 Markdown 结构稳定。
+
+### 5.2 `app/api/blog/[slug]/route.ts`
+
+HTTP 接口支持 `?locale=` 与 `?script=true`。后台调用保持宽松容错，脚本模式则严格校验，方便 `fetch` 触发批量翻译时观测失败原因。
+
+### 5.3 批量补齐脚本 `scripts/backfill-missing-translations.ts`
+
+- 会优先自动查找 Miniflare 生成的本地 sqlite 文件，找不到时退回 Cloudflare D1 HTTP 驱动。
+- 枚举所有主语言文章，筛出缺失翻译的 `(postId, locale)`，逐个触发 `/api/blog/[slug]?locale=...&script=true`。
+- 请求按照指数退避 + 抖动重试，默认任务间隔 `REQUEST_DELAY_MS = 500`，日志会区分成功 / 失败。
+- `pnpm post:translate` 即可在本地或远程环境跑完全量补齐。
+
+> 因为翻译 API 有配额限制，脚本会尽量拉长间隔，避免短时间内请求过多被封锁。如果被封了，就换个VPN节点IP再试。
+
+## 6. 管理后台体验
+
+`app/[locale]/admin/articles/page.tsx` 结合 `useRequest` + `getPaginatedArticles` 实现了语言、状态、搜索联动：
+
+- URL 查询串存储 `language`、`status`、`search`、`page`，刷新或分享链接都能保留筛选。
+- 查询会对输入搜索词做 400ms 防抖，并在数据变动时自动纠正页码范围。
+- 列表项展示 `Badge` 区分草稿 / 发布状态，删除操作带确认提示并复用服务端 `deleteArticle`。
+
+整体下来，主内容与翻译副本的职责分离清晰，服务端接口、后台 UI 以及批量脚本共用一套工具方法，后续再扩展语种或接入人工翻译时只需在 `postTranslations` 维度对齐即可。

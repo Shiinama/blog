@@ -1,0 +1,166 @@
+# 1. Expo 生态与核心概念
+
+第一章我们先从三个维度快速建立 [Expo](https://docs.expo.dev/) 的整体认知：SDK / Expo Go / EAS、以及它在真实项目中的优势与权衡。
+
+## 什么是 Expo？为什么选择它
+
+Expo 是围绕 React Native 打造的一套开发平台与服务集合，目标是让你“像做 Web 一样”高效地开发原生应用。它在 React Native 之上提供：
+
+- 更快的项目初始化与开发体验（零配置或少配置起步）。
+- 高度一致的跨平台 API（相机、通知、文件系统、传感器等）。
+- 一体化的构建、发布与热更新服务（EAS 套件）。
+
+一句话：如果你希望更少地和原生构建细节纠缠、更快把产品交付到用户手里，Expo 是非常好的选择。
+
+快速上手示例：
+
+```bash
+# 1) 初始化
+npx create-expo-app my-app
+
+# 2) 进入项目并启动开发服务器
+cd my-app
+npm run start     # 等同于 npx expo start
+
+# 3) 手机装 Expo Go 扫码预览（或使用 iOS/Android 模拟器）
+```
+
+你会得到一个“可立即运行”的 RN 应用，常见的原生依赖（如图标、设备信息、屏幕亮度等）都可以直接通过 Expo SDK 使用。
+
+## Expo 生态概览：SDK / Expo Go / EAS
+
+Expo 的生态可以理解为三层：
+
+### 1、 Expo SDK（开发库）
+
+Expo SDK 是一组对原生能力进行封装的 JS/TS 模块，覆盖常见应用能力：
+
+- UI 与主题：`expo-router`、`expo-font`、`@expo/vector-icons` 等。
+- 设备与系统：`expo-device`、`expo-battery`、`expo-haptics`、`expo-application`。
+- 多媒体：`expo-image`、`expo-camera`、`expo-av`。
+- 传感器：`expo-sensors`（加速度、陀螺仪、磁力计等）。
+- 通知与权限：`expo-notifications`、`expo-permissions`（部分权限已内置到各模块）。
+- 存储与文件：`expo-file-system`、`expo-secure-store`。
+
+安装与使用通常非常直接：
+
+```bash
+npx expo install expo-notifications
+```
+
+```ts
+import * as Notifications from 'expo-notifications'
+
+await Notifications.scheduleNotificationAsync({
+  content: { title: 'Hello Expo' },
+  trigger: { seconds: 1 }
+})
+```
+
+在 Managed 工作流（下一章会讲到主要两种Expo工作流）中，绝大多数 SDK 模块都能“即插即用”，减少了手动配置原生项目的负担。
+
+### 2、 Expo Go（开发期容器 App）
+
+Expo Go 是一款在 iOS/Android 上的调试 App，你的 JS 代码可以在其中直接运行：
+
+- 零编译预览：扫码即可在真机上预览 HMR 热更新效果。
+- 适合团队联调与需求演示，门槛极低。
+- 注意：Expo Go 仅内置常见 Expo 模块，若你依赖未内置的原生模块，需要改用 Dev Build（开发构建）或转 Bare 工作流。
+
+日常工作流：
+
+```bash
+npx expo start    # 启动开发服务器，Expo Go 扫码预览
+```
+
+如果需要使用自定义原生模块，可以生成“开发构建（Dev Build）”：
+
+```bash
+eas build --profile development --platform ios   # 或 android
+```
+
+生成的 Dev Build 会包含你的原生依赖，仍可连接本地 Metro 服务器进行调试。
+
+### 3、 EAS（Expo Application Services）
+
+EAS 是 Expo 的云端服务套件，涵盖“构建、提交与更新”：
+
+- EAS Build：云端打包 iOS/Android 应用，无需本地 Xcode/Android Studio 环境。
+- EAS Submit：打包完成后，一键上传到 TestFlight / Google Play。
+- EAS Update：发送 OTA 代码更新（JS/资产），无需应用商店审核。
+
+常用命令：
+
+```bash
+# 登录与初始化
+npx eas-cli login
+npx eas-cli init
+
+# 构建（根据 eas.json 的 profile）
+npx eas-cli build --platform ios
+
+# 提交到应用商店
+npx eas-cli submit --platform ios
+
+# 代码热更新（OTA）
+npx eas-cli update --branch production --message "Fix push logic"
+```
+
+配合 `eas.json` 你可以为开发、预览、生产环境定义不同的构建与签名策略。
+
+## 核心优势与权衡
+
+### 优势
+
+- 快速启动：`create-expo-app` 可在分钟级完成起步，省去大量原生配置。
+- 跨平台一致性：统一的 API 与最佳实践，iOS/Android 一套代码尽量一致。
+- 开发体验极佳：HMR/快速刷新、Expo Go 扫码预览、Dev Build 灵活调试。
+- 上线全流程一体化：EAS 提供构建、分发、热更新的完整闭环。
+- 维护成本低：Managed 工作流下，许多原生细节由 Expo 代管，升级有指引，甚至你每一个版本的最简依赖都可以被Expo管理。
+
+### 权衡与限制
+
+- 原生模块限制：
+
+  - Expo Go 只包含内置模块；使用第三方原生库需 Dev Build 或 Bare工作流。
+  - 极个别需要深度原生改造的场景更适合直接 Bare 工作流。
+
+- OTA 更新边界：
+
+  - EAS Update 只能更新 JS/静态资源，不能变更原生代码或权限清单。
+  - 涉及原生改动仍需发版本（通过 EAS Build + 应用商店发布）。
+
+- 体积与性能考量：
+
+  - 默认依赖集合可能使包体略大；需按需引入、开启压缩与资源优化。
+  - 性能瓶颈多来自通用 RN 范式，与是否使用 Expo 并非完全等价。
+
+- 服务依赖与成本：
+  - EAS 是托管服务，高并发/大团队用量可能有成本；也需考虑账号与流水线接入。
+
+## 何时优先选择 Expo？
+
+- MVP/原型期、独立开发者、小团队：追求更快的迭代与上线速度。
+- 产品以 JS 层逻辑为主：更多业务在前端实现，少量或可替代的原生需求。
+- 需要 OTA 热更新与云端构建：减少发布阻力、提升响应速度。
+
+我自己目前也正好在开发App，也用的是这一套但我是Bare流+自己写了很多原生模块（因为业务的要求更高，定制化更强），但如果完全是自己做东西独立开发，走Managed流就完全够用了。
+
+## 总结
+
+Expo 把“开发体验”和“上线效率”放在首位：你可以在 Managed 工作流下迅速交付 80% 的通用应用需求；当遇到原生边界时，再通过 Dev Build 或 Bare 工作流扩展能力。理解 SDK、Expo Go 与 EAS 的分工，是高效使用 Expo 的关键。
+
+- 版本节奏：Expo 紧随 React Native 迭代发布稳定的 SDK（如 SDK 5x），并提供一键升级工具与文档迁移指南。
+- Hermes 默认化：启用 Hermes 引擎后，启动速度、内存占用和运行效率显著提升。
+- Dev Build 与 Config Plugins 成熟：现在可以灵活地在托管工作流中引入自定义原生模块，大幅降低“必须 eject”的概率。
+- EAS 全面化：从构建、提交、更新到凭证管理，CI/CD 链路更加顺滑，更适配现代团队协作方式。
+
+以前写的一些Rn的基础文章以及资料：
+[Expo文档](https://docs.expo.dev/)
+[Rn官网](https://reactnative.dev/)
+[社区包查看](https://reactnative.directory/)
+[为什么选择React-native](https://juejin.cn/post/7223204251005239354?searchId=202509142132010528EB827E0AD232902B)
+[Rn新架构](https://juejin.cn/post/7223441307959836733?searchId=202509142132010528EB827E0AD232902B)(但这篇文章有点过时了，再后续我会讲现在非常爽的原生接入方式)
+[Expo脚手架](https://juejin.cn/post/7224112064460079163?searchId=202509142132010528EB827E0AD232902B)
+[Rn Flex Box](https://juejin.cn/post/7224335234009989175?searchId=202509142132010528EB827E0AD232902B)
+[Rn 实战](https://juejin.cn/post/7224426218929291325?searchId=202509142132010528EB827E0AD232902B)

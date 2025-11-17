@@ -4,19 +4,22 @@
 
 因此这是有问题的，不能白白放着十几倍的I18N页面索引量和小语种流量不管。所以关于文章的I18N，是需要重新设计的。
 
-[当前版本](https://github.com/Shiinama/next-cloudflare-template/tree/v12.1.1)
+[当前版本](https://github.com/Shiinama/next-cloudflare-template/tree/v12.1.4)
 
 ## 关于翻译方案
 
-首先，需要一个翻译的API，最开始其实我踩了很多坑，我还git想过用大模型来翻译，但发现最适合的还是用Google的免费翻译API + 动静结合。
+首先，需要一个翻译的API，最开始其实我踩了很多坑，我还尝试想过用大模型来翻译，但发现最适合的还是用Google的免费翻译API。
 
-动静结合指的就是：文章内容在第一次访问的时候，采用Google翻译API翻译一次，并将翻译结果保存在数据库中，下次再次访问的时候，直接从数据库中读取翻译结果，这样就不需要再翻译了。
+数据流：文章内容在第一次访问的时候，采用Google翻译API翻译一次，并将翻译结果保存在数据库中，下次再次访问的时候，直接从数据库中读取翻译结果，这样就不需要再翻译了。
 
-这主要有两个核心因素：1. 防止并发后Google免费的API直接限额了。2. 直接查库的翻译结果更快一些。
+这样实现是为了：
+
+1. 防止并发后Google免费的API直接限额了。
+2. 直接查库的翻译结果更快一些。
 
 ## 翻译实现
 
-第一步就是新增一张翻译表，非常简单关联一下主Post表，然后存一个内容即可。
+第一步就是新增一张翻译表，非常简单关联一下主Post表，字段保持。
 
 ```typescript
 export const postTranslations = sqliteTable('postTranslations', {
@@ -26,6 +29,10 @@ export const postTranslations = sqliteTable('postTranslations', {
   postId: text('postId')
     .notNull()
     .references(() => posts.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  excerpt: text('excerpt').notNull(),
+  coverImageUrl: text('cover_image_url'),
   locale: text('locale').notNull(),
   content: text('content').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
@@ -37,7 +44,7 @@ export const postTranslations = sqliteTable('postTranslations', {
 })
 ```
 
-第二步实现翻译的API，这步的难点是在于， 1. 找到这个API。 2.试出来API到底怎么用，网上的信息和写法太垃圾了，这就是试出来的MarkDown长文本翻译最佳实践。
+第二步实现翻译的API，这步的难点是在于， 1. 找到这个API。 2.试出来API到底怎么用，网上的信息和写法太垃圾了，这是我试出来的MarkDown长文本翻译最佳实践。
 
 ```typescript
 // 全角符号转半角符号的映射
@@ -92,15 +99,17 @@ const translateContent = async (content: string, locale: string): Promise<string
 }
 ```
 
-第三步实现动静结合和异常捕捉（翻译很容易报错）的逻辑：
+第三步实现翻译的数据流和异常捕捉（翻译很容易报错）的逻辑：
 
 ```typescript
 export const postTranslate = async ({
   postId,
+  slug,
   content,
   locale,
   originalTitle,
-  originalDescription
+  originalDescription,
+  originalCoverImageUrl
 }: PostTranslateParams): Promise<TranslationResult> => {
   const db = createDb()
 
@@ -122,14 +131,10 @@ export const postTranslate = async ({
       .limit(1)
 
     if (existingTranslation.length > 0) {
-      // 如果已有翻译，直接返回数据库中的内容
-      const translatedContent = existingTranslation[0].content
-      const { title, description } = extractTitleAndDescription(translatedContent, originalTitle, originalDescription)
-
       return {
-        title,
-        description,
-        fullText: translatedContent
+        title: existingTranslation[0].title,
+        description: existingTranslation[0].excerpt,
+        fullText: existingTranslation[0].content
       }
     }
 
@@ -137,15 +142,19 @@ export const postTranslate = async ({
     const translatedText = await translateContent(content, locale)
 
     if (translatedText) {
+      const { title, description } = extractTitleAndDescription(translatedText, originalTitle, originalDescription)
+
       await db.insert(postTranslations).values({
         postId,
         locale,
+        slug,
         content: translatedText,
+        title: originalTitle,
+        excerpt: originalDescription,
+        coverImageUrl: originalCoverImageUrl,
         createdAt: new Date(),
         updatedAt: new Date()
       })
-
-      const { title, description } = extractTitleAndDescription(translatedText, originalTitle, originalDescription)
 
       return {
         title,
@@ -166,7 +175,7 @@ export const postTranslate = async ({
 }
 ```
 
-第四步实现一个route，这里不用Actions的核心原因是在于，Nextjs在处理Actions的时候没有做同组件生命周期同一个请求只调用一次的优化（Actions里面有存库操作，会造成双写）。而fetch是会自动处理的，也就是在同一组件生命周期只调用一次同样的请求，不管函数调用了多少次。
+第四步实现一个route，这里不用Actions的核心原因是在于，Nextjs在处理Actions的时候没有做同组件生命周期同一个请求只调用一次的优化（Actions里面有存库操作，会造成双写）。而fetch是会自动处理的，也就是在同一组件生命周期只调用一次同样的请求，不管Fetch请求了多少次。
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
@@ -205,6 +214,139 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 ```
 
+最后一步改造文章列表的查询分页接口
+
+```typescript
+export async function getPaginatedArticles({
+  locale,
+  page = 1,
+  pageSize = 10
+}: {
+  locale?: string
+  page?: number
+  pageSize?: number
+}) {
+  const database = createDb()
+
+  const currentPage = Math.max(1, page)
+  const itemsPerPage = Math.max(1, pageSize)
+  const offset = (currentPage - 1) * itemsPerPage
+
+  if (!locale || locale === 'en') {
+    const baseQuery = database.select().from(posts).orderBy(desc(posts.publishedAt))
+    const query = baseQuery.where(eq(posts.locale, 'en'))
+    const countQuery = database.select({ count: count() }).from(posts).where(eq(posts.locale, 'en'))
+
+    const [articles, countResult] = await Promise.all([query.limit(itemsPerPage).offset(offset), countQuery])
+
+    const totalItems = countResult[0]?.count || 0
+    const totalPages = Math.ceil(totalItems / itemsPerPage)
+
+    return {
+      articles,
+      pagination: {
+        currentPage,
+        pageSize: itemsPerPage,
+        totalItems,
+        totalPages
+      }
+    }
+  } else {
+    const baseQuery = database
+      .select()
+      .from(postTranslations)
+      .where(eq(postTranslations.locale, locale))
+      .orderBy(desc(postTranslations.createdAt)) // 使用翻译的创建时间排序
+
+    const countQuery = database
+      .select({ count: count() })
+      .from(postTranslations)
+      .where(eq(postTranslations.locale, locale))
+
+    const [articles, countResult] = await Promise.all([baseQuery.limit(itemsPerPage).offset(offset), countQuery])
+
+    const totalItems = countResult[0]?.count || 0
+    const totalPages = Math.ceil(totalItems / itemsPerPage)
+
+    return {
+      articles,
+      pagination: {
+        currentPage,
+        pageSize: itemsPerPage,
+        totalItems,
+        totalPages
+      }
+    }
+  }
+}
+```
+
+## 生成多语言Sitemap文件
+
+在前面的整个SEO章节里，我们讲到过很多次Sitemap，它单个文件拥有上限50000个URL和50M大小的提交上限。
+
+那对于I18n的Sitemap的最佳实践应该是如何？很多同学会觉得就是把同一个站点的不同URL版本提交，但这是不对的。[最佳实践](https://developers.google.com/search/docs/specialty/international/localized-versions#xdefault)是一个URL包含多个语言版本。
+
+让我们中`Nextjs`中实现一下：
+
+```typescript
+import { unstable_noStore } from 'next/cache'
+
+import { getAllArticles } from '@/actions/ai-content'
+import { locales } from '@/i18n/routing'
+
+import type { MetadataRoute } from 'next'
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  unstable_noStore()
+
+  const routes = ['', '/blogs', '/voice', '/voice-design', '/blogs']
+
+  const entries: MetadataRoute.Sitemap = []
+
+  for (const route of routes) {
+    entries.push({
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}${route}`,
+      alternates: {
+        languages: Object.fromEntries(
+          locales
+            .filter((locale) => locale.code !== 'en')
+            .map((locale) => [locale.code, `${process.env.NEXT_PUBLIC_BASE_URL}/${locale.code}${route}`])
+        )
+      }
+    })
+  }
+
+  const allArticles = await getAllArticles()
+
+  const publishedArticles: MetadataRoute.Sitemap = allArticles.map((article) => {
+    return {
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/blog/${article.slug}`,
+      alternates: {
+        languages: Object.fromEntries(
+          locales
+            .filter((locale) => locale.code !== 'en')
+            .map((locale) => [locale.code, `${process.env.NEXT_PUBLIC_BASE_URL}/${locale.code}/blog/${article.slug}`])
+        )
+      }
+    }
+  })
+
+  return [...entries, ...publishedArticles]
+}
+```
+
+代码部分其实很简单，但大家会发现如果去浏览器[预览](https://demo.getwhynot.org/sitemap.xml)，并不能正确的展示格式，没有关系这只是浏览器不能正确的解析这种格式的XML文件，但提交给搜索引擎是可以处理的。
+
+我们可以去[xml预览工具](https://jsonformatter.org/xml-viewer)上查看
+
+https://ik.imagekit.io/ixou4q6nu/xml-preview.png?updatedAt=1755353302463
+
+值得注意的事：
+
+1. 它是以Loc为一个URL，下方的xhtml:link是不计入50000个名额。
+2. XML加上多语言会非常大，会导致提交站点地图失败，Google官方文档的50M大小和50000URL其实是针对普通类型的Sitemap的。这种类型的Sitemap的最佳实践大概是在3000-5000个URL。
+
 ## 结束
 
-前端的代码无需多言，这个东西挺重要的，能让网页的SEO流量成倍数增长。
+前端的代码无需多言，多语言真的很重要的，能让网页的自然流量成倍数增长。

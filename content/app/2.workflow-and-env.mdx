@@ -1,0 +1,164 @@
+# 2. 工作流选择与环境配置
+
+在 Expo 体系中，工作流的抉择直接决定了你的工程复杂度、研发效率与可维护性。本章从“为什么这样选”到“怎么落地”的视角，系统梳理 Managed、Dev Build 与 Bare 三种模式的边界与组合打法，并提供适用于团队协作与生产环境的环境配置范式、标准脚手架与问题排查清单。阅读完本章，你应能在项目伊始就做出稳健选择，并在生命周期内平滑演进而不被技术债拖累。
+
+## 一、工作流选型：Managed、Dev Build 与 Bare 的真正边界
+
+- Managed（托管工作流）：
+
+  - 核心价值：把“原生工程的繁琐与脆弱”交由 Expo 代管，开发者聚焦 JS/TS 业务。绝大多数官方 SDK 模块即插即用。
+  - 能力上限：借助 Config Plugins 可修改 Info.plist、AndroidManifest、Gradle 配置，解决权限、依赖与初始化等原生层配置问题。结合 Dev Build，可在托管模式下调试并运行包含自定义原生依赖的客户端。
+  - 典型适配：中小团队、追求快速验证与高频迭代的业务线、以 JS 层为主的产品。
+
+- Dev Build（开发构建）：
+
+  - 是什么：在 Managed 模式下生成“包含你所需原生依赖”的专用调试 App，替代 Expo Go 的能力边界。
+  - 核心作用：让你在不 ejection 的前提下，使用第三方原生库或自研模块进行真机调试。
+  - 何时需要：当某个模块不在 Expo Go 内置集合中时（如 IAP、部分蓝牙库），或需要修改原生配置。
+
+- Bare（裸工作流）：
+  - 核心价值：完全掌控 `ios/` 与 `android/`，可深度自定义编译链、与既有原生仓库合并、使用任意原生库。
+  - 代价：你需要维护原生依赖、CI、证书、构建脚本与升级路径；升级成本高，对经验要求更强。
+  - 适配：强原生诉求（自研 SDK/厂商深度集成/特定 ABI 或编译器版本要求）、已有原生团队与基础设施。
+
+最佳实践：先选 Managed，配合 Config Plugins 与 Dev Build 解决 80–90% 的需求；仅在确认必须深度原生改造时转 Bare。这样能延迟复杂度、降低维护成本。
+
+## 二、对于Managed/Bare的工作流以及本地环境
+
+在我看来，Managed 和 Bare 的差别不是“是否更专业”，而是“谁来驱动原生工程”。Managed 的出发点是尽量不碰原生，把权限、依赖、清单、证书等改动写进 app.config.ts 与 Config Plugins；真正打包时，由 EAS 在云端“理解这些意图”，在一个干净的机房环境里完成预构建和打包。
+
+而 Bare 则相反：你自己维护 ios/ 与 android/ 的一切，工程怎么组织、证书如何管、Gradle 和 Pods 的版本如何对齐，都要自己兜底。两条路都能到达终点，只是代价与自由度不同。
+
+> 云端构建很慢，一个月也有次数限制（基本是够用的，只要不是天天打包浪费次数，尽量把需要的原生包装完）。
+
+### Expo prebuild
+
+所谓 `npx expo prebuild`，正是这两条路之间的关节。
+
+它会把 app.config.ts 与 Config Plugins 里声明的修改，真的落到原生工程：iOS 这边生成 Xcode 项目、写入 Info.plist 与 Entitlements、跑 CocoaPods。Android 那边改 AndroidManifest、Gradle、加仓库和权限。
+
+EAS 云端打包在过程里也会做这件事，只不过那是发生在云端的临时目录里；而你本地执行 npx expo prebuild，会在仓库里生成或更新 ios/ 与 android/，等同于“把原生层交到你手里”。
+
+也正因为如此，一旦你选择在本地长期维护这两个目录（并停止依赖 prebuild 自动回写），就意味着你已经进入 Bare 的工作流。
+
+这个命令的本质是把 `app.json/app.config.ts` 与 `Config Plugins` 中声明的“原生意图”落地为真实原生工程，生成或更新 ios/ 和 android/ 目录。
+
+### Managed下的工作流
+
+如果把 Managed 的日常拍成一段流程镜头，它是这样展开的：
+
+开发期：直接 npx expo start，Expo Go 扫码或模拟器预览，改一行 JS 即时生效。当你引入了 Expo Go 不内置的原生能力（比如 IAP、蓝牙、部分通知能力），就切换到 Dev Build：用 eas build --profile development --platform ios|android 云端构建一个“属于你项目的开发客户端”，装到设备上后依旧 npx expo start，只是这次连的是你自己的客户端。
+
+在发布阶段，按环境挑选 preview 或 production 的构建档案，用 eas build 产出内测或商店包，再 `eas submit` 提交。小改动不需要发版，`eas update --branch <branch>` 就能把 JS 和静态资源推到线上。整条链路的重点是：尽量把原生变更抽象为配置与插件，让云端完成苦活脏活，你本地保持轻量。
+
+> 没Mac的话，就不用考虑Bare工作流了,Ios包都会打不了。
+
+### Bare工作流
+
+Bare 的节奏则更像传统原生团队：直接 expo run:ios --device 或 expo run:android 把工程装到设备，开 npx expo start 接上 Metro 调试.
+
+打包可以走 EAS 云端，也可以本地 eas build --local，最终 eas submit 完成上架。
+
+做 iOS 的需要一台和 Xcode 版本配套的 macOS，Command Line Tools 装全，第一次打开 Xcode 把组件安装完，Pod 环境稳定一些；做 Android 的把 Android Studio、SDK、Platform Tools 准备好，ANDROID_HOME 配上，platform-tools 加进 PATH。
+
+Expo/EAS 则以最少的工具介入为宜：
+
+项目脚手架 npx create-expo-app，账号登录、初始化 eas init。
+
+凭证用 `EAS` 托管并存放在 `Secrets`，别把敏感文件留在仓库。
+
+至于多环境，在`app.config.ts` 里根据环境拼出生产/测试各不相同的 bundleIdentifier/package，如果需要打不同的包，每次打包的前都需要用`npx expo prebuild --clean`去切生成不同包的原生目录。
+
+简单总结一下：
+
+在Bare下，打包expo ios 或者 eas build --local系列，本质上其实是跑的Xcode和Android Studio。
+
+环境变量、凭证可以直接存云端（Eas本地build也会读）。这种方式非常适合有Mac且稍懂原生的小伙伴。
+
+## 三、脚手架与目录结构
+
+创建：
+
+```bash
+npx create-expo-app@latest my-app
+cd my-app
+npx expo start
+```
+
+建议模板：Blank TypeScript 或基于 `expo-router` 的模板。`expo-router` 能以文件系统驱动路由，降低路由配置负担，适合中大型前端团队。
+
+推荐目录结构（示例）：
+
+- `app/`：页面与路由；
+- `features/`：特性域（例如 `auth/`、`payments/`、`notifications/`）；
+- `shared/`：通用组件、hooks、样式与工具；
+- `services/`：网络、存储、日志、分析；
+- `config/`：环境变量、Feature Flags、远端配置；
+- `scripts/`：CI/CD 与本地自动化脚本。
+
+## 四、`app.json` / `app.config.ts`
+
+推荐使用 TypeScript 配置，以便根据环境动态生成配置并进行类型校验：
+
+```ts
+// app.config.ts（进阶范式）
+import type { ExpoConfig } from 'expo'
+
+const BRAND_COLOR = '#4f46e5'
+
+export default (): ExpoConfig => {
+  const APP_ENV = process.env.APP_ENV ?? 'staging'
+  const isProd = APP_ENV === 'production'
+  const PROJECT_ID = process.env.EAS_PROJECT_ID ?? '<your-eas-project-id>'
+
+  return {
+    name: isProd ? 'MyApp' : `MyApp (${APP_ENV})`,
+    slug: 'my-app',
+    scheme: 'myapp',
+    owner: 'your-expo-username',
+    version: '1.2.0',
+    runtimeVersion: { policy: 'appVersion' },
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    splash: { image: './assets/splash.png', resizeMode: 'contain', backgroundColor: '#ffffff' },
+    updates: { url: `https://u.expo.dev/${PROJECT_ID}` },
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: isProd ? 'com.company.myapp' : `com.company.myapp.${APP_ENV}`,
+      infoPlist: {
+        NSCameraUsageDescription: '需要访问相机以完成扫描',
+        NSPhotoLibraryUsageDescription: '用于上传头像与图片'
+      }
+    },
+    android: {
+      package: isProd ? 'com.company.myapp' : `com.company.myapp.${APP_ENV}`,
+      adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#ffffff' },
+      permissions: ['CAMERA', 'READ_EXTERNAL_STORAGE']
+    },
+    extra: {
+      env: APP_ENV,
+      apiBase: isProd ? 'https://api.company.com' : 'https://staging-api.company.com',
+      projectId: PROJECT_ID
+    },
+    plugins: [
+      [
+        'expo-notifications',
+        { icon: './assets/notification-icon.png', color: BRAND_COLOR, mode: isProd ? 'production' : 'development' }
+      ]
+      // 其他插件按需声明，如 IAP、深链、权限文案等
+    ]
+  }
+}
+```
+
+关键设计要点：
+
+- `runtimeVersion` 与 EAS Update 兼容性严格相关；当升级原生依赖时应随版本提升；
+- `extra` 注入运行时变量，结合远端配置服务（如 LaunchDarkly、ConfigCat）实现灰度与开关；
+- `plugins` 承担“将意图转化为原生配置”的职责，优先将口头步骤写成插件，提升可复制性。
+
+> 记住不管是Bare还是Managed这个文件的设计意图是给`prebuild`使用的。
+
+## 总结
+
+管理原生复杂度的最佳方式不是“直接 Bare”，而是“延迟 Bare”：优先以 Managed + Plugins + Dev Build 覆盖绝大多数场景，让配置与改动可编排、可追踪、可复现。只有当业务证明确有必要、且团队具备原生工程维护能力时，再打开 Bare 的上限。这套策略能把你的工程从第一天起就放在可演进的轨道上，并把人力投入集中到真正的产品价值上。

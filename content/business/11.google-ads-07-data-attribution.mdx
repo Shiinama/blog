@@ -1,0 +1,99 @@
+---
+title: Google Ads 投流系列 07：数据与归因验证
+description: GA4/Ads 口径对齐、UTM、增强转化与离线回传，建立可靠的测量与验证体系。
+date: 2025-09-15
+---
+
+# Google Ads 投流系列 07：数据与归因验证
+
+> 测量是增长的地基。AI 角色扮演的路径长、行为细、价值延迟（订阅续费/内购），如果口径不统一、事件不稳定，模型会学坏、归因会失真。本篇给出“事件字典—口径对齐—增强转化—离线回传—归因”的完整方法。
+
+## 1. GA4 × Ads：角色分工与口径统一
+
+- Google Ads：投放优化的“金标准事件”（订阅/内购），只勾选核心事件“计为转化并用于出价”。
+- GA4：用于分析行为与产品漏斗（会话长度/角色创建/回访），并用于多渠道对比。
+- 口径统一：时区/货币/跨域/UTM 命名/转化定义一致；Ads 与 GA4 的总转化差异控制在 ±30%。
+
+## 2. 事件字典（AI 角色扮演）
+
+宏转化（出价优化主目标）：
+- `purchase`（订阅/内购）：`value`、`currency`、`transaction_id`、`product_id`、`price`、`margin_value`（可选）。
+
+微转化（冷启动与诊断）：
+- `start_chat`（开始会话）：`role_id`、`locale`、`channel`；
+- `first_session_len_bin`（首会话长度分档）：`20+`/`50+`/`100+`；
+- `create_character`（创建角色）：`category`、`locale`；
+- `add_to_favorites`：`role_id`；
+- `view_collection`（主题合集曝光）：`collection_id`；
+- `policy_view`（安全政策页查看）：提升平台信任和转化意图。
+
+App 特有：
+- `first_open`/`login`/`trial_start`/`subscription_renewed`；
+- iOS：通过 SKAN 配置转化值映射（把“会话长度/创建角色/付费”映射到 CV）。
+
+去重与一致性：
+- Ads 本地转化 vs GA4 导入二选一，避免重复；
+- 使用 `transaction_id` 以避免重复统计；
+- 保证 web/app 跨域一致性与用户 ID 串联（如有登录）。
+
+## 3. UTM 与命名规范
+
+- `utm_source=google`、`utm_medium=cpc`；
+- `utm_campaign`：系列名 + 语言/类目，如 `NB-Search-EN-Companion`；
+- `utm_content`：创意/素材/资产组，如 `UI-Demo-15s`；
+- `utm_term`：关键词或受众关键字；
+- 统一生成工具，避免手填差错；跨域标记启用。
+
+## 4. 增强转化（Enhanced Conversions）与 Consent Mode v2
+
+- 目的：提升匹配率与可测性，缓解浏览器限制；
+- 数据：邮箱/电话/地址在本地哈希后上传；
+- 合规：CMP（同意管理）到位，隐私政策披露测量目的与字段；
+- 验证：Ads 诊断与标签助手；匹配率持续跟踪。
+
+## 5. 离线回传（Offline Conversion Import）
+
+- 适用：订阅续费、退款回冲、风控失败单、线下核查（如客服完成验证）。
+- 必要字段：`gclid/gbraid/wbraid`、`conversion_time`、`value`、`currency`、`transaction_id`、`conversion_action`；
+- 回传频率：每日/逐日，至少每周；
+- 质量：CRM 对账，核查匹配率与金额分布（防止异常大额污染学习）；
+- 进阶：回传“首付费/续费/内购/退款”四级事件，tROAS 以“净收入/毛利”作为目标。
+
+## 6. 归因策略：DDA 为主，最后点击为辅
+
+- DDA（数据驱动）：更符合“多触点”的现实（Search + YouTube + 再营销 + PMax）。
+- 最后点击：作为“底线校验”，特别是在品牌系列与再营销上；
+- 展示后转化（VTC）：单列观察（YouTube/GDN），不与点击混算；
+- 询问式归因：LP/应用内简短问卷“从哪里知道我们”，用于验证软触达贡献。
+
+分拆看板：
+- 品牌 vs 非品牌；
+- Search vs PMax vs YouTube/GDN；
+- 再营销（按时间窗与行为分层）；
+- 地区/语言；
+- 类目/角色主题。
+
+## 7. 诊断流程：当 GA4 与 Ads 数据差异 > 30%
+
+排查顺序：
+1) 时间、时区与货币；
+2) 事件去重（`transaction_id`、`send_to`）；
+3) 跨域与会话断裂；
+4) Consent Mode 与增强转化开关；
+5) 退款回冲逻辑（是否被计算两次/未回冲）；
+6) UTM 与重定向（LP 参数丢失）。
+
+## 8. 看板与告警（建议）
+
+- 告警：日预算异常、无展示/无点击/无转化、追踪中断、匹配率骤降、退款异常、VTC 激增；
+- 指标：花费、CVR、CPA、ROAS、毛利 ROAS、首会话长度、角色创建、D1/D7 回访、地区/语言/类目分布；
+- 视图：按“来源/系列/资产组/语言/类目”透视。
+
+## 9. 快速 SOP
+
+1) Ads 本地转化与 GA4 导入二选一，统一 `transaction_id` 去重；
+2) 启用增强转化 + Consent Mode v2；
+3) 订阅/续费/退款离线回传，做月度对账；
+4) DDA 为主、最后点击为辅，品牌/再营销单列看；
+5) 与产品团队维护“事件字典”，每月复审字段与质量。
+

@@ -1,0 +1,124 @@
+---
+title: Google Ads 入门第三章：Goals（转化与归因）从搭建到验证
+description: 初学者也能跑通的转化配置手册：Conversion actions、价值与去重、增强转化、GA4 对齐、离线回传、归因模型、诊断与常见故障修复。
+date: 2025-09-16
+---
+
+# Google Ads 入门第三章：Goals（转化与归因）从搭建到验证
+
+> 没有可靠的测量，一切优化都是盲目。本章用“事件字典→创建→价值→去重→增强转化→GA4 对齐→离线回传→归因→诊断”的链路，帮你把转化做对做稳。
+
+## 1. 关键概念速览
+
+- Conversion action：一个具体的转化动作（如 purchase、lead、sign_up、phone call）。
+- Include in ‘Conversions’：勾选后会进入优化口径（用于出价与报表主指标）。辅助目标（如微转化）可以不勾。
+- Attribution（归因模型）：Data‑Driven（DDA）/Last click/Position-based 等，影响转化如何分配到点击或展示。
+- Conversion window（窗口期）：多长时间内发生的转化算在这次点击头上；不同动作可设不同窗口。
+- Count（计数方式）：Every vs One。电商下单用 Every；线索提交常用 One（同用户多次只记一次）。
+
+## 2. 事件字典（参考模板）
+
+按业务类型准备事件定义与字段：
+
+- 电商：
+  - purchase：value/currency、transaction_id、items、shipping、tax；
+  - begin_checkout、add_to_cart：微转化；
+  - refund：用于回冲（离线回传）。
+- 线索：
+  - generate_lead：lead_score、form_version、source；
+  - qualified_lead / opportunity（离线回传）。
+- App：
+  - first_open/login、in_app_purchase、subscription、trial_start、subscription_renewed；
+  - iOS 需考虑 SKAN 的转化值映射：把关键事件压缩进 64 个值的编码。
+
+提示：用最贴近“收入”的事件作为优化目标；样本不足时，可暂用微转化喂养，达标后尽快切换到宏转化。
+
+## 3. 创建转化（以网站为例）
+
+路径：Goals → Conversions → New conversion action → Website。
+
+步骤：
+1) 输入域名让系统自动扫描标记事件（或手动配置标签）。
+2) 选择事件类型（Purchase/Lead/Signup/Custom）。
+3) 设定价值（固定值/动态值/不使用值），币种与计数方式。
+4) 选择归因模型与窗口（建议 DDA，窗口按业务周期设定，如 30 天点击 + 1 天展示）。
+5) 拿到 gtag/gtm 配置指引，或直接用 GA4 导入（注意不要与 Ads 本地转化重复勾选）。
+
+验证：
+- 使用 Tag Assistant 和 Google Ads 的转化诊断，确认事件被触发且带有 gclid；
+- 在实时/过去 24 小时报表中观测是否有记录。
+
+## 4. 价值与去重
+
+- 动态价值：把订单金额或订阅金额通过 `value`/`currency` 传入。多币种建议在服务器端统一换算。
+- 去重：使用 `transaction_id`；GA4 导入与 Ads 本地转化不要双重统计；同一事件只在一个来源“Include in Conversions”。
+- Value rules（可选）：对某些设备/地域/受众加权价值，如移动端价值=1.1×，用于策略倾斜。
+
+## 5. 增强转化（Enhanced Conversions）与 Consent Mode v2
+
+- 增强转化：将邮箱/电话/地址（哈希后）在转化时随事件上传，提升匹配率，缓解浏览器限制带来的测量损失。
+- 合规：使用 CMP 采集同意；隐私政策披露字段与用途；仅上传必要字段；传输加密。
+- 验证：Ads 中的诊断卡片会显示匹配率与错误信息，出现骤降要检查 CMP 配置或站点改版。
+
+## 6. GA4 与 Ads 的对齐
+
+- UTM 规范：`utm_source=google&utm_medium=cpc&utm_campaign=...`；保持跨域启用，避免会话切断。
+- 时区/货币：保持一致；GA4 有汇率换算，Ads 使用上报币种。
+- 口径：Ads 默认按“点击时间”计转化；GA4 可在探索中选择事件发生时间。差异≤±30% 属可接受范围。
+- 双轨策略：Ads 本地转化用于出价，GA4 用于用户行为与跨渠道比较；避免同一事件被两个系统同时“用于出价”。
+
+## 7. 离线回传（Offline Conversion Import, OCI）
+
+适用场景：
+- CRM 里发生的 SQL/成交；
+- 订阅续费、退款回冲；
+- 线下电话成单、门店到店。
+
+关键字段：`gclid/gbraid/wbraid`、`conversion_action`、`conversion_time`、`value`、`currency`、`order_id/transaction_id`。
+
+流程：
+1) 在 Ads 里创建对应的“离线转化动作”；
+2) 准备 CSV 或 API；
+3) 每日/逐日回传，至少每周；
+4) 与 CRM 对账，校验匹配率与金额分布；
+5) 对退款/风控失败单做负值回冲，保持净收入口径。
+
+## 8. 归因模型与实践
+
+- 推荐：DDA（数据驱动）作为主模型，更符合多触点现实（Search + YouTube + 再营销 + PMax）。
+- 辅助：Last click 作为“底线验证”，尤其在品牌与再营销系列。
+- 展示后转化（VTC）：单独看趋势，不与点击混算；主要评估 YouTube/GDN 的助攻价值。
+- 时间口径：报表可切换“By conversion time”，用于对齐财务周期。
+
+## 9. 故障诊断（差异 > 30% 或转化骤降）
+
+排查顺序：
+1) 时间、时区与货币是否一致；
+2) 去重是否生效（transaction_id 重复、双重导入）；
+3) 跨域/重定向是否丢失 UTM 或 gclid；
+4) CMP 与 Consent Mode 是否关闭或更改；
+5) 站点改版导致事件名称/参数变化；
+6) 退款回冲未入账，导致 ROAS 被高估；
+7) 最近是否大改出价或结构，造成学习期动荡。
+
+## 10. 上线前检查表
+
+- 已创建核心转化动作（仅核心勾选 Include in Conversions）；
+- 价值传入正确、币种统一；
+- transaction_id 去重；
+- Auto‑tagging 开启，gclid 到站；
+- 增强转化启用并通过验证；
+- GA4 已连接，UTM 规范落地，跨域启用；
+- 离线回传样例跑通；
+- 报表列添加 Conv/Conv rate/Cost per conv/Conv value/ROAS。
+
+## 11. 常见问答
+
+- 微转化要不要勾选“用于出价”？冷启动可先勾，但一旦宏转化达标应尽快切换，仅保留宏转化用于出价。
+- 转化价值必须传吗？若用 tROAS 必须；即使用 tCPA，传 value 也有助于后续升级与分析。
+- DDA 会“抢功”吗？它会按贡献分配，品牌与再营销系列建议单独看，以免解读混淆。
+
+## 12. 结语
+
+Goals 是广告系统的“神经系统”。当信号真实、口径统一、归因合理，出价与系列的每一次调整才有意义。把本章清单固化为标准流程，之后的优化才能又快又稳。
+

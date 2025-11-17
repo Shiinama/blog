@@ -1,6 +1,3 @@
-import { NextIntlClientProvider } from 'next-intl'
-import { getLocale, getMessages } from 'next-intl/server'
-
 import NextAuthProvider from '@/components/session-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
@@ -10,6 +7,7 @@ import type { Metadata, Viewport } from 'next'
 
 import '../styles/globals.css'
 import '../styles/code.css'
+import NextTopLoader from '@/components/ui/top-loader'
 
 export const metadata: Metadata = {
   title: '鱼的杂记',
@@ -37,23 +35,20 @@ export const viewport: Viewport = {
   userScalable: false
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const locale = await getLocale()
-  const messages = await getMessages()
   return (
     <NextAuthProvider>
-      <html lang={locale} suppressHydrationWarning>
-        <body className={cn('min-h-screen bg-background')} suppressHydrationWarning>
-          <NextIntlClientProvider messages={messages}>
-            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-              {children}
-              <Toaster />
-            </ThemeProvider>
-          </NextIntlClientProvider>
+      <html suppressHydrationWarning>
+        <body className={cn('bg-background min-h-screen')} suppressHydrationWarning>
+          <NextTopLoader />
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            {children}
+            <Toaster />
+          </ThemeProvider>
         </body>
       </html>
     </NextAuthProvider>

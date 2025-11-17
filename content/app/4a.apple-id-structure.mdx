@@ -1,0 +1,343 @@
+# 4.1 Apple IAP 生态体系 - 数据结构与落地全解
+
+在上一章《4. 应用内购买（IAP）- 整体 IAP 生态理解》里，我们把“能买、能验证、能恢复、能审计”这四个环节过了一遍，更多是在搭建概念上的地基。到了苹果这一章，我想把视角拉得更近一些：真实落地 Apple IAP 时，你会遇到哪些角色、跑哪些流程、踩哪些坑、如何把那堆看似重复的 id 绑成一张清晰的网。
+
+![Apple IAP 章节封面（WWDC25：Dive into App Store server APIs for IAP）](https://devimages-cdn.apple.com/wwdc-services/images/3055294D-836B-4513-B7B0-0BC5666246B0/9939/9939_wide_900x506_2x.jpg)
+我强烈推荐大家观看这个视频，你能很大程度的了解整体生态和各种ID。([Apple Developer][1])
+
+## Apple IAP 的数据怎么跑
+
+如果没有把整个生态的角色看清楚，光记一堆 id 没意义。我会先把 Apple IAP 拆成三个环：
+
+1. **客户端 & StoreKit**：负责展示商品、触发交易、把票据上传；
+2. **Apple 服务**：App Store 负责付款、生成票据；而App Store Server API + Notifications 就是用来通知和查交易状态的；([Apple Developer][2])
+3. **我们自家服务端**：验证票据、发放/回收权益、审计与对账。
+
+![StoreKit 2 官方页（示意）](https://developer.apple.com/assets/elements/icons/storekit/storekit-128x128_2x.png)
+_入口推荐：StoreKit 2 官方页，含概览与资源集合_。([Apple Developer][3])
+
+数据在这三环里的流转顺序几乎不会变：客户端发起购买 -> App Store 生成 `transaction` 并写入服务器 -> StoreKit 用票据把交易回传给我们 -> 我们调用 Server API 或等待 Notifications 获取状态 -> 数据落库、发权益。理解这个顺序之后，再去看 `transactionId`、`webOrderLineItemId` 这些 id，会知道它们分别属于哪一环。([Apple Developer][4])
+
+## 商品的提前准备和定义
+
+其实Apple IAP 的实现不是从写代码开始的，而是从“能否创建商品、能否正确结算、能否在测试环境登录”这些基础准备起步。
+
+### 角色与权限
+
+Apple Developer Program 和 App Store Connect 各有一套角色体系。IAP 涉及到的几个关键角色：`Account Holder`（只有他能签协议、创建高级功能）、`App Manager`（配置 App）、`Developer`（上传构建）、`Marketing`（查看销售数据）。如果你的团队里没有 Account Holder 的配合，订阅相关的“自动续订协议”根本没法签。
+
+### 商品设计文档
+
+苹果的商品创建在 App Store Connect 里完成。表面看就是填表格，实则有一堆约束：
+
+- `Reference Name` 可以随便写，但会在报表里出现；
+- `Product ID` 创建后永远不能修改或删除，只能下架，因此命名一定要留扩展空间；
+- `Cleared for Sale` 默认会勾选，若不小心去掉，客户端就看不到商品；
+- 订阅类商品需要配置周期、价格、试用期、促销优惠、订阅组。
+
+我其实是把商品设计和架构设计一样对待，写了一个专门的 `SKU Sheet`（因为我产品内的订阅和商品实在有点多），里面包含 `productId`、显示名称、货币、价格层级、是否家庭共享、属于哪个订阅组、是否允许优惠码。一旦上线后有人想改，就必须先改 `SKU Sheet`，再去 Connect 操作，保证信息同步。
+（图文参考：App Store Connect “In-App Purchase 信息/管理订阅/Win-back offers”等帮助页。） ([Apple Developer][5])
+
+### 订阅组与跨订阅组的拆法
+
+订阅组可以理解为苹果替你维护的一条“权益线”，组内的所有订阅互斥、共享试用/优惠状态，是实现自动续订策略的基础单元。
+
+#### 订阅组（Subscription Group）
+
+Apple 要求每一个自动续订订阅都必须隶属某个订阅组，且用户在同一组内任一时间只能持有一个订阅。组的职责是：
+
+- 定义互斥：比如「月度」「年度」是同一条权益线，只能取其一；
+- 约束升级/降级规则：StoreKit 依赖订阅组来判断补差价、按比例退款等场景；
+- 提供唯一的 `subscriptionGroupIdentifier`，帮助服务端建模、对账以及识别退款/续费回调来自哪个权益线；
+- 关联 Intro Offer / Promo Offer / Win-back Offer 的生效条件——因为这些优惠默认只在组内判断“是否为新用户/回流用户”。 ([Apple Developer][24])
+
+#### 升级、降级和平级切换策略
+
+在同一个订阅组里，Apple 预设了三类跳转路径，我们需要结合自身权益系统补完策略：
+
+- **升级（Upgrade）**：用户从低价档切到更贵档位，StoreKit 会立即生效新权益并按比例返还剩余时间。服务端要监听 `transactionReason = UPGRADE` 或 ASSN 的 `UPGRADE` subtype，立刻把用户权限提升，并记录原订阅的剩余时长（方便审计）。
+- **降级（Downgrade）**：用户从高价档切到低价档位，苹果会在当前周期结束后才生效。我们需要在订单状态机里标记“待降级”，等看到新的 `originalTransactionId` / `webOrderLineItemId` 变体或 ASSN `DID_CHANGE_RENEWAL_PREF` 后再真正回收权益。
+- **平级（Crossgrade / Lateral move）**：同价档之间的互换（例如 Monthly A 与 Monthly B 只是内容不同）。系统默认视为降级策略，即新订阅在下一计费期生效。为了减少等待，你可以在应用内做“软切换”：立即调整内容分发，但在服务端保留原订阅到期日，直到苹果发出新的续订交易。
+
+我的做法是把这三种跳转映射到统一的 `plan_migration` 表：记录 `fromProductId`、`toProductId`、`migrationType`、`effectiveDate`。每次收到新的交易或通知，就查这张表决定是立即升级、延迟降级还是平级切换，避免状态错乱。
+
+#### 什么时候需要多个订阅组
+
+典型拆分依据：产品线完全不同（如 Chat vs Storage）、法律或税务要求（必须拆不同 bundle）、历史包袱导致旧产品无法迁移。我的经验是：当互斥关系无法用单个状态机描述，或者你需要允许用户同时持有两种权益，就该拆组。
+
+更具体的评估步骤可以照着这三个问题走：
+
+1. **权益矩阵是否存在“同时为真”的格子？** 如果用户可能同时拥有「AI Plus」和「Cloud Plus」，但两者的权益不冲突，就应该拆成两个组；
+2. **是否需要不同的试用/定价梯度？** 订阅组的 Intro Offer 只能在组内判断新/老用户，如果你要对同一个人投放两个完全独立的试用策略，就必须拆组；
+3. **合规或结算要求是否强制拆分？** 某些地区对教育版/企业版有不同税率或合同，放在同组会导致报表无法区分。
+
+最好在产品上线前画一张“订阅组 vs 商品”的矩阵图，并且在 PRD 里明确“该组允许的迁移路径”。一旦上线后再拆组，老用户无法迁移，需要用 offer code 或后台补偿，非常痛苦。
+
+#### 跨订阅组（Cross-group Entitlement）
+
+苹果不会替你管理组与组之间的关系，用户可以同时付费多个组。因此我们通常还会在自家系统里做一层「跨订阅组」映射，用来描述：
+
+- 哪些组在业务上互斥，需要主动阻断/提示（例如「教育版」与「企业版」）；
+- 哪些组共享权益，需要在权益服务里把多个 `subscriptionGroupIdentifier` 映射到同一套餐；
+- 如何给跨组迁移的用户补差价或延后权益（例如旧版 A 订阅迁移到新版 B 订阅，需要自家逻辑计算新的到期时间）。
+
+实践上我会在 `SKU Sheet` 里新增一个 `logicalPlanId` 字段，并在数据库里维护 `subscription_group_relations` 表。收到票据或通知时，先按苹果给的 `subscriptionGroupIdentifier` 找到对应的逻辑权益，再决定是并行生效、互斥抢占还是触发升级流程。这样一来，跨订阅组的策略完全掌握在我们手里，而不是被 Connect 的结构限制死。
+
+同时别忘了在监控侧做三件事：统计“跨组并发数”用于发现 double charge，给客服后台暴露“该用户持有的所有组”避免重复退费，以及在账务对账时按组拆分收入（尤其是多币种下）。这些内容虽然不是苹果强制，但会直接决定你能否长期稳定运营多组订阅。
+
+### 沙箱账号与环境
+
+当创建商品后，我们需要测试，苹果会有一个专门的沙河环境是进行测试的。几个要点：
+
+- 测试账号要在 `Users and Access -> Sandbox` 里创建，邮箱不能带加号，密码必须至少八位且包含数字；
+- 同一个测试账号 24 小时内只能购买同一个订阅产品一次，超过会报 `This subscription cannot be purchased`；
+- 沙箱里的订阅周期是加速的，比如月订阅等于 5 分钟，年订阅也不过半小时；
+
+当创建完沙盒账号后，你需要在Ios中打开开发模式，在开发模式的最下方有个沙盒账号登录，此时在购买的时候就会自动使用沙盒账号进行购买以便测试。
+![](https://ik.imagekit.io/ixou4q6nu/2501762701774_.pic.jpg?updatedAt=1762701845681)
+
+## 服务端落地：验证、订单、权益
+
+服务端是整个 IAP 体系的压舱石。这里分享我最终定型的一套架构。
+
+### 票据验证服务
+
+我们把票据验证从主业务服务拆出来，做成一个 `ReceiptService`。它提供两个接口：
+
+1. `verifyReceipt(signedTransactionInfo: string)`：验证并解析票据；
+2. `pullHistory(originalTransactionId: string)`：调用 Server API 拉完整历史。
+
+服务实现内部会：
+
+- 校验 JWS 签名（使用苹果官方库）；
+- 根据 `environment` 决定调用沙箱还是生产接口；
+- 将解析后的结构写入 `iap_transactions` 表；
+- 返回一个规范化的 `TransactionDTO` 给上层。
+
+（Server API 端点与返回结构：`Get Transaction Info`、`TransactionInfoResponse`。）([Apple Developer][4])
+
+### 订单状态机
+
+```
+INIT -> PURCHASED -> VERIFIED -> ENTITLED -> ARCHIVED
+             |           |            |
+             |           |            -> REVOKED
+             |           -> FAILED
+             -> CANCELLED
+```
+
+我们用状态机来驱动告警：任何订单在 `PURCHASED` 或 `VERIFIED` 停留超过 10 分钟，都要触发报警。因为这个阶段卡住往往意味着服务端挂了或 ASSN 延迟。
+（通知类型、历史补拉与重放参见官方文档。）([Apple Developer][7])
+
+### 权益系统
+
+权益发放不应直接写在 IAP 模块里，而应该有自己的服务。我们采用“事件驱动”方式：当订单进入 `ENTITLED` 状态时，发出一条 `entitlement.granted` 事件，权益服务监听后更新用户的会员表。收到退款通知时，发送 `entitlement.revoked`，由权益服务回收。
+（退款/撤销与相关字段：ASSN 与 Server API 文档中有明确定义。）([Apple Developer][7])
+
+## 各种Id
+
+我习惯把苹果的 id 分成四层：
+
+- **商品层**：`productId`、`subscriptionGroupIdentifier`、`appAccountToken`；
+- **交易层**：`transactionId`、`originalTransactionId`、`webOrderLineItemId`；
+- **用户关联层**：`appAccountToken`、`storefront`、`offerIdentifier` 等。
+
+接下来我们按这四层顺着拆，让每个 id 都有出处、有使用场景。
+
+### StoreKit 商品与本地模型的 id
+
+#### `productId`
+
+命名建议“公司缩写.项目.模块.用途”，例如 `com.acme.reader.subscription.monthly`。便于跨项目、跨区域扩展。
+
+#### `subscriptionGroupIdentifier`
+
+订阅组的唯一 id。用于确定升级/降级的互斥关系。
+
+### Transaction 体系下的关键Id
+
+#### `transactionId`
+
+一次交易在苹果侧的唯一流水号。每一次扣款/续费/退款都会变化。我们将它作为“幂等键”。
+
+#### `originalTransactionId`
+
+订单链路的根 id。首次购买时与 `transactionId` 相同；续费时 `transactionId` 变化但它不变。
+官方说明：`originalTransactionId`（StoreKit/Server API/Receipt 均有定义）。([Apple Developer][9])
+
+#### `webOrderLineItemId`
+
+标识账单里的一条订阅线（跨设备续费也能稳定对齐）。用于与财务报表的 `Web Order Line Item ID` 对账。
+字段出处：Server API / ASSN 模型与财务报表字段参考。([Apple Github][10])
+
+_建议配合文档：`transactionId`、`originalTransactionId`、`webOrderLineItemId` 对账与链路追溯_。([Apple Developer][1])
+
+### 绑定用户的那一串 id
+
+- **`appAccountToken`**：强烈建议使用（可由 app 写入，也可通过 Server API 的 **Set App Account Token** 事后补写）。([Apple Developer][8])
+- **`storefront`/`currency`**：运营分区推断；
+- **`offerIdentifier`/`offerType`**：活动归因；
+- **`priceIncreaseStatus`**：涨价确认跟踪。
+
+### 通知Payload示例
+
+IOS的通知有这些类型：SUBSCRIBED、DID_RENEW、DID_FAIL_TO_RENEW、EXPIRED、PRICE_INCREASE、DID_CHANGE_RENEWAL_STATUS、DID_CHANGE_RENEWAL_PREF、OFFER_REDEEMED、REFUND、REFUND_DECLINED、REFUND_REVERSED、CONSUMPTION_REQUEST、ONE_TIME_CHARGE、EXTERNAL_PURCHASE_TOKEN、RENEWAL_EXTENSION、RENEWAL_EXTENDED、REVOKE、TEST。
+
+我从数据库取了一些`ios`通知的`payload`给大家观察，我只列出了首次订阅（SUBSCRIBED）、续订（DID_RENEW）和一次性商品购买（ONE_TIME_CHARGE），这三个是我认为最核心的通知类型：
+
+#### 首次订阅：
+
+```json
+{
+  "notification_type": "SUBSCRIBED",
+  "subtype": "INITIAL_BUY",
+  "notification_uuid": "c236df47-b8a2-4c0c-b3e3-614944beb907",
+  "environment": "Sandbox",
+  "bundle_id": "com.craveu.app",
+  "product_id": "com.craveu.premium.monthly.2",
+  "transaction_id": "2000001005624606",
+  "original_transaction_id": "2000001005624606",
+  "transaction_info": {
+    "transactionId": "2000001005624606",
+    "originalTransactionId": "2000001005624606",
+    "webOrderLineItemId": "2000000111385127",
+    "bundleId": "com.craveu.app",
+    "productId": "com.craveu.premium.monthly.2",
+    "subscriptionGroupIdentifier": "21761314",
+    "purchaseDate": 1757494955000,
+    "originalPurchaseDate": 1757494955000,
+    "expiresDate": 1757495255000,
+    "quantity": 1,
+    "type": "Auto-Renewable Subscription",
+    "inAppOwnershipType": "PURCHASED",
+    "signedDate": 1757494964129,
+    "environment": "Sandbox",
+    "transactionReason": "PURCHASE",
+    "storefrontId": "143441",
+    "price": 14990,
+    "currency": "USD"
+  },
+  "renewal_info": {
+    "originalTransactionId": "2000001005624606",
+    "autoRenewProductId": "com.craveu.premium.monthly.2",
+    "productId": "com.craveu.premium.monthly.2",
+    "autoRenewStatus": 1,
+    "signedDate": 1757494964129,
+    "environment": "Sandbox",
+    "recentSubscriptionStartDate": 1757494955000,
+    "renewalDate": 1757495255000
+  },
+  "processed_at": "2025-09-10T09:02:44.418001572Z",
+  "is_test_notification": false
+}
+```
+
+#### 续订
+
+```json
+{
+  "notification_type": "DID_RENEW",
+  "notification_uuid": "3b3a461d-87d4-4e34-a25f-6c1547139643",
+  "environment": "Sandbox",
+  "bundle_id": "com.craveu.app",
+  "product_id": "com.craveu.premium.monthly.2",
+  "transaction_id": "2000001004044815",
+  "original_transaction_id": "2000000994389883",
+  "transaction_info": {
+    "transactionId": "2000001004044815",
+    "originalTransactionId": "2000000994389883",
+    "webOrderLineItemId": "2000000111124298",
+    "bundleId": "com.craveu.app",
+    "productId": "com.craveu.premium.monthly.2",
+    "subscriptionGroupIdentifier": "21761314",
+    "purchaseDate": 1757403984000,
+    "originalPurchaseDate": 1756367167000,
+    "expiresDate": 1757490384000,
+    "quantity": 1,
+    "type": "Auto-Renewable Subscription",
+    "inAppOwnershipType": "PURCHASED",
+    "signedDate": 1757403980045,
+    "environment": "Sandbox",
+    "transactionReason": "RENEWAL",
+    "storefrontId": "143465",
+    "price": 98000,
+    "currency": "CNY"
+  },
+  "renewal_info": {
+    "originalTransactionId": "2000000994389883",
+    "autoRenewProductId": "com.craveu.premium.monthly.2",
+    "productId": "com.craveu.premium.monthly.2",
+    "autoRenewStatus": 0,
+    "signedDate": 1757403980045,
+    "environment": "Sandbox",
+    "recentSubscriptionStartDate": 1756367167000,
+    "renewalDate": 1757490384000
+  },
+  "processed_at": "2025-09-09T07:46:20.281503798Z",
+  "is_test_notification": false
+}
+```
+
+#### 一次性商品消费
+
+```json
+{
+  "notification_type": "ONE_TIME_CHARGE",
+  "notification_uuid": "6e34a7a1-b016-4ef8-bdad-f7a115e371e2",
+  "environment": "Sandbox",
+  "bundle_id": "com.craveu.app",
+  "product_id": "com.craveu.tokens.package.standard.v2.2",
+  "transaction_id": "2000001005289245",
+  "original_transaction_id": "2000001005289245",
+  "transaction_info": {
+    "transactionId": "2000001005289245",
+    "originalTransactionId": "2000001005289245",
+    "bundleId": "com.craveu.app",
+    "productId": "com.craveu.tokens.package.standard.v2.2",
+    "purchaseDate": 1757485314000,
+    "originalPurchaseDate": 1757485314000,
+    "quantity": 1,
+    "type": "Consumable",
+    "inAppOwnershipType": "PURCHASED",
+    "signedDate": 1757485319103,
+    "environment": "Sandbox",
+    "transactionReason": "PURCHASE",
+    "storefrontId": "143441",
+    "price": 5990,
+    "currency": "USD"
+  },
+  "processed_at": "2025-09-10T06:21:59.406439829Z",
+  "is_test_notification": false
+}
+```
+
+## 结束
+
+支付大家可能看得云里雾里的，因为这里面涉及到了大量的系统设计和生态问题，我自己写的时候就已经感受到了，但没办法对于C端业务而言，世界上支付成功率最高和最稳定的支付方式就是IOS支付和Google Play Purchase支付，但在我看来这也是做出海独立开发的基本功之一。
+
+![](https://ik.imagekit.io/ixou4q6nu/image.png?updatedAt=1762845304430)
+
+[1]: https://developer.apple.com/videos/play/wwdc2025/249/ 'Dive into App Store server APIs for In-App Purchase - WWDC25 - Videos - Apple Developer'
+[2]: https://developer.apple.com/documentation/appstoreserverapi?utm_source=chatgpt.com 'App Store Server API | Apple Developer Documentation'
+[3]: https://developer.apple.com/storekit/ 'StoreKit 2 - Apple Developer'
+[4]: https://developer.apple.com/documentation/appstoreserverapi/get-transaction-info?utm_source=chatgpt.com 'Get Transaction Info | Apple Developer Documentation'
+[5]: https://developer.apple.com/help/app-store-connect/manage-in-app-purchases/view-and-edit-in-app-purchase-information/?utm_source=chatgpt.com 'View and edit in-app purchase information'
+[6]: https://developer.apple.com/videos/play/wwdc2023/10143/?utm_source=chatgpt.com 'Meet the App Store Server Library - WWDC23 - Videos'
+[7]: https://developer.apple.com/documentation/appstoreservernotifications?utm_source=chatgpt.com 'App Store Server Notifications'
+[8]: https://developer.apple.com/documentation/storekit/transaction/appaccounttoken?utm_source=chatgpt.com 'appAccountToken | Apple Developer Documentation'
+[9]: https://developer.apple.com/documentation/appstoreserverapi/originaltransactionid?utm_source=chatgpt.com 'originalTransactionId | Apple Developer Documentation'
+[10]: https://apple.github.io/app-store-server-library-swift/documentation/appstoreserverlibrary/jwstransactiondecodedpayload/weborderlineitemid/?utm_source=chatgpt.com 'webOrderLineItemId | Documentation - Apple'
+[11]: https://developer.apple.com/documentation/appstoreserverapi/transactioninforesponse?utm_source=chatgpt.com 'TransactionInfoResponse | Apple Developer Documentation'
+[12]: https://developer.apple.com/documentation/appstoreservernotifications/app-store-server-notifications-v2?utm_source=chatgpt.com 'App Store Server Notifications V2'
+[13]: https://developer.apple.com/videos/play/wwdc2024/10062/?utm_source=chatgpt.com 'Explore App Store server APIs for In-App Purchase ...'
+[14]: https://developer.apple.com/documentation/appstoreserverapi/notificationtype?utm_source=chatgpt.com 'notificationType | Apple Developer Documentation'
+[15]: https://developer.apple.com/documentation/appstoreservernotifications/enabling-app-store-server-notifications?utm_source=chatgpt.com 'Enabling App Store Server Notifications'
+[16]: https://developer.apple.com/documentation/appstoreservernotifications/app-store-server-notifications-changelog?utm_source=chatgpt.com 'App Store Server Notifications changelog'
+[17]: https://developer.apple.com/documentation/appstorereceipts/original_transaction_id?utm_source=chatgpt.com 'original_transaction_id | Apple Developer Documentation'
+[18]: https://developer.apple.com/documentation/storekit/product/subscriptioninfo/renewalinfo/originaltransactionid?utm_source=chatgpt.com 'originalTransactionID | Apple Developer Documentation'
+[19]: https://developer.apple.com/help/app-store-connect/reference/financial-report-fields/?utm_source=chatgpt.com 'Financial report fields - Reference - App Store Connect - Help'
+[20]: https://developer.apple.com/documentation/appstoreserverapi/appaccounttoken?utm_source=chatgpt.com 'appAccountToken | Apple Developer Documentation'
+[21]: https://developer.apple.com/documentation/appstorereceipts/app_account_token?utm_source=chatgpt.com 'app_account_token | Apple Developer Documentation'
+[22]: https://developer.apple.com/documentation/appstoreserverapi/set-app-account-token?utm_source=chatgpt.com 'Set App Account Token'
+[23]: https://developer.apple.com/videos/play/wwdc2021/10114/?utm_source=chatgpt.com 'Meet StoreKit 2 - WWDC21 - Videos'
+[24]: https://developer.apple.com/help/app-store-connect/manage-subscriptions/set-up-subscription-groups/?utm_source=chatgpt.com 'Set up subscription groups - App Store Connect Help'
