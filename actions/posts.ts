@@ -234,3 +234,41 @@ export async function togglePostStatusAction(postId: string, status: PostStatus)
 
   return { status: 'success', statusValue: updatedPost.status }
 }
+
+export async function updatePostPublishedAtAction(postId: string, publishedAt?: string | null) {
+  await assertAdmin()
+  const db = createDb()
+  const existing = await db.query.posts.findFirst({
+    where: (post, { eq }) => eq(post.id, postId)
+  })
+
+  if (!existing) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  let parsedDate: Date | null = null
+  if (publishedAt) {
+    const candidate = new Date(publishedAt)
+    if (Number.isNaN(candidate.getTime())) {
+      return { status: 'error', message: 'Invalid published time' }
+    }
+    parsedDate = candidate
+  }
+
+  const updated = await db
+    .update(posts)
+    .set({
+      publishedAt: parsedDate,
+      updatedAt: new Date()
+    })
+    .where(eq(posts.id, postId))
+    .returning({ id: posts.id })
+
+  if (!updated[0]) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  revalidatePostRoutes(updated[0].id)
+
+  return { status: 'success' }
+}

@@ -61,31 +61,14 @@ export default async function ContentPage() {
       count: category.posts.length
     }))
 
-  const totalPosts = explorerPosts.length
-
   return (
     <>
-      <div className="mx-auto w-full max-w-5xl px-4 pt-8 pb-14 sm:px-6 lg:px-8 lg:pt-12">
+      <div className="mx-auto w-full max-w-4xl px-4 pt-8 pb-14 sm:px-6 lg:px-8 lg:pt-12">
         <header className="space-y-3.5">
-          <p className="text-muted-foreground text-[0.6rem] font-semibold tracking-[0.45em] uppercase">
-            {homeT('heroBadge')}
-          </p>
           <div className="space-y-2">
-            <h1 className="text-foreground text-2xl leading-tight font-semibold sm:text-3xl">
-              {homeT('heroTitle')}
-            </h1>
+            <h2 className="text-foreground text-2xl leading-tight font-semibold sm:text-3xl">{homeT('heroTitle')}</h2>
             <p className="text-muted-foreground text-sm sm:text-[0.95rem]">{homeT('heroDescription')}</p>
           </div>
-          <dl className="text-muted-foreground flex flex-wrap gap-5 text-[0.7rem]">
-            <div>
-              <dt className="tracking-[0.35em] uppercase">{homeT('stats.articlesLabel')}</dt>
-              <dd className="text-foreground mt-1 text-xl font-semibold">{totalPosts}</dd>
-            </div>
-            <div>
-              <dt className="tracking-[0.35em] uppercase">{homeT('stats.categoriesLabel')}</dt>
-              <dd className="text-foreground mt-1 text-xl font-semibold">{explorerCategories.length}</dd>
-            </div>
-          </dl>
         </header>
 
         <PostExplorer initialPosts={explorerPosts} categories={explorerCategories} />

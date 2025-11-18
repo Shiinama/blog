@@ -22,20 +22,19 @@ export default async function Navbar({
   return (
     <nav
       className={cn(
-        'sticky top-0 z-50 flex w-full flex-row items-center px-4 py-1.5 text-sm backdrop-blur-lg md:px-8 md:py-2.5',
+        'sticky top-0 flex w-full flex-row items-center px-4 py-1.5 text-sm backdrop-blur-lg md:px-8 md:py-2.5',
         className
       )}
     >
       {!hideLogo && (
         <div className="flex w-full flex-row items-center justify-between">
-          {children ? children : <NamedLogoWithLink />}
+          {children ? children : <NamedLogoWithLink brandTitle={t('home.brandTitle')} />}
         </div>
       )}
-      <div className="ml-auto flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-2">
         <Link
           href={'/about'}
           className={buttonVariants({
-            className: 'text-sm font-medium',
             variant: 'link',
             size: 'sm'
           })}

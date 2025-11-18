@@ -3,31 +3,38 @@
 import { signOut, useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 
-import { DialogContent, DialogHeader, DialogTitle, Dialog, DialogTrigger } from '@/components/ui/dialog'
+import LoginForm from '@/components/login-form'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Link, useRouter } from '@/i18n/navigation'
+import { Link } from '@/i18n/navigation'
 
 import { Button, buttonVariants } from './ui/button'
 
 export function AuthButton() {
   const session = useSession()
-  const router = useRouter()
-  const t = useTranslations()
-
-  const handleSignInOrOut = () => {
-    router.push('/login')
-  }
+  const common = useTranslations()
+  const auth = useTranslations('auth')
 
   const user = session.data?.user
-  const isAdmin = ((user ?? {}) as { role?: string }).role === 'ADMIN'
-  const planType = ((user ?? {}) as { subscription?: { planType?: string } }).subscription?.planType
+  const isAdmin = user?.id === process.env.NEXT_PUBLIC_ADMIN_ID
 
   if (session.status === 'unauthenticated')
     return (
-      <Button className="text-sm font-medium" onClick={handleSignInOrOut} variant="link" size="sm">
-        {t('common.loginIn')}
-      </Button>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="link" size="sm">
+            {common('common.loginIn')}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-foreground text-lg font-semibold">{auth('login.page.title')}</DialogTitle>
+            <p className="text-muted-foreground text-xs">{auth('login.page.description')}</p>
+          </DialogHeader>
+          <LoginForm />
+        </DialogContent>
+      </Dialog>
     )
 
   return (
@@ -36,37 +43,36 @@ export function AuthButton() {
         <Link
           href="/admin/posts"
           className={buttonVariants({
-            className: 'text-sm font-medium',
             variant: 'link',
             size: 'sm'
           })}
         >
-          {t('common.adminPanel')}
+          {common('common.adminPanel')}
         </Link>
       )}
       <Dialog>
         <DialogTrigger asChild>
-          <Button className="text-sm font-medium" variant="link" size="sm">
-            {t('common.myAccount')}
+          <Button variant="link" size="sm">
+            {common('common.myAccount')}
           </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('common.myAccount')}</DialogTitle>
+            <DialogTitle>{common('common.myAccount')}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-6 pb-4 pt-8">
+          <div className="flex flex-col gap-6 pt-8 pb-4">
             <div className="gap-1.5">
-              <Label htmlFor="email">{t('common.email')}</Label>
+              <Label htmlFor="email">{common('common.email')}</Label>
               <Input id="email" disabled value={user?.email ?? ''} />
             </div>
             <div className="gap-1.5">
-              <Label htmlFor="username">{t('common.username')}</Label>
+              <Label htmlFor="username">{common('common.username')}</Label>
               <Input disabled id="username" value={user?.name ?? ''} />
             </div>
-            <div className="gap-1.5">
-              <Label>{t('common.currentTier')}</Label>
-              <div className="ml-2 capitalize text-muted-foreground">{planType}</div>
-            </div>
+            {/* <div className="gap-1.5">
+              <Label>{common('common.currentTier')}</Label>
+              <div className="text-muted-foreground ml-2 capitalize">{planType}</div>
+            </div> */}
             <Button
               className="w-24 self-end"
               variant="destructive"
@@ -74,7 +80,7 @@ export function AuthButton() {
                 signOut()
               }}
             >
-              {t('common.signout')}
+              {common('common.signout')}
             </Button>
           </div>
         </DialogContent>

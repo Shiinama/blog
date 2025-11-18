@@ -1,7 +1,9 @@
 'use client'
 
-import { ArrowUpRight, Loader2, RotateCcw } from 'lucide-react'
+import { useDebounce } from 'ahooks'
+import { Loader2, RotateCcw } from 'lucide-react'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 
 import { fetchExplorerPostsAction } from '@/actions/posts'
@@ -9,7 +11,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Link } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
-import { useTranslations } from 'next-intl'
+import { cn } from '@/lib/utils'
+
+import { Button } from '../ui/button'
 
 import type { ExplorerPostRecord, ExplorerSortOption } from '@/lib/posts/types'
 
@@ -35,11 +39,13 @@ export interface ExplorerCategory {
 interface PostExplorerProps {
   initialPosts: ExplorerPost[]
   categories: ExplorerCategory[]
+  className?: string
 }
 
-export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
+export function PostExplorer({ initialPosts, categories, className }: PostExplorerProps) {
   const [posts, setPosts] = useState<ExplorerPost[]>(initialPosts)
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const throttledSearch = useDebounce(searchInput, { wait: 250 })
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all')
   const [sortBy, setSortBy] = useState<ExplorerSortOption>('newest')
   const [isPending, startTransition] = useTransition()
@@ -61,119 +67,99 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
       return
     }
 
-    const timeout = setTimeout(() => {
-      startTransition(async () => {
-        const response = await fetchExplorerPostsAction({
-          search: search.trim() || undefined,
-          categoryId: selectedCategoryId === 'all' ? undefined : selectedCategoryId,
-          sortBy
-        })
-        setPosts(mapServerPostsToDisplay(response, labelLookup, uncategorizedLabel))
+    startTransition(async () => {
+      const trimmedSearch = throttledSearch.trim()
+      const response = await fetchExplorerPostsAction({
+        search: trimmedSearch || undefined,
+        categoryId: selectedCategoryId === 'all' ? undefined : selectedCategoryId,
+        sortBy
       })
-    }, 250)
+      setPosts(mapServerPostsToDisplay(response, labelLookup, uncategorizedLabel))
+    })
+  }, [throttledSearch, selectedCategoryId, sortBy, labelLookup, startTransition, uncategorizedLabel])
 
-    return () => clearTimeout(timeout)
-  }, [search, selectedCategoryId, sortBy, labelLookup, startTransition, uncategorizedLabel])
-
-  const hasActiveFilters = selectedCategoryId !== 'all' || Boolean(search.trim()) || sortBy !== 'newest'
+  const hasActiveFilters = selectedCategoryId !== 'all' || Boolean(searchInput.trim()) || sortBy !== 'newest'
 
   return (
-    <section className="mt-8 space-y-8">
-      <div className="border-border/60 border-t pt-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
-          <label className="text-muted-foreground flex flex-1 flex-col gap-2 text-[0.65rem] font-semibold tracking-[0.4em] uppercase">
-            {t('searchLabel')}
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('searchPlaceholder')}
-              className="border-border/70 text-foreground h-10 rounded-none border-0 border-b bg-transparent px-0 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-          </label>
-          <div className="flex flex-col gap-4 sm:flex-row md:flex-none md:gap-6">
-            <label className="text-muted-foreground flex flex-1 flex-col gap-2 text-[0.65rem] font-semibold tracking-[0.4em] uppercase">
-              {t('categoryLabel')}
-              <Select value={selectedCategoryId} onValueChange={(value) => setSelectedCategoryId(value)}>
-                <SelectTrigger className="border-border/70 text-foreground h-10 min-w-[180px] rounded-none border-0 border-b bg-transparent px-0 text-sm font-medium focus:ring-0">
-                  <SelectValue placeholder={t('categoryAll')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('categoryAll')}</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.label} ({category.count})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className="text-muted-foreground flex flex-1 flex-col gap-2 text-[0.65rem] font-semibold tracking-[0.4em] uppercase">
-              {t('sortLabel')}
-              <Select value={sortBy} onValueChange={(value: ExplorerSortOption) => setSortBy(value)}>
-                <SelectTrigger className="border-border/70 text-foreground h-10 min-w-40 rounded-none border-0 border-b bg-transparent px-0 text-sm font-medium focus:ring-0">
-                  <SelectValue placeholder={t('sortPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">{t('sortOptions.newest')}</SelectItem>
-                  <SelectItem value="oldest">{t('sortOptions.oldest')}</SelectItem>
-                  <SelectItem value="alphabetical">{t('sortOptions.alphabetical')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </label>
-          </div>
-        </div>
-        <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-4 text-[0.65rem] tracking-[0.35em] uppercase">
+    <section className={cn('mt-8 space-y-8 pb-10', className)}>
+      <div className="space-y-4">
+        <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs font-semibold tracking-[0.45em] uppercase">
           <span>{t('stats', { count: posts.length })}</span>
           {hasActiveFilters && (
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 transition"
+            <Button
+              variant="ghost"
               onClick={() => {
-                setSearch('')
+                setSearchInput('')
                 setSelectedCategoryId('all')
                 setSortBy('newest')
               }}
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-3 w-3" />
               {t('reset')}
-            </button>
+            </Button>
           )}
           {isPending && (
-            <span className="text-muted-foreground inline-flex items-center gap-2 text-[0.6rem] tracking-[0.4em] uppercase">
+            <span className="text-muted-foreground inline-flex items-center gap-2 text-[0.6rem] font-semibold tracking-[0.4em] uppercase">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {t('updating')}
             </span>
           )}
         </div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
+          <Input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder={t('searchPlaceholder')}
+            aria-label={t('searchLabel')}
+          />
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row md:flex-none md:gap-5">
+            <Select value={selectedCategoryId} onValueChange={(value) => setSelectedCategoryId(value)}>
+              <SelectTrigger aria-label={t('categoryLabel')}>
+                <SelectValue className="truncate text-left" placeholder={t('categoryAll')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('categoryAll')}</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.label} ({category.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(value: ExplorerSortOption) => setSortBy(value)}>
+              <SelectTrigger aria-label={t('sortLabel')}>
+                <SelectValue className="truncate text-left" placeholder={t('sortPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">{t('sortOptions.newest')}</SelectItem>
+                <SelectItem value="oldest">{t('sortOptions.oldest')}</SelectItem>
+                <SelectItem value="alphabetical">{t('sortOptions.alphabetical')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
-      <div className="divide-border/60 divide-y">
+      <div className="divide-border/60 space-y-0">
         {posts.map((post) => (
-          <article key={post.id} className="grid gap-5 py-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
+          <article key={post.id} className="grid gap-5 pb-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
             <div className="space-y-3">
-              <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[11px] font-semibold tracking-[0.35em] uppercase">
+              <div className="text-muted-foreground/80 flex flex-wrap items-center gap-3 text-[11px] font-semibold tracking-[0.35em] uppercase">
                 <span>{post.categoryLabel}</span>
                 {post.publishedAt && <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>}
               </div>
-              <header className="space-y-3">
+              <header className="space-y-2">
                 <Link
                   href={`/content/${post.id}`}
                   className="text-foreground hover:text-primary block text-lg leading-snug font-semibold transition sm:text-xl"
                 >
                   {post.title}
                 </Link>
-                {post.summary && <p className="text-muted-foreground text-sm sm:text-base">{post.summary}</p>}
+                {post.summary && <p className="text-muted-foreground/90 text-sm sm:text-base">{post.summary}</p>}
               </header>
-              <Link
-                href={`/content/${post.id}`}
-                className="text-primary hover:text-foreground inline-flex items-center gap-2 text-xs font-semibold transition"
-              >
-                <ArrowUpRight className="h-4 w-4" />
-                <span>{t('readArticle')}</span>
-              </Link>
             </div>
             {post.coverImageUrl && (
-              <div className="relative hidden h-32 w-full overflow-hidden rounded-xl sm:block md:h-36">
+              <div className="relative hidden h-32 w-full overflow-hidden rounded-2xl sm:block md:h-36">
                 <Image
                   src={post.coverImageUrl}
                   alt={post.title}

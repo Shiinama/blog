@@ -1,9 +1,11 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useFormState } from 'react-dom'
 
 import { deletePostAction, savePostAction } from '@/actions/posts'
+import { initialPostFormState } from '@/actions/posts/form-state'
 import { MarkdownEditor } from '@/components/posts/markdown-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,12 +14,9 @@ import { AutoResizeTextarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useRouter } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
+
 import type { PostStatus } from '@/drizzle/schema'
-import { useTranslations } from 'next-intl'
-
 import type { CategorySummary, PostDetails } from '@/lib/posts/types'
-
-import { initialPostFormState } from '@/actions/posts/form-state'
 
 type EditablePost = PostDetails
 
@@ -107,18 +106,12 @@ export function PostForm({ post, categories }: PostFormProps) {
             placeholder={t('form.placeholders.title')}
             required
           />
-          {fieldError('title') && <p className="text-sm text-destructive">{fieldError('title')}</p>}
+          {fieldError('title') && <p className="text-destructive text-sm">{fieldError('title')}</p>}
         </div>
         <div>
           <Label htmlFor="slug">{t('form.fields.slug')}</Label>
-          <Input
-            id="slug"
-            name="slug"
-            defaultValue={post?.slug}
-            placeholder={t('form.placeholders.slug')}
-            required
-          />
-          {fieldError('slug') && <p className="text-sm text-destructive">{fieldError('slug')}</p>}
+          <Input id="slug" name="slug" defaultValue={post?.slug} placeholder={t('form.placeholders.slug')} required />
+          {fieldError('slug') && <p className="text-destructive text-sm">{fieldError('slug')}</p>}
         </div>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
@@ -128,7 +121,7 @@ export function PostForm({ post, categories }: PostFormProps) {
             id="categoryId"
             name="categoryId"
             defaultValue={post?.categoryId}
-            className="mt-2 w-full rounded-md border bg-background p-2"
+            className="bg-background mt-2 w-full rounded-md border p-2"
             required
           >
             <option value="">{t('form.placeholders.category')}</option>
@@ -138,7 +131,7 @@ export function PostForm({ post, categories }: PostFormProps) {
               </option>
             ))}
           </select>
-          {fieldError('categoryId') && <p className="text-sm text-destructive">{fieldError('categoryId')}</p>}
+          {fieldError('categoryId') && <p className="text-destructive text-sm">{fieldError('categoryId')}</p>}
         </div>
         <div>
           <Label htmlFor="status">{t('form.fields.status')}</Label>
@@ -146,7 +139,7 @@ export function PostForm({ post, categories }: PostFormProps) {
             id="status"
             name="status"
             defaultValue={post?.status ?? 'DRAFT'}
-            className="mt-2 w-full rounded-md border bg-background p-2"
+            className="bg-background mt-2 w-full rounded-md border p-2"
             required
           >
             {statusOptions.map((option) => (
@@ -166,7 +159,7 @@ export function PostForm({ post, categories }: PostFormProps) {
             defaultValue={post?.coverImageUrl ?? ''}
             placeholder={t('form.placeholders.coverImageUrl')}
           />
-          {fieldError('coverImageUrl') && <p className="text-sm text-destructive">{fieldError('coverImageUrl')}</p>}
+          {fieldError('coverImageUrl') && <p className="text-destructive text-sm">{fieldError('coverImageUrl')}</p>}
         </div>
         <div>
           <Label htmlFor="tags">{t('form.fields.tags')}</Label>
@@ -176,13 +169,7 @@ export function PostForm({ post, categories }: PostFormProps) {
       <div className="grid gap-6 md:grid-cols-3">
         <div>
           <Label htmlFor="sortOrder">{t('form.fields.sortOrder')}</Label>
-          <Input
-            id="sortOrder"
-            name="sortOrder"
-            type="number"
-            defaultValue={post?.sortOrder ?? 0}
-            placeholder="0"
-          />
+          <Input id="sortOrder" name="sortOrder" type="number" defaultValue={post?.sortOrder ?? 0} placeholder="0" />
         </div>
         <div>
           <Label htmlFor="language">{t('form.fields.language')}</Label>
@@ -190,7 +177,12 @@ export function PostForm({ post, categories }: PostFormProps) {
         </div>
         <div>
           <Label htmlFor="publishedAt">{t('form.fields.publishedAt')}</Label>
-          <Input id="publishedAt" name="publishedAt" type="datetime-local" defaultValue={formatDateValue(post?.publishedAt)} />
+          <Input
+            id="publishedAt"
+            name="publishedAt"
+            type="datetime-local"
+            defaultValue={formatDateValue(post?.publishedAt)}
+          />
         </div>
       </div>
       <div>
@@ -212,7 +204,7 @@ export function PostForm({ post, categories }: PostFormProps) {
           onChange={setContent}
           placeholder={t('form.placeholders.content')}
         />
-        {fieldError('content') && <p className="text-sm text-destructive">{fieldError('content')}</p>}
+        {fieldError('content') && <p className="text-destructive text-sm">{fieldError('content')}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <Button type="submit" disabled={state.status === 'success'}>

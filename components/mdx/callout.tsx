@@ -15,7 +15,7 @@ const CalloutIcon = {
 }
 
 export const CalloutTitle = ({ children }: { children: React.ReactNode }) => (
-  <h5 className="font-medium leading-none tracking-tight">{children}</h5>
+  <h5 className="leading-none font-medium tracking-tight">{children}</h5>
 )
 
 export const CalloutDescription = ({ children }: { children: React.ReactNode }) => (
@@ -36,7 +36,7 @@ export function Callout({ children, type = 'default', ...props }: CalloutProps) 
     >
       {Icon && (
         <Icon
-          className={cn('flex-shrink-0', {
+          className={cn('shrink-0', {
             'stroke-red-900': type === 'danger',
             'stroke-yellow-900': type === 'warning',
             'stroke-blue-900': type === 'info'

@@ -40,14 +40,14 @@
     "timeline": "时间桩子",
     "onPage": "大纲",
     "reactSourceCode": "React源码",
-    "reactNative": "reactNative",
+    "reactNative": "React Native",
     "business": "商业",
     "independentDevelopment": "独立开发",
     "vue": "Vue",
-    "sdk": "Sdk",
+    "sdk": "SDK",
     "fontEnd": "前端",
     "interview": "面试",
-    "flutter": "flutter移动开发"
+    "flutter": "Flutter 移动开发"
   },
   "admin": {
     "layout": {
@@ -66,7 +66,8 @@
         "newPost": "撰写新文章",
         "toDraft": "改为草稿",
         "publish": "发布",
-        "delete": "删除"
+        "delete": "删除",
+        "updatePublishTime": "更新发布时间"
       },
       "filters": {
         "searchLabel": "搜索",
@@ -102,6 +103,7 @@
           "category": "分类",
           "status": "状态",
           "updated": "更新时间",
+          "publishedAt": "发布时间",
           "actions": "操作"
         },
         "uncategorized": "未分类"
@@ -145,13 +147,19 @@
         "save": "保存文章",
         "deleting": "删除中...",
         "delete": "删除文章"
+      },
+      "publishTime": {
+        "invalid": "请选择有效的发布时间",
+        "updateSuccess": "发布时间已更新",
+        "updateFailed": "发布时间更新失败"
       }
     }
   },
   "auth": {
     "login": {
       "page": {
-        "title": "欢迎来到鱼的杂记",
+        "title": "欢迎来到鱼的手记",
+        "badge": "手记",
         "description": "登录以继续你的旅程"
       },
       "google": "使用 Google 登录",
@@ -193,6 +201,7 @@
   },
   "home": {
     "heroBadge": "手记",
+    "brandTitle": "鱼的手记",
     "heroTitle": "为深思熟虑的构建者整理的策略",
     "heroDescription": "长篇笔记、实施指南与研究总结被收集在一个安静的阅读列表中。使用下方筛选器直接找到你需要的内容。",
     "stats": {

@@ -39,7 +39,7 @@ export function ZoomableMedia({
     <MotionConfig transition={{ duration: 0.3, type: 'spring', bounce: 0 }}>
       <motion.div id="media-container" className={cn('relative my-4 h-auto w-full border', className)}>
         <Image
-          src={src}
+          src={src as string}
           alt={alt}
           width={width}
           height={height}
@@ -65,7 +65,7 @@ export function ZoomableMedia({
               transition={{ duration: 0.2 }}
             >
               <Image
-                src={src}
+                src={src as string}
                 alt={alt}
                 width={width}
                 height={height}

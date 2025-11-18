@@ -46,12 +46,12 @@ declare const messages: {
     "reactSourceCode": "React Source Code",
     "reactNative": "React Native",
     "business": "Business",
-    "independentDevelopment":"independentDevelopment",
-    "vue":"Vue",
-    "sdk":"Sdk",
-    "fontEnd":"fontEnd",
-    "interview":"interview",
-    "flutter":"flutter"
+    "independentDevelopment": "Independent Development",
+    "vue": "Vue",
+    "sdk": "SDK",
+    "fontEnd": "Front-End",
+    "interview": "Interview",
+    "flutter": "Flutter"
   },
   "admin": {
     "layout": {
@@ -70,7 +70,8 @@ declare const messages: {
         "newPost": "Write new post",
         "toDraft": "Switch to draft",
         "publish": "Publish",
-        "delete": "Delete"
+        "delete": "Delete",
+        "updatePublishTime": "Update publish time"
       },
       "filters": {
         "searchLabel": "Search",
@@ -106,6 +107,7 @@ declare const messages: {
           "category": "Category",
           "status": "Status",
           "updated": "Updated at",
+          "publishedAt": "Published at",
           "actions": "Actions"
         },
         "uncategorized": "Uncategorized"
@@ -113,6 +115,11 @@ declare const messages: {
       "new": {
         "description": "Create a new article",
         "title": "Compose content"
+      },
+      "publishTime": {
+        "invalid": "Pick a valid published time",
+        "updateSuccess": "Publish time updated",
+        "updateFailed": "Failed to update publish time"
       }
     },
     "form": {
@@ -155,7 +162,8 @@ declare const messages: {
   "auth": {
     "login": {
       "page": {
-        "title": "Welcome to 鱼的杂记",
+        "title": "Welcome to Fish Notes",
+        "badge": "logbook",
         "description": "Sign in to continue your journey"
       },
       "google": "Continue with Google",
@@ -197,6 +205,7 @@ declare const messages: {
   },
   "home": {
     "heroBadge": "Notebook",
+    "brandTitle": "Fish Notes",
     "heroTitle": "Curated strategies for thoughtful builders",
     "heroDescription": "Long-form notes, implementation guides, and research summaries collected in one quiet reading list. Use the filters below to cut directly to what you need.",
     "stats": {

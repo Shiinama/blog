@@ -1,8 +1,8 @@
 'use client'
 
 import { Github, Mail, Loader2 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
 import { signIn } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { Button } from './ui/button'
@@ -34,11 +34,11 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4">
       <Button
         onClick={() => handleSignIn('google')}
         disabled={isLoading.google}
-        className="w-full bg-white font-semibold text-gray-800 shadow-md transition-all duration-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+        className="border-border bg-secondary/10 text-foreground hover:border-foreground/30 w-full rounded-full border px-4 py-3 text-sm font-semibold transition"
       >
         {isLoading.google ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -69,37 +69,33 @@ export default function LoginForm() {
       <Button
         onClick={() => handleSignIn('github')}
         disabled={isLoading.github}
-        className="w-full bg-gray-900 font-semibold text-white shadow-md transition-all duration-200 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+        className="border-border bg-background/40 text-foreground hover:border-foreground/30 w-full rounded-full border px-4 py-3 text-sm font-semibold transition"
       >
         {isLoading.github ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Github className="mr-2 h-5 w-5" />}
         {t('login.github')}
       </Button>
 
-      <div className="relative my-6 flex items-center">
-        <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
-        <span className="mx-4 flex-shrink text-xs uppercase text-gray-500 dark:text-gray-400">
-          {t('login.orContinue')}
-        </span>
-        <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+      <div className="text-muted-foreground flex justify-center text-xs tracking-[0.35em] uppercase">
+        <span>{t('login.orContinue')}</span>
       </div>
 
-      <form onSubmit={handleEmailSignIn} className="space-y-4">
+      <form onSubmit={handleEmailSignIn} className="flex flex-col gap-3">
         <Input
           type="email"
           placeholder={t('login.emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+          className="border-border/60 bg-background/30 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/60 w-full rounded-full border px-4 py-3 text-sm font-medium"
         />
         <Button
           type="submit"
           disabled={isLoading.email}
-          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 font-semibold text-white shadow-md transition-all duration-200 hover:from-blue-600 hover:to-blue-700 dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-full px-4 py-3 text-sm font-semibold transition"
         >
-        {isLoading.email ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-5 w-5" />}
-        {t('login.emailButton')}
-      </Button>
+          {isLoading.email ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-5 w-5" />}
+          {t('login.emailButton')}
+        </Button>
       </form>
     </div>
   )
