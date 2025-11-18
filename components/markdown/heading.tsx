@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { Children } from 'react'
 
+import { Link } from '@/i18n/navigation'
 import { slugifyHeading } from '@/lib/markdown/slugify'
 
 import type { JSX } from 'react'

@@ -1,5 +1,4 @@
-import Link from 'next/link'
-
+import { Link } from '@/i18n/navigation'
 import { requireAdmin } from '@/lib/authz'
 
 import type { PropsWithChildren } from 'react'

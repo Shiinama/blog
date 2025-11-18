@@ -1,6 +1,5 @@
 import { CircleIcon } from 'lucide-react'
 import Image, { type ImageProps } from 'next/image'
-import Link from 'next/link'
 
 import { ComponentSource } from '@/components/mdx/component-source'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -9,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Files, File, Folder } from '@/components/ui/files'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Link } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 
 import { Callout, CalloutTitle, CalloutDescription } from './callout'

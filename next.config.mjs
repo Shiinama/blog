@@ -9,13 +9,29 @@ const withNextIntl = createNextIntlPlugin({
   }
 })
 
+/**
+ * @type {import('next').NextConfig}
+ */
 const nextConfig = {
   output: 'standalone',
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'ik.imagekit.io',
+        port: '',
+        pathname: '/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'p6-juejin.byteimg.com',
+        port: '',
+        pathname: '/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'p1-juejin.byteimg.com',
         port: '',
         pathname: '/**'
       }

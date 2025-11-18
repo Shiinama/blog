@@ -1,7 +1,5 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 
@@ -16,6 +14,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator
 } from '@/components/ui/sidebar'
+import { Link, usePathname } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
 
 type SidebarItem = {

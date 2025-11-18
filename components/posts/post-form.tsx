@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useFormState } from 'react-dom'
 
@@ -11,13 +10,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+import { useRouter } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
 import { PostStatus } from '@/lib/db'
-import { CategorySummary, getPostBySlug } from '@/lib/posts'
+
+import type { CategorySummary, PostDetails } from '@/lib/posts/types'
 
 import { initialPostFormState } from '@/actions/posts/form-state'
 
-type EditablePost = NonNullable<Awaited<ReturnType<typeof getPostBySlug>>>
+type EditablePost = PostDetails
 
 interface PostFormProps {
   post?: EditablePost

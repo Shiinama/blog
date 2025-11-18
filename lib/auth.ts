@@ -4,7 +4,9 @@ import GitHub from 'next-auth/providers/github'
 import GoogleProvider from 'next-auth/providers/google'
 import ResendProvider from 'next-auth/providers/resend'
 
-import { accounts, createDb, sessions, users, verificationTokens } from '@/lib/db'
+import { accounts, sessions, users, verificationTokens } from '@/drizzle/schema'
+
+import { createDb } from './db'
 
 declare module 'next-auth' {
   interface Session extends DefaultSession {

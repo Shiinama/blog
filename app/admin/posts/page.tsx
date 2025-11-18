@@ -1,8 +1,7 @@
-import Link from 'next/link'
-
 import { PostTable } from '@/components/posts/post-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Link } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
 import { getAllCategories, getPaginatedPosts } from '@/lib/posts'
 

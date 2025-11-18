@@ -2,9 +2,9 @@ import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { drizzle as drizzleD1 } from 'drizzle-orm/d1'
 import { drizzle as drizzleProxy } from 'drizzle-orm/sqlite-proxy'
 
-
 import * as schema from '@/drizzle/schema'
-import { d1HttpDriver } from '@/lib/db/d1-http-driver'
+
+import { d1HttpDriver } from './d1-http-driver'
 
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { AsyncRemoteCallback } from 'drizzle-orm/sqlite-proxy'
@@ -35,4 +35,3 @@ export const createDb = (): DrizzleD1Database<typeof schema> => {
 }
 
 export type DB = ReturnType<typeof createDb>
-export * from '@/drizzle/schema'

@@ -3,65 +3,61 @@ import { notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
-import { DashboardTableOfContents } from '@/components/mdx/toc'
 import { siteConfig } from '@/config/site.config'
 import { formatCategoryLabel } from '@/lib/categories'
-import { buildToc } from '@/lib/markdown/toc'
-import { getPostBySlug } from '@/lib/posts'
-import { absoluteUrl } from '@/lib/utils'
+import { getPostById } from '@/lib/posts'
 
-import type { Metadata } from 'next'
 
 type DocPageProps = {
-  slug: string[]
+  id: string
 }
 
 async function getPostFromParams({ params }: { params: Promise<DocPageProps> }) {
   const parameters = await params
-  console.log(parameters)
-  const slugPath = parameters.slug?.join('/') ?? ''
 
-  console.log(slugPath)
-
-  return getPostBySlug(slugPath)
-}
-
-export async function generateMetadata({ params }: { params: Promise<DocPageProps> }): Promise<Metadata> {
-  const post = await getPostFromParams({ params })
-
-  if (!post) {
-    return {}
+  if (!parameters.id) {
+    return null
   }
 
-  const summary = post.summary
-  const slugUrl = `/content/${post.slug}`
-
-  return {
-    title: `${post.title} - ${siteConfig.name}`,
-    description: summary,
-    openGraph: {
-      title: post.title,
-      description: summary,
-      type: 'article',
-      url: absoluteUrl(slugUrl),
-      images: [
-        {
-          url: post.coverImageUrl ?? siteConfig.og,
-          width: 2880,
-          height: 1800,
-          alt: siteConfig.name
-        }
-      ]
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.title,
-      description: summary,
-      images: [post.coverImageUrl ?? siteConfig.og],
-      creator: '@rds_agi'
-    }
-  }
+  return getPostById(parameters.id)
 }
+
+// export async function generateMetadata({ params }: { params: Promise<DocPageProps> }): Promise<Metadata> {
+//   const post = await getPostFromParams({ params })
+
+//   if (!post) {
+//     return {}
+//   }
+
+//   const summary = post.summary
+//   const slugUrl = `/content/${post.id}`
+
+//   return {
+//     title: `${post.title} - ${siteConfig.name}`,
+//     description: summary,
+//     openGraph: {
+//       title: post.title,
+//       description: summary,
+//       type: 'article',
+//       url: absoluteUrl(slugUrl),
+//       images: [
+//         {
+//           url: post.coverImageUrl ?? siteConfig.og,
+//           width: 2880,
+//           height: 1800,
+//           alt: siteConfig.name
+//         }
+//       ]
+//     },
+//     twitter: {
+//       card: 'summary_large_image',
+//       title: post.title,
+//       description: summary,
+//       images: [post.coverImageUrl ?? siteConfig.og],
+//       creator: '@rds_agi'
+//     }
+//   }
+// }
 
 export default async function DocPage({ params }: { params: Promise<DocPageProps> }) {
   const [post, t] = await Promise.all([getPostFromParams({ params }), getTranslations('article')])
@@ -71,17 +67,16 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   }
 
   const readingTime = Math.max(1, post.readingTime || 0)
-  const fallbackCategoryLabel = formatCategoryLabel(post.category.key) || 'Uncategorized'
+  const fallbackCategoryLabel = formatCategoryLabel(post.category?.key) || 'Uncategorized'
   let categoryLabel = fallbackCategoryLabel
-  if (post.category.key) {
+  if (post.category?.key) {
     try {
-      categoryLabel = t(post.category.key as any)
+      categoryLabel = t(post.category.key)
     } catch {
       categoryLabel = fallbackCategoryLabel
     }
   }
 
-  const toc = await buildToc(post.content)
   const publishedDate = post.publishedAt ? new Date(post.publishedAt) : null
   const formattedPublishedDate = publishedDate
     ? publishedDate.toLocaleDateString(undefined, {
@@ -151,16 +146,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
           <MarkdownRenderer content={post.content} />
         </article>
 
-        <section className="border-border/60 mx-auto max-w-3xl border-t pt-8">
-          <p className="text-muted-foreground text-xs font-semibold tracking-[0.35em] uppercase">On this page</p>
-          {toc.length > 0 ? (
-            <div className="text-muted-foreground mt-4 space-y-3 text-sm">
-              <DashboardTableOfContents toc={toc} />
-            </div>
-          ) : (
-            <p className="text-muted-foreground mt-4 text-sm">No headings yet for this article.</p>
-          )}
-        </section>
+       
       </div>
     </div>
   )

@@ -2,16 +2,15 @@
 
 import { ArrowUpRight, Loader2, RotateCcw } from 'lucide-react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 
 import { fetchExplorerPostsAction } from '@/actions/posts'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Link } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
 
-
-import type { ExplorerPostRecord, ExplorerSortOption } from '@/lib/posts'
+import type { ExplorerPostRecord, ExplorerSortOption } from '@/lib/posts/types'
 
 export type ExplorerPost = {
   id: string
@@ -156,7 +155,7 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
               </div>
               <header className="space-y-3">
                 <Link
-                  href={`/content/${post.slug}`}
+                  href={`/content/${post.id}`}
                   className="text-foreground hover:text-primary block text-lg leading-snug font-semibold transition sm:text-xl"
                 >
                   {post.title}
@@ -164,7 +163,7 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
                 {post.summary && <p className="text-muted-foreground text-sm sm:text-base">{post.summary}</p>}
               </header>
               <Link
-                href={`/content/${post.slug}`}
+                href={`/content/${post.id}`}
                 className="text-primary hover:text-foreground inline-flex items-center gap-2 text-xs font-semibold transition"
               >
                 <ArrowUpRight className="h-4 w-4" />

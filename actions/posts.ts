@@ -4,10 +4,13 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
+import { posts, PostStatus, postStatusEnum } from '@/drizzle/schema'
 import { assertAdmin } from '@/lib/authz'
-import { createDb, postStatusEnum, posts, type DB, type PostStatus } from '@/lib/db'
-import { getExplorerPosts, type ExplorerFilterInput } from '@/lib/posts'
+import { createDb, DB } from '@/lib/db'
+import { getExplorerPosts } from '@/lib/posts'
 import { calculateReadingTime, extractSummary, normalizeSlug } from '@/lib/posts/utils'
+
+import type { ExplorerFilterInput } from '@/lib/posts/types'
 
 type PostFormState = {
   status: 'idle' | 'success' | 'error'
@@ -125,10 +128,9 @@ async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: 
   return created[0]!
 }
 
-function revalidatePostRoutes(slug: string) {
+function revalidatePostRoutes(postId: string) {
   revalidatePath('/')
-  revalidatePath('/content')
-  revalidatePath(`/content/${slug}`)
+  revalidatePath(`/content/${postId}`)
   revalidatePath('/admin/posts')
 }
 
@@ -153,7 +155,7 @@ export async function savePostAction(prevState: PostFormState, formData: FormDat
 
     const post = await upsertPost(db, payload.data, user.id)
 
-    revalidatePostRoutes(post.slug)
+    revalidatePostRoutes(post.id)
 
     return {
       status: 'success',
@@ -189,13 +191,13 @@ export async function savePostAction(prevState: PostFormState, formData: FormDat
 export async function deletePostAction(postId: string) {
   await assertAdmin()
   const db = createDb()
-  const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ slug: posts.slug })
+  const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ id: posts.id })
 
   if (!deleted[0]) {
     return { status: 'error', message: '文章不存在' }
   }
 
-  revalidatePostRoutes(deleted[0].slug)
+  revalidatePostRoutes(deleted[0].id)
 
   return { status: 'success' }
 }
@@ -221,14 +223,14 @@ export async function togglePostStatusAction(postId: string, status: PostStatus)
       updatedAt: new Date()
     })
     .where(eq(posts.id, postId))
-    .returning({ slug: posts.slug, status: posts.status })
+    .returning({ id: posts.id, status: posts.status })
 
   const updatedPost = updated[0]
   if (!updatedPost) {
     return { status: 'error', message: '文章不存在' }
   }
 
-  revalidatePostRoutes(updatedPost.slug)
+  revalidatePostRoutes(updatedPost.id)
 
   return { status: 'success', statusValue: updatedPost.status }
 }

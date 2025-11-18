@@ -2,20 +2,12 @@
 
 import { MoonIcon, SunIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export default function ToggleTheme({ className }: { className?: string }) {
-  const [mounted, setMounted] = useState(false)
   const { setTheme, theme } = useTheme()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light')

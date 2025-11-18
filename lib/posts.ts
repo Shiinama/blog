@@ -2,34 +2,20 @@
 
 import { and, count, desc, eq, like, or, type SQL } from 'drizzle-orm'
 
-import { categories, createDb, posts, type Category, type Post, type PostStatus, users } from '@/lib/db'
+import { categories, posts, type PostStatus, users } from '@/drizzle/schema'
+import { formatCategoryLabel } from '@/lib/categories'
+import {
+  type CategorySummary,
+  type ExplorerFilterInput,
+  type ExplorerPostRecord,
+  type PaginatedPostListItem,
+  type PaginatedPostsResult,
+  type PostDetails,
+  type SidebarPost
+} from '@/lib/posts/types'
+import { normalizeSlug } from '@/lib/posts/utils'
 
-import { formatCategoryLabel } from './categories'
-import { normalizeSlug } from './posts/utils'
-
-export type CategorySummary = Pick<Category, 'id' | 'key' | 'sortOrder' | 'isVisible'>
-export type SidebarPost = Pick<Post, 'id' | 'title' | 'slug' | 'sortOrder' | 'publishedAt' | 'createdAt' | 'status'>
-export type ExplorerSortOption = 'newest' | 'oldest' | 'alphabetical'
-
-export interface ExplorerFilterInput {
-  search?: string
-  categoryId?: string
-  sortBy?: ExplorerSortOption
-}
-
-export type ExplorerPostRecord = {
-  id: string
-  slug: string
-  title: string
-  summary: string | null
-  coverImageUrl: string | null
-  categoryId: string | null
-  categoryKey: string | null
-  categoryLabel: string
-  publishedAt: string | null
-  createdAt: string | null
-  sortTimestamp: number
-}
+import { createDb } from './db'
 
 export async function getVisibleCategoriesWithPosts() {
   const db = createDb()
@@ -54,7 +40,7 @@ export async function getVisibleCategoriesWithPosts() {
   })
 }
 
-export async function getSidebarPosts(categoryId: string) {
+export async function getSidebarPosts(categoryId: string): Promise<SidebarPost[]> {
   const db = createDb()
   return db.query.posts.findMany({
     where: (post, { and, eq }) => and(eq(post.categoryId, categoryId), eq(post.status, 'PUBLISHED')),
@@ -81,7 +67,7 @@ export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }
   }
   if (search) {
     const likeSearch = `%${search}%`
-    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)))
+    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)) as any)
   }
 
   const rows = await db
@@ -126,7 +112,7 @@ export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }
   })
 }
 
-export async function getPostBySlug(slug: string, options?: { includeDrafts?: boolean }) {
+export async function getPostBySlug(slug: string, options?: { includeDrafts?: boolean }): Promise<PostDetails | null> {
   const db = createDb()
   const cleanedSlug = normalizeSlug(slug)
   const post = await db.query.posts.findFirst({
@@ -161,7 +147,41 @@ export async function getPostBySlug(slug: string, options?: { includeDrafts?: bo
   return post
 }
 
-export async function getAllCategories() {
+export async function getPostById(id: string, options?: { includeDrafts?: boolean }): Promise<PostDetails | null> {
+  const db = createDb()
+  const post = await db.query.posts.findFirst({
+    where: (post, { eq }) => eq(post.id, id),
+    with: {
+      category: {
+        columns: {
+          id: true,
+          key: true,
+          sortOrder: true,
+          isVisible: true
+        }
+      },
+      author: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
+    }
+  })
+
+  if (!post) {
+    return null
+  }
+
+  if (!options?.includeDrafts && post.status !== 'PUBLISHED') {
+    return null
+  }
+
+  return post
+}
+
+export async function getAllCategories(): Promise<CategorySummary[]> {
   const db = createDb()
   return db.query.categories.findMany({
     orderBy: (category, { asc }) => asc(category.sortOrder),
@@ -188,7 +208,7 @@ export async function getPaginatedPosts({
   search,
   status = 'all',
   categoryId
-}: PaginatedPostOptions) {
+}: PaginatedPostOptions): Promise<PaginatedPostsResult> {
   const db = createDb()
   const conditions: SQL<unknown>[] = []
   if (status !== 'all') {
@@ -199,7 +219,7 @@ export async function getPaginatedPosts({
   }
   if (search) {
     const likeSearch = `%${search}%`
-    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)))
+    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)) as any)
   }
   const whereClause = conditions.length ? and(...conditions) : undefined
 
@@ -226,16 +246,12 @@ export async function getPaginatedPosts({
 
   const totalQuery = db.select({ value: count(posts.id) }).from(posts)
 
-  let filteredPostQuery = postQuery
-  let filteredTotalQuery = totalQuery
-  if (whereClause) {
-    filteredPostQuery = filteredPostQuery.where(whereClause)
-    filteredTotalQuery = filteredTotalQuery.where(whereClause)
-  }
+  const filteredPostQuery = whereClause ? postQuery.where(whereClause) : postQuery
+  const filteredTotalQuery = whereClause ? totalQuery.where(whereClause) : totalQuery
 
   const [rows, totalResult] = await Promise.all([filteredPostQuery, filteredTotalQuery])
 
-  const formattedPosts = rows.map(({ post, category, author }) => ({
+  const formattedPosts: PaginatedPostListItem[] = rows.map(({ post, category, author }) => ({
     ...post,
     category,
     author

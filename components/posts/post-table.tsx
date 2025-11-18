@@ -1,20 +1,18 @@
 'use client'
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
 import { deletePostAction, togglePostStatusAction } from '@/actions/posts'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
+import { Link, useRouter } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
 import { PostStatus } from '@/lib/db'
 
 import type { PostStatus as PostStatusType } from '@/lib/db'
-import type { getPaginatedPosts } from '@/lib/posts'
+import type { PaginatedPostListItem } from '@/lib/posts/types'
 
-
-type PostListItem = Awaited<ReturnType<typeof getPaginatedPosts>>['posts'][number]
+type PostListItem = PaginatedPostListItem
 
 interface PostTableProps {
   posts: PostListItem[]
@@ -99,8 +97,8 @@ export function PostTable({ posts }: PostTableProps) {
                       {post.title}
                     </Link>
                     <div className="text-xs text-muted-foreground">
-                      <Link href={`/content/${post.slug}`} target="_blank" rel="noreferrer">
-                        /content/{post.slug}
+                      <Link href={`/content/${post.id}`} target="_blank" rel="noreferrer">
+                        /content/{post.id}
                       </Link>
                     </div>
                   </div>

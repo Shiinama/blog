@@ -3,6 +3,24 @@
 import * as NProgress from 'nprogress'
 import * as React from 'react'
 
+const toAbsoluteURL = (url: string): string => {
+  return new URL(url, window.location.href).href
+}
+
+const isHashAnchor = (currentUrl: string, newUrl: string): boolean => {
+  const current = new URL(toAbsoluteURL(currentUrl))
+  const next = new URL(toAbsoluteURL(newUrl))
+  // 比较URL去掉哈希部分后是否相同
+  return current.href.split('#')[0] === next.href.split('#')[0]
+}
+
+const isSameHostName = (currentUrl: string, newUrl: string): boolean => {
+  const current = new URL(toAbsoluteURL(currentUrl))
+  const next = new URL(toAbsoluteURL(newUrl))
+  // 比较主机名（忽略www前缀）
+  return current.hostname.replace(/^www\./, '') === next.hostname.replace(/^www\./, '')
+}
+
 export type NextTopLoaderProps = {
   /**
    * Color for the TopLoader.
@@ -127,41 +145,6 @@ const NextTopLoader = ({
     </style>
   )
 
-  /**
-   * 将相对URL转换为绝对URL
-   * @param url {string} 需要转换的URL
-   * @returns {string} 转换后的绝对URL
-   */
-  const toAbsoluteURL = (url: string): string => {
-    return new URL(url, window.location.href).href
-  }
-
-  /**
-   * 检查URL是否为哈希锚点或同页面锚点
-   * @param currentUrl {string} 当前URL位置
-   * @param newUrl {string} 带有锚点的新URL
-   * @returns {boolean} 是否为哈希锚点
-   */
-  const isHashAnchor = (currentUrl: string, newUrl: string): boolean => {
-    const current = new URL(toAbsoluteURL(currentUrl))
-    const next = new URL(toAbsoluteURL(newUrl))
-    // 比较URL去掉哈希部分后是否相同
-    return current.href.split('#')[0] === next.href.split('#')[0]
-  }
-
-  /**
-   * 检查两个URL是否属于同一主机名
-   * @param currentUrl {string} 当前URL位置
-   * @param newUrl {string} 新URL
-   * @returns {boolean} 是否为同一主机名
-   */
-  const isSameHostName = (currentUrl: string, newUrl: string): boolean => {
-    const current = new URL(toAbsoluteURL(currentUrl))
-    const next = new URL(toAbsoluteURL(newUrl))
-    // 比较主机名（忽略www前缀）
-    return current.hostname.replace(/^www\./, '') === next.hostname.replace(/^www\./, '')
-  }
-
   React.useEffect((): ReturnType<React.EffectCallback> => {
     // 配置NProgress进度条的行为
     NProgress.configure({
@@ -277,10 +260,10 @@ const NextTopLoader = ({
             NProgress.start()
           }
         }
-      } catch (err) {
-        // 捕获错误并确保进度条完成
-        // 开发环境可以取消注释下面的日志
-        // console.log('NextTopLoader error: ', err);
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('NextTopLoader error:', error)
+        }
         NProgress.start()
         NProgress.done()
       }
@@ -342,7 +325,7 @@ const NextTopLoader = ({
       window.removeEventListener('pagehide', handlePageHide)
       window.removeEventListener('popstate', handleBackAndForth)
     }
-  }, [])
+  }, [crawl, crawlSpeed, easing, initialPosition, showForHashAnchor, showSpinner, speed, template])
 
   // 返回样式元素
   return styles
