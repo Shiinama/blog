@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
+import { AutoResizeTextarea } from '@/components/ui/textarea'
 
 interface MarkdownEditorProps {
   value: string
@@ -24,7 +24,7 @@ export function MarkdownEditor({ value, onChange, name, placeholder }: MarkdownE
         <TabsTrigger value="preview">预览</TabsTrigger>
       </TabsList>
       <TabsContent value="write">
-        <Textarea
+        <AutoResizeTextarea
           name={name}
           value={value}
           onChange={(event) => onChange(event.target.value)}

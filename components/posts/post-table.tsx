@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { Link, useRouter } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
-import { PostStatus } from '@/lib/db'
+import { useTranslations } from 'next-intl'
+import type { PostStatus } from '@/drizzle/schema'
 
-import type { PostStatus as PostStatusType } from '@/lib/db'
 import type { PaginatedPostListItem } from '@/lib/posts/types'
 
 type PostListItem = PaginatedPostListItem
@@ -18,31 +18,31 @@ interface PostTableProps {
   posts: PostListItem[]
 }
 
-const statusLabel: Record<PostStatusType, string> = {
-  [PostStatus.DRAFT]: '草稿',
-  [PostStatus.PUBLISHED]: '已发布'
-}
-
 export function PostTable({ posts }: PostTableProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [actionTarget, setActionTarget] = useState<{ type: 'delete' | 'toggle'; id: string } | null>(null)
   const [isPending, startTransition] = useTransition()
+  const t = useTranslations('admin')
+  const statusLabel: Record<PostStatus, string> = {
+    DRAFT: t('status.draft'),
+    PUBLISHED: t('status.published')
+  }
 
   const handleDelete = (id: string) => {
-    if (!confirm('确定要删除这篇文章吗？')) {
+    if (!confirm(t('posts.deleteConfirmation'))) {
       return
     }
     setActionTarget({ type: 'delete', id })
     startTransition(async () => {
       const result = await deletePostAction(id)
       if (result.status === 'success') {
-        toast({ title: '文章已删除' })
+        toast({ title: t('posts.deleteSuccess') })
         router.refresh()
       } else {
         toast({
-          title: '删除失败',
-          description: result.message ?? '请稍后再试',
+          title: t('posts.deleteFailed'),
+          description: result.message ?? t('posts.deleteFailedDescription'),
           variant: 'destructive'
         })
       }
@@ -51,17 +51,19 @@ export function PostTable({ posts }: PostTableProps) {
   }
 
   const handleToggle = (post: PostListItem) => {
-    const nextStatus = post.status === PostStatus.PUBLISHED ? PostStatus.DRAFT : PostStatus.PUBLISHED
+    const nextStatus = post.status === 'PUBLISHED' ? ('DRAFT' as PostStatus) : ('PUBLISHED' as PostStatus)
     setActionTarget({ type: 'toggle', id: post.id })
     startTransition(async () => {
       const result = await togglePostStatusAction(post.id, nextStatus)
       if (result.status === 'success') {
-        toast({ title: `已切换为${statusLabel[nextStatus]}` })
+        toast({
+          title: t('posts.statusSwitchSuccess', { status: statusLabel[nextStatus] })
+        })
         router.refresh()
       } else {
         toast({
-          title: '状态更新失败',
-          description: result.message ?? '请稍后重试',
+          title: t('posts.statusUpdateFailed'),
+          description: result.message ?? t('posts.statusUpdateFailedDescription'),
           variant: 'destructive'
         })
       }
@@ -70,7 +72,7 @@ export function PostTable({ posts }: PostTableProps) {
   }
 
   if (posts.length === 0) {
-    return <p className="text-sm text-muted-foreground">暂无文章</p>
+    return <p className="text-sm text-muted-foreground">{t('posts.empty')}</p>
   }
 
   return (
@@ -78,11 +80,11 @@ export function PostTable({ posts }: PostTableProps) {
       <table className="w-full border-collapse text-left text-sm">
         <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
           <tr>
-            <th className="px-4 py-3">标题</th>
-            <th className="px-4 py-3">分类</th>
-            <th className="px-4 py-3">状态</th>
-            <th className="px-4 py-3">更新时间</th>
-            <th className="px-4 py-3 text-right">操作</th>
+            <th className="px-4 py-3">{t('posts.table.headers.title')}</th>
+            <th className="px-4 py-3">{t('posts.table.headers.category')}</th>
+            <th className="px-4 py-3">{t('posts.table.headers.status')}</th>
+            <th className="px-4 py-3">{t('posts.table.headers.updated')}</th>
+            <th className="px-4 py-3 text-right">{t('posts.table.headers.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -103,11 +105,11 @@ export function PostTable({ posts }: PostTableProps) {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">{formatCategoryLabel(post.category?.key) || '未分类'}</td>
+                <td className="px-4 py-3">{formatCategoryLabel(post.category?.key) || t('posts.table.uncategorized')}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
-                      post.status === PostStatus.PUBLISHED ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-amber-100 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200'
+                      post.status === 'PUBLISHED' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-amber-100 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200'
                     }`}
                   >
                     {statusLabel[post.status]}
@@ -124,7 +126,7 @@ export function PostTable({ posts }: PostTableProps) {
                       onClick={() => handleToggle(post)}
                       disabled={pendingToggle}
                     >
-                      {post.status === PostStatus.PUBLISHED ? '转为草稿' : '发布'}
+                      {post.status === 'PUBLISHED' ? t('posts.actions.toDraft') : t('posts.actions.publish')}
                     </Button>
                     <Button
                       variant="destructive"
@@ -132,7 +134,7 @@ export function PostTable({ posts }: PostTableProps) {
                       onClick={() => handleDelete(post.id)}
                       disabled={pendingDelete}
                     >
-                      删除
+                      {t('posts.actions.delete')}
                     </Button>
                   </div>
                 </td>

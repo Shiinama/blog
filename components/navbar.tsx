@@ -4,6 +4,7 @@ import { Link } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 
 import { AuthButton } from './auth-button'
+import LanguageSwitcher from './language-switcher'
 import { NamedLogoWithLink } from './logo'
 import ToggleTheme from './toggle'
 import { buttonVariants } from './ui/button'
@@ -30,21 +31,11 @@ export default async function Navbar({
           {children ? children : <NamedLogoWithLink />}
         </div>
       )}
-      <div className="ml-auto flex items-center">
-        <Link
-          href={'/'}
-          className={buttonVariants({
-            className: 'px-2 text-sm font-medium',
-            variant: 'link',
-            size: 'sm'
-          })}
-        >
-          {t('common.home')}
-        </Link>
+      <div className="ml-auto flex items-center gap-4">
         <Link
           href={'/about'}
           className={buttonVariants({
-            className: 'px-2 text-sm font-medium',
+            className: 'text-sm font-medium',
             variant: 'link',
             size: 'sm'
           })}
@@ -53,6 +44,7 @@ export default async function Navbar({
         </Link>
         <AuthButton />
         <ToggleTheme />
+        <LanguageSwitcher />
       </div>
     </nav>
   )

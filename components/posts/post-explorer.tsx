@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Link } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
+import { useTranslations } from 'next-intl'
 
 import type { ExplorerPostRecord, ExplorerSortOption } from '@/lib/posts/types'
 
@@ -43,6 +44,9 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
   const [sortBy, setSortBy] = useState<ExplorerSortOption>('newest')
   const [isPending, startTransition] = useTransition()
   const hasInitialized = useRef(false)
+  const t = useTranslations('explorer')
+  const common = useTranslations('common')
+  const uncategorizedLabel = common('uncategorized')
 
   const labelLookup = useMemo(() => {
     return categories.reduce<Record<string, string>>((acc, category) => {
@@ -64,12 +68,12 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
           categoryId: selectedCategoryId === 'all' ? undefined : selectedCategoryId,
           sortBy
         })
-        setPosts(mapServerPostsToDisplay(response, labelLookup))
+        setPosts(mapServerPostsToDisplay(response, labelLookup, uncategorizedLabel))
       })
     }, 250)
 
     return () => clearTimeout(timeout)
-  }, [search, selectedCategoryId, sortBy, labelLookup, startTransition])
+  }, [search, selectedCategoryId, sortBy, labelLookup, startTransition, uncategorizedLabel])
 
   const hasActiveFilters = selectedCategoryId !== 'all' || Boolean(search.trim()) || sortBy !== 'newest'
 
@@ -78,23 +82,23 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
       <div className="border-border/60 border-t pt-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
           <label className="text-muted-foreground flex flex-1 flex-col gap-2 text-[0.65rem] font-semibold tracking-[0.4em] uppercase">
-            Search
+            {t('searchLabel')}
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Find by title, summary, or keyword"
+              placeholder={t('searchPlaceholder')}
               className="border-border/70 text-foreground h-10 rounded-none border-0 border-b bg-transparent px-0 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           </label>
           <div className="flex flex-col gap-4 sm:flex-row md:flex-none md:gap-6">
             <label className="text-muted-foreground flex flex-1 flex-col gap-2 text-[0.65rem] font-semibold tracking-[0.4em] uppercase">
-              Category
+              {t('categoryLabel')}
               <Select value={selectedCategoryId} onValueChange={(value) => setSelectedCategoryId(value)}>
                 <SelectTrigger className="border-border/70 text-foreground h-10 min-w-[180px] rounded-none border-0 border-b bg-transparent px-0 text-sm font-medium focus:ring-0">
-                  <SelectValue placeholder="All categories" />
+                  <SelectValue placeholder={t('categoryAll')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
+                  <SelectItem value="all">{t('categoryAll')}</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.label} ({category.count})
@@ -104,24 +108,22 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
               </Select>
             </label>
             <label className="text-muted-foreground flex flex-1 flex-col gap-2 text-[0.65rem] font-semibold tracking-[0.4em] uppercase">
-              Sort
+              {t('sortLabel')}
               <Select value={sortBy} onValueChange={(value: ExplorerSortOption) => setSortBy(value)}>
                 <SelectTrigger className="border-border/70 text-foreground h-10 min-w-40 rounded-none border-0 border-b bg-transparent px-0 text-sm font-medium focus:ring-0">
-                  <SelectValue placeholder="Newest first" />
+                  <SelectValue placeholder={t('sortPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="oldest">Oldest</SelectItem>
-                  <SelectItem value="alphabetical">A → Z</SelectItem>
+                  <SelectItem value="newest">{t('sortOptions.newest')}</SelectItem>
+                  <SelectItem value="oldest">{t('sortOptions.oldest')}</SelectItem>
+                  <SelectItem value="alphabetical">{t('sortOptions.alphabetical')}</SelectItem>
                 </SelectContent>
               </Select>
             </label>
           </div>
         </div>
         <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-4 text-[0.65rem] tracking-[0.35em] uppercase">
-          <span>
-            Showing {posts.length} article{posts.length === 1 ? '' : 's'}
-          </span>
+          <span>{t('stats', { count: posts.length })}</span>
           {hasActiveFilters && (
             <button
               type="button"
@@ -133,13 +135,13 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
               }}
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Reset
+              {t('reset')}
             </button>
           )}
           {isPending && (
             <span className="text-muted-foreground inline-flex items-center gap-2 text-[0.6rem] tracking-[0.4em] uppercase">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Updating
+              {t('updating')}
             </span>
           )}
         </div>
@@ -167,7 +169,7 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
                 className="text-primary hover:text-foreground inline-flex items-center gap-2 text-xs font-semibold transition"
               >
                 <ArrowUpRight className="h-4 w-4" />
-                <span>Read article</span>
+                <span>{t('readArticle')}</span>
               </Link>
             </div>
             {post.coverImageUrl && (
@@ -185,8 +187,8 @@ export function PostExplorer({ initialPosts, categories }: PostExplorerProps) {
         ))}
         {posts.length === 0 && (
           <div className="text-muted-foreground py-16 text-center text-sm">
-            <p className="text-foreground font-medium">Nothing matches yet.</p>
-            <p className="mt-2">Adjust the filters or clear the search.</p>
+            <p className="text-foreground font-medium">{t('empty.title')}</p>
+            <p className="mt-2">{t('empty.description')}</p>
           </div>
         )}
       </div>
@@ -210,12 +212,16 @@ function formatDate(date?: string | null) {
   }
 }
 
-function mapServerPostsToDisplay(records: ExplorerPostRecord[], labels: Record<string, string>): ExplorerPost[] {
+function mapServerPostsToDisplay(
+  records: ExplorerPostRecord[],
+  labels: Record<string, string>,
+  fallbackLabel: string
+): ExplorerPost[] {
   return records.map((record) => {
     const derivedLabel =
       (record.categoryId ? labels[record.categoryId] : undefined) ||
       formatCategoryLabel(record.categoryKey ?? undefined) ||
-      'Uncategorized'
+      fallbackLabel
     return {
       id: record.id,
       slug: record.slug,

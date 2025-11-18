@@ -1,6 +1,7 @@
 'use client'
 
 import { Github, Mail, Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 
@@ -8,6 +9,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 
 export default function LoginForm() {
+  const t = useTranslations('auth')
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState({
     google: false,
@@ -61,7 +63,7 @@ export default function LoginForm() {
             <path fill="none" d="M1 1h22v22H1z" />
           </svg>
         )}
-        Continue with Google
+        {t('login.google')}
       </Button>
 
       <Button
@@ -70,19 +72,21 @@ export default function LoginForm() {
         className="w-full bg-gray-900 font-semibold text-white shadow-md transition-all duration-200 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
       >
         {isLoading.github ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Github className="mr-2 h-5 w-5" />}
-        Continue with GitHub
+        {t('login.github')}
       </Button>
 
       <div className="relative my-6 flex items-center">
         <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
-        <span className="mx-4 flex-shrink text-xs uppercase text-gray-500 dark:text-gray-400">Or continue with</span>
+        <span className="mx-4 flex-shrink text-xs uppercase text-gray-500 dark:text-gray-400">
+          {t('login.orContinue')}
+        </span>
         <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
       </div>
 
       <form onSubmit={handleEmailSignIn} className="space-y-4">
         <Input
           type="email"
-          placeholder="Enter your email"
+          placeholder={t('login.emailPlaceholder')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -93,9 +97,9 @@ export default function LoginForm() {
           disabled={isLoading.email}
           className="w-full bg-gradient-to-r from-blue-500 to-blue-600 font-semibold text-white shadow-md transition-all duration-200 hover:from-blue-600 hover:to-blue-700 dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800"
         >
-          {isLoading.email ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-5 w-5" />}
-          Sign in with Email
-        </Button>
+        {isLoading.email ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-5 w-5" />}
+        {t('login.emailButton')}
+      </Button>
       </form>
     </div>
   )

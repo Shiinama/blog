@@ -10,8 +10,8 @@ import type { AsyncRemoteCallback, SqliteRemoteDatabase } from 'drizzle-orm/sqli
 
 import { locales } from '@/i18n/routing'
 import { d1HttpDriver } from '@/lib/db/d1-http-driver'
-import * as schema from '@/lib/db/schema'
-import { postTranslations, posts } from '@/lib/db/schema'
+import * as schema from '@/drizzle/schema'
+import { postTranslations, posts } from '@/drizzle/schema'
 
 type MissingTask = {
   postId: string

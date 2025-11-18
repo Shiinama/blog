@@ -10,7 +10,7 @@ export const metadata = {
 }
 
 export default async function ContentPage() {
-  const t = await getTranslations('article')
+  const [articleT, homeT] = await Promise.all([getTranslations('article'), getTranslations('home')])
   const categories = await getVisibleCategoriesWithPosts()
 
   const localizedCategories = categories.map((category) => {
@@ -18,7 +18,7 @@ export default async function ContentPage() {
     let label = fallbackLabel
     if (category.key) {
       try {
-        label = t(category.key as any)
+        label = articleT(category.key as any)
       } catch {
         label = fallbackLabel
       }
@@ -67,23 +67,22 @@ export default async function ContentPage() {
     <>
       <div className="mx-auto w-full max-w-5xl px-4 pt-8 pb-14 sm:px-6 lg:px-8 lg:pt-12">
         <header className="space-y-3.5">
-          <p className="text-muted-foreground text-[0.6rem] font-semibold tracking-[0.45em] uppercase">Notebook</p>
+          <p className="text-muted-foreground text-[0.6rem] font-semibold tracking-[0.45em] uppercase">
+            {homeT('heroBadge')}
+          </p>
           <div className="space-y-2">
             <h1 className="text-foreground text-2xl leading-tight font-semibold sm:text-3xl">
-              Curated strategies for thoughtful builders
+              {homeT('heroTitle')}
             </h1>
-            <p className="text-muted-foreground text-sm sm:text-[0.95rem]">
-              Long-form notes, implementation guides, and research summaries collected in one quiet reading list. Use
-              the filters below to cut directly to what you need.
-            </p>
+            <p className="text-muted-foreground text-sm sm:text-[0.95rem]">{homeT('heroDescription')}</p>
           </div>
           <dl className="text-muted-foreground flex flex-wrap gap-5 text-[0.7rem]">
             <div>
-              <dt className="tracking-[0.35em] uppercase">Articles</dt>
+              <dt className="tracking-[0.35em] uppercase">{homeT('stats.articlesLabel')}</dt>
               <dd className="text-foreground mt-1 text-xl font-semibold">{totalPosts}</dd>
             </div>
             <div>
-              <dt className="tracking-[0.35em] uppercase">Categories</dt>
+              <dt className="tracking-[0.35em] uppercase">{homeT('stats.categoriesLabel')}</dt>
               <dd className="text-foreground mt-1 text-xl font-semibold">{explorerCategories.length}</dd>
             </div>
           </dl>

@@ -8,11 +8,12 @@ import { MarkdownEditor } from '@/components/posts/markdown-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { AutoResizeTextarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useRouter } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
-import { PostStatus } from '@/lib/db'
+import type { PostStatus } from '@/drizzle/schema'
+import { useTranslations } from 'next-intl'
 
 import type { CategorySummary, PostDetails } from '@/lib/posts/types'
 
@@ -25,11 +26,6 @@ interface PostFormProps {
   categories: CategorySummary[]
 }
 
-const statusOptions = [
-  { label: '草稿', value: PostStatus.DRAFT },
-  { label: '已发布', value: PostStatus.PUBLISHED }
-]
-
 function formatDateValue(date?: Date | null) {
   if (!date) return ''
   const iso = new Date(date).toISOString()
@@ -39,28 +35,33 @@ function formatDateValue(date?: Date | null) {
 export function PostForm({ post, categories }: PostFormProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const t = useTranslations('admin')
   const [content, setContent] = useState(post?.content ?? '')
   const [tagsValue, setTagsValue] = useState(post?.tags?.join(', ') ?? '')
   const [state, formAction] = useFormState(savePostAction, initialPostFormState)
   const [isDeleting, startDelete] = useTransition()
+  const statusOptions = [
+    { label: t('status.draft'), value: 'DRAFT' as PostStatus },
+    { label: t('status.published'), value: 'PUBLISHED' as PostStatus }
+  ]
 
   useEffect(() => {
     if (state.status === 'success') {
       toast({
-        title: '内容已保存',
-        description: '文章保存成功'
+        title: t('form.saveSuccessTitle'),
+        description: t('form.saveSuccessDescription')
       })
       if (state.redirectTo) {
         router.replace(state.redirectTo)
       }
-    } else if (state.status === 'error' && state.message) {
+    } else if (state.status === 'error') {
       toast({
-        title: '保存失败',
-        description: state.message,
+        title: t('form.saveFailedTitle'),
+        description: state.message ?? t('form.saveFailedDescription'),
         variant: 'destructive'
       })
     }
-  }, [state, router, toast])
+  }, [state, router, toast, t])
 
   const categoryOptions = useMemo(
     () =>
@@ -73,18 +74,18 @@ export function PostForm({ post, categories }: PostFormProps) {
 
   const handleDelete = () => {
     if (!post) return
-    if (!confirm('确定要删除这篇文章吗？此操作不可恢复。')) {
+    if (!confirm(t('form.deleteConfirmation'))) {
       return
     }
     startDelete(async () => {
       const result = await deletePostAction(post.id)
       if (result.status === 'success') {
-        toast({ title: '文章已删除' })
+        toast({ title: t('form.deleteSuccess') })
         router.replace('/admin/posts')
       } else {
         toast({
-          title: '删除失败',
-          description: result.message ?? '请稍后重试',
+          title: t('form.deleteFailed'),
+          description: result.message ?? t('form.deleteFailedDescription'),
           variant: 'destructive'
         })
       }
@@ -98,19 +99,31 @@ export function PostForm({ post, categories }: PostFormProps) {
       <input type="hidden" name="postId" value={post?.id ?? ''} />
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <Label htmlFor="title">标题</Label>
-          <Input id="title" name="title" defaultValue={post?.title} placeholder="请输入标题" required />
+          <Label htmlFor="title">{t('form.fields.title')}</Label>
+          <Input
+            id="title"
+            name="title"
+            defaultValue={post?.title}
+            placeholder={t('form.placeholders.title')}
+            required
+          />
           {fieldError('title') && <p className="text-sm text-destructive">{fieldError('title')}</p>}
         </div>
         <div>
-          <Label htmlFor="slug">Slug</Label>
-          <Input id="slug" name="slug" defaultValue={post?.slug} placeholder="app/your-article" required />
+          <Label htmlFor="slug">{t('form.fields.slug')}</Label>
+          <Input
+            id="slug"
+            name="slug"
+            defaultValue={post?.slug}
+            placeholder={t('form.placeholders.slug')}
+            required
+          />
           {fieldError('slug') && <p className="text-sm text-destructive">{fieldError('slug')}</p>}
         </div>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <Label htmlFor="categoryId">分类</Label>
+          <Label htmlFor="categoryId">{t('form.fields.category')}</Label>
           <select
             id="categoryId"
             name="categoryId"
@@ -118,7 +131,7 @@ export function PostForm({ post, categories }: PostFormProps) {
             className="mt-2 w-full rounded-md border bg-background p-2"
             required
           >
-            <option value="">选择文章归属分类</option>
+            <option value="">{t('form.placeholders.category')}</option>
             {categoryOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -128,11 +141,11 @@ export function PostForm({ post, categories }: PostFormProps) {
           {fieldError('categoryId') && <p className="text-sm text-destructive">{fieldError('categoryId')}</p>}
         </div>
         <div>
-          <Label htmlFor="status">状态</Label>
+          <Label htmlFor="status">{t('form.fields.status')}</Label>
           <select
             id="status"
             name="status"
-            defaultValue={post?.status ?? PostStatus.DRAFT}
+            defaultValue={post?.status ?? 'DRAFT'}
             className="mt-2 w-full rounded-md border bg-background p-2"
             required
           >
@@ -146,18 +159,23 @@ export function PostForm({ post, categories }: PostFormProps) {
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <Label htmlFor="coverImageUrl">封面图 URL</Label>
-          <Input id="coverImageUrl" name="coverImageUrl" defaultValue={post?.coverImageUrl ?? ''} placeholder="https://..." />
+          <Label htmlFor="coverImageUrl">{t('form.fields.coverImageUrl')}</Label>
+          <Input
+            id="coverImageUrl"
+            name="coverImageUrl"
+            defaultValue={post?.coverImageUrl ?? ''}
+            placeholder={t('form.placeholders.coverImageUrl')}
+          />
           {fieldError('coverImageUrl') && <p className="text-sm text-destructive">{fieldError('coverImageUrl')}</p>}
         </div>
         <div>
-          <Label htmlFor="tags">标签（逗号分隔）</Label>
+          <Label htmlFor="tags">{t('form.fields.tags')}</Label>
           <Input id="tags" name="tags" value={tagsValue} onChange={(event) => setTagsValue(event.target.value)} />
         </div>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
         <div>
-          <Label htmlFor="sortOrder">排序权重</Label>
+          <Label htmlFor="sortOrder">{t('form.fields.sortOrder')}</Label>
           <Input
             id="sortOrder"
             name="sortOrder"
@@ -167,41 +185,42 @@ export function PostForm({ post, categories }: PostFormProps) {
           />
         </div>
         <div>
-          <Label htmlFor="language">语言</Label>
+          <Label htmlFor="language">{t('form.fields.language')}</Label>
           <Input id="language" name="language" defaultValue={post?.language ?? 'zh'} />
         </div>
         <div>
-          <Label htmlFor="publishedAt">发布时间</Label>
+          <Label htmlFor="publishedAt">{t('form.fields.publishedAt')}</Label>
           <Input id="publishedAt" name="publishedAt" type="datetime-local" defaultValue={formatDateValue(post?.publishedAt)} />
         </div>
       </div>
       <div>
-        <Label htmlFor="summary">摘要</Label>
-        <Textarea
+        <Label htmlFor="summary">{t('form.fields.summary')}</Label>
+        <AutoResizeTextarea
           id="summary"
           name="summary"
           defaultValue={post?.summary ?? ''}
-          placeholder="用于列表展示与 SEO 的简介..."
-          rows={4}
+          placeholder={t('form.placeholders.summary')}
+          minRows={4}
+          maxRows={8}
         />
       </div>
       <div className="space-y-2">
-        <Label>正文内容</Label>
+        <Label>{t('form.fields.content')}</Label>
         <MarkdownEditor
           name="content"
           value={content}
           onChange={setContent}
-          placeholder="使用 Markdown/MDX 进行写作..."
+          placeholder={t('form.placeholders.content')}
         />
         {fieldError('content') && <p className="text-sm text-destructive">{fieldError('content')}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <Button type="submit" disabled={state.status === 'success'}>
-          保存文章
+          {t('form.actions.save')}
         </Button>
         {post && (
           <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? '删除中...' : '删除文章'}
+            {isDeleting ? t('form.actions.deleting') : t('form.actions.delete')}
           </Button>
         )}
       </div>

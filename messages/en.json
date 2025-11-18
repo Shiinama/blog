@@ -28,7 +28,11 @@
     "username": "Username",
     "currentTier": "Current Tier",
     "loginIn": "Login",
-    "signout": "Sign Out"
+    "signout": "Sign Out",
+    "language": "Language",
+    "toggleTheme": "Toggle theme",
+    "uncategorized": "Uncategorized",
+    "adminPanel": "Admin Dashboard"
   },
   "article": {
     "life": "Life",
@@ -45,5 +49,156 @@
     "fontEnd":"fontEnd",
     "interview":"interview",
     "flutter":"flutter"
+  },
+  "admin": {
+    "layout": {
+      "welcome": "Welcome back, {name}",
+      "title": "Content management",
+      "backHome": "Back to home"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published"
+    },
+    "posts": {
+      "description": "Manage all posts in one place with search and filters.",
+      "title": "Post list",
+      "actions": {
+        "newPost": "Write new post",
+        "toDraft": "Switch to draft",
+        "publish": "Publish",
+        "delete": "Delete"
+      },
+      "filters": {
+        "searchLabel": "Search",
+        "searchPlaceholder": "Title or summary keywords",
+        "statusLabel": "Status",
+        "statusOptions": {
+          "all": "All",
+          "published": "Published",
+          "draft": "Draft"
+        },
+        "categoryLabel": "Category",
+        "categoryOptions": {
+          "all": "All"
+        },
+        "apply": "Apply filters"
+      },
+      "pagination": {
+        "caption": "Page {page} / {totalPages} ({total} posts)",
+        "prev": "Previous",
+        "next": "Next"
+      },
+      "deleteConfirmation": "Are you sure you want to delete this post? This action cannot be undone.",
+      "deleteSuccess": "Post deleted",
+      "deleteFailed": "Failed to delete post",
+      "deleteFailedDescription": "Please try again later.",
+      "statusSwitchSuccess": "Switched to {status}",
+      "statusUpdateFailed": "Failed to update status",
+      "statusUpdateFailedDescription": "Please try again later.",
+      "empty": "No posts available.",
+      "table": {
+        "headers": {
+          "title": "Title",
+          "category": "Category",
+          "status": "Status",
+          "updated": "Updated at",
+          "actions": "Actions"
+        },
+        "uncategorized": "Uncategorized"
+      },
+      "new": {
+        "description": "Create a new article",
+        "title": "Compose content"
+      }
+    },
+    "form": {
+      "saveSuccessTitle": "Content saved",
+      "saveSuccessDescription": "Post saved successfully",
+      "saveFailedTitle": "Save failed",
+      "saveFailedDescription": "Please try again later.",
+      "deleteConfirmation": "Are you sure you want to delete this post? This action cannot be undone.",
+      "deleteSuccess": "Post deleted",
+      "deleteFailed": "Failed to delete post",
+      "deleteFailedDescription": "Please try again later.",
+      "fields": {
+        "title": "Title",
+        "slug": "Slug",
+        "category": "Category",
+        "status": "Status",
+        "coverImageUrl": "Cover image URL",
+        "tags": "Tags (comma separated)",
+        "sortOrder": "Sort weight",
+        "language": "Language",
+        "publishedAt": "Published at",
+        "summary": "Summary",
+        "content": "Content"
+      },
+      "placeholders": {
+        "title": "Enter a title",
+        "slug": "app/your-article",
+        "category": "Select the category",
+        "coverImageUrl": "https://...",
+        "summary": "Short intro for lists & SEO...",
+        "content": "Write using Markdown/MDX..."
+      },
+      "actions": {
+        "save": "Save post",
+        "deleting": "Deleting...",
+        "delete": "Delete post"
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "page": {
+        "title": "Welcome to 鱼的杂记",
+        "description": "Sign in to continue your journey"
+      },
+      "google": "Continue with Google",
+      "github": "Continue with GitHub",
+      "orContinue": "Or continue with",
+      "emailPlaceholder": "Enter your email",
+      "emailButton": "Sign in with Email"
+    }
+  },
+  "content": {
+    "metadata": {
+      "published": "Published",
+      "readingTime": "Reading Time",
+      "author": "Author"
+    },
+    "updated": "Updated {date}",
+    "coverImage": "Cover image"
+  },
+  "explorer": {
+    "searchLabel": "Search",
+    "searchPlaceholder": "Find by title, summary, or keyword",
+    "categoryLabel": "Category",
+    "categoryAll": "All categories",
+    "sortLabel": "Sort",
+    "sortPlaceholder": "Newest first",
+    "sortOptions": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "alphabetical": "A → Z"
+    },
+    "stats": "{count, plural, one {Showing # article} other {Showing # articles}}",
+    "reset": "Reset",
+    "updating": "Updating",
+    "readArticle": "Read article",
+    "empty": {
+      "title": "Nothing matches yet.",
+      "description": "Adjust the filters or clear the search."
+    }
+  },
+  "home": {
+    "heroBadge": "Notebook",
+    "heroTitle": "Curated strategies for thoughtful builders",
+    "heroDescription": "Long-form notes, implementation guides, and research summaries collected in one quiet reading list. Use the filters below to cut directly to what you need.",
+    "stats": {
+      "articlesLabel": "Articles",
+      "categoriesLabel": "Categories"
+    }
   }
 }

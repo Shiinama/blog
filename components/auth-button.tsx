@@ -20,31 +20,33 @@ export function AuthButton() {
   }
 
   const user = session.data?.user
+  const isAdmin = ((user ?? {}) as { role?: string }).role === 'ADMIN'
+  const planType = ((user ?? {}) as { subscription?: { planType?: string } }).subscription?.planType
 
   if (session.status === 'unauthenticated')
     return (
-      <Button className="px-2 text-sm font-medium" onClick={handleSignInOrOut} variant="link" size="sm">
+      <Button className="text-sm font-medium" onClick={handleSignInOrOut} variant="link" size="sm">
         {t('common.loginIn')}
       </Button>
     )
 
   return (
     <div className="flex items-center gap-2">
-      {user?.role === 'ADMIN' && (
+      {isAdmin && (
         <Link
           href="/admin/posts"
           className={buttonVariants({
-            className: 'px-2 text-sm font-medium',
+            className: 'text-sm font-medium',
             variant: 'link',
             size: 'sm'
           })}
         >
-          管理后台
+          {t('common.adminPanel')}
         </Link>
       )}
       <Dialog>
         <DialogTrigger asChild>
-          <Button className="px-2 text-sm font-medium" variant="link" size="sm">
+          <Button className="text-sm font-medium" variant="link" size="sm">
             {t('common.myAccount')}
           </Button>
         </DialogTrigger>
@@ -63,7 +65,7 @@ export function AuthButton() {
             </div>
             <div className="gap-1.5">
               <Label>{t('common.currentTier')}</Label>
-              <div className="ml-2 capitalize text-muted-foreground">{user?.subscription?.planType}</div>
+              <div className="ml-2 capitalize text-muted-foreground">{planType}</div>
             </div>
             <Button
               className="w-24 self-end"

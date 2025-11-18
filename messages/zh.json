@@ -27,7 +27,11 @@
     "username": "用户名",
     "currentTier": "当前等级",
     "signout": "退出",
-    "loginIn": "登录"
+    "loginIn": "登录",
+    "language": "语言",
+    "toggleTheme": "切换主题",
+    "uncategorized": "未分类",
+    "adminPanel": "管理后台"
   },
   "article": {
     "seo": "搜索引擎优化",
@@ -44,5 +48,156 @@
     "fontEnd": "前端",
     "interview": "面试",
     "flutter": "flutter移动开发"
+  },
+  "admin": {
+    "layout": {
+      "welcome": "欢迎回来，{name}",
+      "title": "内容管理",
+      "backHome": "返回首页"
+    },
+    "status": {
+      "draft": "草稿",
+      "published": "已发布"
+    },
+    "posts": {
+      "description": "集中管理所有文章，支持搜索与筛选。",
+      "title": "文章列表",
+      "actions": {
+        "newPost": "撰写新文章",
+        "toDraft": "改为草稿",
+        "publish": "发布",
+        "delete": "删除"
+      },
+      "filters": {
+        "searchLabel": "搜索",
+        "searchPlaceholder": "标题或摘要关键字",
+        "statusLabel": "状态",
+        "statusOptions": {
+          "all": "全部",
+          "published": "已发布",
+          "draft": "草稿"
+        },
+        "categoryLabel": "分类",
+        "categoryOptions": {
+          "all": "全部"
+        },
+        "apply": "应用筛选"
+      },
+      "pagination": {
+        "caption": "第 {page} / {totalPages} 页（共 {total} 篇文章）",
+        "prev": "上一页",
+        "next": "下一页"
+      },
+      "deleteConfirmation": "确定要删除这篇文章吗？此操作不可恢复。",
+      "deleteSuccess": "文章已删除",
+      "deleteFailed": "删除失败",
+      "deleteFailedDescription": "请稍后再试。",
+      "statusSwitchSuccess": "已切换为 {status}",
+      "statusUpdateFailed": "状态更新失败",
+      "statusUpdateFailedDescription": "请稍后再试。",
+      "empty": "暂无文章。",
+      "table": {
+        "headers": {
+          "title": "标题",
+          "category": "分类",
+          "status": "状态",
+          "updated": "更新时间",
+          "actions": "操作"
+        },
+        "uncategorized": "未分类"
+      },
+      "new": {
+        "description": "创建新文章",
+        "title": "撰写内容"
+      }
+    },
+    "form": {
+      "saveSuccessTitle": "内容已保存",
+      "saveSuccessDescription": "文章保存成功",
+      "saveFailedTitle": "保存失败",
+      "saveFailedDescription": "请稍后再试。",
+      "deleteConfirmation": "确定要删除这篇文章吗？此操作不可恢复。",
+      "deleteSuccess": "文章已删除",
+      "deleteFailed": "删除失败",
+      "deleteFailedDescription": "请稍后再试。",
+      "fields": {
+        "title": "标题",
+        "slug": "Slug",
+        "category": "分类",
+        "status": "状态",
+        "coverImageUrl": "封面图 URL",
+        "tags": "标签（用逗号分隔）",
+        "sortOrder": "排序权重",
+        "language": "语言",
+        "publishedAt": "发布时间",
+        "summary": "摘要",
+        "content": "正文内容"
+      },
+      "placeholders": {
+        "title": "请输入标题",
+        "slug": "app/your-article",
+        "category": "选择文章归属分类",
+        "coverImageUrl": "https://...",
+        "summary": "用于列表与 SEO 的简介...",
+        "content": "使用 Markdown/MDX 进行写作..."
+      },
+      "actions": {
+        "save": "保存文章",
+        "deleting": "删除中...",
+        "delete": "删除文章"
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "page": {
+        "title": "欢迎来到鱼的杂记",
+        "description": "登录以继续你的旅程"
+      },
+      "google": "使用 Google 登录",
+      "github": "使用 GitHub 登录",
+      "orContinue": "或使用以下方式继续",
+      "emailPlaceholder": "输入你的邮箱",
+      "emailButton": "使用邮箱登录"
+    }
+  },
+  "content": {
+    "metadata": {
+      "published": "发布时间",
+      "readingTime": "阅读时间",
+      "author": "作者"
+    },
+    "updated": "更新于 {date}",
+    "coverImage": "封面图"
+  },
+  "explorer": {
+    "searchLabel": "搜索",
+    "searchPlaceholder": "按标题、摘要或关键词查找",
+    "categoryLabel": "分类",
+    "categoryAll": "全部分类",
+    "sortLabel": "排序",
+    "sortPlaceholder": "按发布时间排序",
+    "sortOptions": {
+      "newest": "最新",
+      "oldest": "最旧",
+      "alphabetical": "字母顺序"
+    },
+    "stats": "{count, plural, one {显示 # 篇文章} other {显示 # 篇文章}}",
+    "reset": "重置",
+    "updating": "更新中",
+    "readArticle": "阅读文章",
+    "empty": {
+      "title": "暂无匹配结果",
+      "description": "调整筛选或清空搜索词"
+    }
+  },
+  "home": {
+    "heroBadge": "手记",
+    "heroTitle": "为深思熟虑的构建者整理的策略",
+    "heroDescription": "长篇笔记、实施指南与研究总结被收集在一个安静的阅读列表中。使用下方筛选器直接找到你需要的内容。",
+    "stats": {
+      "articlesLabel": "文章",
+      "categoriesLabel": "分类"
+    }
   }
 }

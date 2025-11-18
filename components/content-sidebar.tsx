@@ -31,6 +31,7 @@ interface ContentSidebarProps {
 export function ContentSidebar({ categoryKey, items }: ContentSidebarProps) {
   const t = useTranslations('article')
   const common = useTranslations('common')
+  const uncategorizedLabel = common('uncategorized')
   const pathname = usePathname()
   const { setTheme, theme } = useTheme()
 
@@ -38,7 +39,7 @@ export function ContentSidebar({ categoryKey, items }: ContentSidebarProps) {
     setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
-  let currentCategoryLabel = formatCategoryLabel(categoryKey) || 'Uncategorized'
+  let currentCategoryLabel = formatCategoryLabel(categoryKey) || uncategorizedLabel
   if (categoryKey) {
     try {
       const translated = t(categoryKey as any)
@@ -91,7 +92,7 @@ export function ContentSidebar({ categoryKey, items }: ContentSidebarProps) {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton>
-                <span onClick={toggleTheme}>切换主题</span>
+                <span onClick={toggleTheme}>{common('toggleTheme')}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

@@ -60,7 +60,11 @@ async function getPostFromParams({ params }: { params: Promise<DocPageProps> }) 
 // }
 
 export default async function DocPage({ params }: { params: Promise<DocPageProps> }) {
-  const [post, t] = await Promise.all([getPostFromParams({ params }), getTranslations('article')])
+  const [post, articleT, contentT] = await Promise.all([
+    getPostFromParams({ params }),
+    getTranslations('article'),
+    getTranslations('content')
+  ])
 
   if (!post) {
     notFound()
@@ -71,7 +75,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   let categoryLabel = fallbackCategoryLabel
   if (post.category?.key) {
     try {
-      categoryLabel = t(post.category.key)
+      categoryLabel = articleT(post.category.key)
     } catch {
       categoryLabel = fallbackCategoryLabel
     }
@@ -89,15 +93,15 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   const authorName = post.author?.name ?? siteConfig.name
   const metadataHighlights = [
     {
-      label: 'Published',
+      label: contentT('metadata.published'),
       value: formattedPublishedDate ?? '—'
     },
     {
-      label: 'Reading Time',
+      label: contentT('metadata.readingTime'),
       value: `${readingTime} min read`
     },
     {
-      label: 'Author',
+      label: contentT('metadata.author'),
       value: authorName
     }
   ]
@@ -106,10 +110,12 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
     <div className="bg-background">
       <div className="mx-auto min-h-screen w-full max-w-5xl px-4 pt-8 pb-14 sm:px-6 lg:px-8">
         <header className="border-border/60 space-y-5 border-b pb-8">
-          <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-[11px] font-semibold tracking-[0.35em] uppercase">
-            <span>{categoryLabel}</span>
-            {formattedPublishedDate && <time dateTime={publishedDateISO}>Updated {formattedPublishedDate}</time>}
-          </div>
+            <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-[11px] font-semibold tracking-[0.35em] uppercase">
+              <span>{categoryLabel}</span>
+              {formattedPublishedDate && (
+                <time dateTime={publishedDateISO}>{contentT('updated', { date: formattedPublishedDate })}</time>
+              )}
+            </div>
           <div className="space-y-4">
             <h1 className="text-foreground text-3xl leading-tight font-semibold sm:text-4xl">{post.title}</h1>
             {post.summary && <p className="text-muted-foreground text-base sm:text-lg">{post.summary}</p>}
@@ -137,7 +143,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
               />
             </div>
             <figcaption className="text-muted-foreground mt-3 text-xs tracking-[0.3em] uppercase">
-              Cover image
+              {contentT('coverImage')}
             </figcaption>
           </figure>
         )}

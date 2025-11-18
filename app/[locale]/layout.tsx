@@ -10,7 +10,7 @@ import type { ReactNode } from 'react'
 
 type LocaleLayoutProps = Readonly<{
   children: ReactNode
-  params: Promise<{ locale: 'zh' | 'en' }>
+  params: Promise<{ locale: string }>
 }>
 
 export function generateStaticParams() {
