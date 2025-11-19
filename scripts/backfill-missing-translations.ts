@@ -131,7 +131,6 @@ const getDbClient = (mode: ExecutionMode) => {
   if (mode !== 'remote') {
     const localFile = findSqliteFile()
     if (localFile) {
-      console.log(`Using local SQLite database: ${localFile}`)
       return openLocalDb(localFile)
     }
 
