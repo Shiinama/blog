@@ -130,7 +130,8 @@
     "unist-util-visit": "^5.0.0",
     "vaul": "^1.1.2",
     "zod": "^4.1.12",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "wrangler": "^4.47.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251115.0",
@@ -168,7 +169,6 @@
     "tailwindcss": "^4.1.17",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "wrangler": "^4.47.0",
     "yargs": "^18.0.0"
   }
 }
