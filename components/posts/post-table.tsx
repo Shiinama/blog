@@ -1,20 +1,17 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
+import { useRef, useState, useTransition } from 'react'
 
-import {
-  deletePostAction,
-  togglePostStatusAction,
-  updatePostPublishedAtAction
-} from '@/actions/posts'
+import { deletePostAction, togglePostStatusAction, updatePostPublishedAtAction } from '@/actions/posts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
-import { Link, useRouter } from '@/i18n/navigation'
+import useRouter from '@/hooks/use-router'
+import { Link } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
-import { useTranslations } from 'next-intl'
-import type { PostStatus } from '@/drizzle/schema'
 
+import type { PostStatus } from '@/drizzle/schema'
 import type { PaginatedPostListItem } from '@/lib/posts/types'
 
 type PostListItem = PaginatedPostListItem
@@ -120,13 +117,13 @@ export function PostTable({ posts }: PostTableProps) {
   }
 
   if (posts.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t('posts.empty')}</p>
+    return <p className="text-muted-foreground text-sm">{t('posts.empty')}</p>
   }
 
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full border-separate text-left text-sm">
-        <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        <thead className="text-muted-foreground bg-slate-50 text-[11px] tracking-[0.18em] uppercase">
           <tr>
             <th className="px-4 py-3">{t('posts.table.headers.title')}</th>
             <th className="px-4 py-3">{t('posts.table.headers.category')}</th>
@@ -140,23 +137,19 @@ export function PostTable({ posts }: PostTableProps) {
           {posts.map((post) => {
             const pendingDelete = actionTarget?.type === 'delete' && actionTarget.id === post.id && isPending
             const pendingToggle = actionTarget?.type === 'toggle' && actionTarget.id === post.id && isPending
-            const pendingPublishTime =
-              actionTarget?.type === 'publishTime' && actionTarget.id === post.id && isPending
+            const pendingPublishTime = actionTarget?.type === 'publishTime' && actionTarget.id === post.id && isPending
             return (
               <tr key={post.id} className="border-t bg-white transition hover:bg-slate-50">
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-1">
-                    <Link href={`/admin/posts/${post.slug}`} className="font-medium text-primary hover:underline">
+                    <Link href={`/admin/posts/${post.id}`} className="text-primary font-medium hover:underline">
                       {post.title}
                     </Link>
-                    <div className="text-xs text-muted-foreground">
-                      <Link href={`/content/${post.id}`} target="_blank" rel="noreferrer">
-                        /content/{post.id}
-                      </Link>
-                    </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">{formatCategoryLabel(post.category?.key) || t('posts.table.uncategorized')}</td>
+                <td className="px-4 py-3">
+                  {formatCategoryLabel(post.category?.key) || t('posts.table.uncategorized')}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
@@ -168,7 +161,7 @@ export function PostTable({ posts }: PostTableProps) {
                     {statusLabel[post.status]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">
+                <td className="text-muted-foreground px-4 py-3 text-sm">
                   {formatLocaleDate(post.updatedAt ?? post.createdAt)}
                 </td>
                 <td className="px-4 py-3">
@@ -183,6 +176,11 @@ export function PostTable({ posts }: PostTableProps) {
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleToggle(post)} disabled={pendingToggle}>
                       {post.status === 'PUBLISHED' ? t('posts.actions.toDraft') : t('posts.actions.publish')}
+                    </Button>
+                    <Button asChild size="sm" variant="ghost">
+                      <Link href={`/content/${post.id}`} target="_blank" rel="noopener noreferrer">
+                        {t('posts.actions.preview')}
+                      </Link>
                     </Button>
                     <Button
                       variant="destructive"
@@ -211,22 +209,25 @@ interface PublishTimeFieldProps {
 }
 
 function PublishTimeField({ post, buttonLabel, onSave, isSaving }: PublishTimeFieldProps) {
-  const [value, setValue] = useState(() => formatDateTimeForInput(post.publishedAt ?? post.updatedAt ?? post.createdAt))
+  const inputRef = useRef<HTMLInputElement>(null)
+  const initialValue = formatDateTimeForInput(post.publishedAt ?? post.updatedAt ?? post.createdAt)
 
-  useEffect(() => {
-    setValue(formatDateTimeForInput(post.publishedAt ?? post.updatedAt ?? post.createdAt))
-  }, [post.publishedAt, post.updatedAt, post.createdAt])
+  const handleSave = () => {
+    const nextValue = inputRef.current?.value ?? initialValue
+    onSave(post, nextValue)
+  }
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Input
+          ref={inputRef}
+          key={post.id}
           type="datetime-local"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
+          defaultValue={initialValue}
           className="h-8 min-w-[170px] text-xs transition"
         />
-        <Button size="sm" variant="outline" onClick={() => onSave(post, value)} disabled={isSaving}>
+        <Button size="sm" variant="outline" onClick={handleSave} disabled={isSaving}>
           {buttonLabel}
         </Button>
       </div>

@@ -68,8 +68,10 @@ declare const messages: {
       "title": "Post list",
       "actions": {
         "newPost": "Write new post",
+        "edit": "Edit post",
         "toDraft": "Switch to draft",
         "publish": "Publish",
+        "preview": "Preview",
         "delete": "Delete",
         "updatePublishTime": "Update publish time"
       },
@@ -154,8 +156,16 @@ declare const messages: {
       },
       "actions": {
         "save": "Save post",
+        "saveDraft": "Save draft",
+        "publish": "Publish post",
+        "cancel": "Cancel",
         "deleting": "Deleting...",
         "delete": "Delete post"
+      },
+      "publishModal": {
+        "title": "Finalize publishing",
+        "description": "Double-check the slug, metadata, and summary before going live.",
+        "help": "Summary defaults to the first 100 characters of your article."
       }
     }
   },

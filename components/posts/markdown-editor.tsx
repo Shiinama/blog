@@ -1,11 +1,20 @@
- 
 'use client'
 
-import { useState } from 'react'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import Link from '@tiptap/extension-link'
+import Placeholder from '@tiptap/extension-placeholder'
+import { EditorContent, useEditor } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import css from 'highlight.js/lib/languages/css'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import { createLowlight } from 'lowlight'
+import MarkdownIt from 'markdown-it'
+import { useEffect, useMemo, useRef } from 'react'
+import TurndownService from 'turndown'
 
-import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AutoResizeTextarea } from '@/components/ui/textarea'
+const lowlightInstance = createLowlight()
+lowlightInstance.register({ javascript, typescript, css })
 
 interface MarkdownEditorProps {
   value: string
@@ -14,35 +23,71 @@ interface MarkdownEditorProps {
   placeholder?: string
 }
 
-export function MarkdownEditor({ value, onChange, name, placeholder }: MarkdownEditorProps) {
-  const [tab, setTab] = useState<'write' | 'preview'>('write')
+export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorProps) {
+  const mdParser = useMemo(
+    () =>
+      new MarkdownIt({
+        html: true,
+        linkify: true,
+        typographer: true
+      }),
+    []
+  )
+
+  const turndownService = useMemo(() => new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' }), [])
+
+  const htmlValue = useMemo(() => mdParser.render(value), [mdParser, value])
+  const lastSyncRef = useRef(value)
+  const editorScrollRef = useRef<HTMLDivElement | null>(null)
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: placeholder ?? 'Write some Markdown...'
+      }),
+      Link.configure({
+        openOnClick: false
+      }),
+      CodeBlockLowlight.configure({
+        lowlight: lowlightInstance
+      })
+    ],
+    editorProps: {
+      attributes: {
+        class: 'min-h-[420px] focus:outline-none'
+      }
+    },
+    content: htmlValue,
+    immediatelyRender: false,
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML()
+      const nextMarkdown = turndownService.turndown(html)
+      if (nextMarkdown !== lastSyncRef.current) {
+        lastSyncRef.current = nextMarkdown
+        onChange(nextMarkdown)
+      }
+    }
+  })
+
+  useEffect(() => {
+    if (!editor) {
+      return
+    }
+    if (value === lastSyncRef.current) {
+      return
+    }
+
+    editor.commands.setContent(htmlValue)
+    lastSyncRef.current = value
+  }, [editor, htmlValue, value])
 
   return (
-    <Tabs value={tab} onValueChange={(next) => setTab(next as 'write' | 'preview')}>
-      <TabsList>
-        <TabsTrigger value="write">写作</TabsTrigger>
-        <TabsTrigger value="preview">预览</TabsTrigger>
-      </TabsList>
-      <TabsContent value="write">
-        <AutoResizeTextarea
-          name={name}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          rows={24}
-          placeholder={placeholder}
-          className="font-mono"
-          required
-        />
-      </TabsContent>
-      <TabsContent value="preview">
-        <div className="rounded-lg border bg-background p-4">
-          {value ? (
-            <MarkdownRenderer content={value} />
-          ) : (
-            <p className="text-sm text-muted-foreground">开始输入内容以查看预览。</p>
-          )}
-        </div>
-      </TabsContent>
-    </Tabs>
+    <div
+      ref={editorScrollRef}
+      className="prose dark:prose-invert max-w-none rounded-2xl border px-4 shadow-inner shadow-slate-900/5"
+    >
+      <EditorContent editor={editor} />
+    </div>
   )
 }

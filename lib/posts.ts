@@ -10,10 +10,8 @@ import {
   type ExplorerPostRecord,
   type PaginatedPostListItem,
   type PaginatedPostsResult,
-  type PostDetails,
-  type SidebarPost
+  type PostDetails
 } from '@/lib/posts/types'
-import { normalizeSlug } from '@/lib/posts/utils'
 
 import { createDb } from './db'
 
@@ -34,25 +32,8 @@ export async function getVisibleCategoriesWithPosts() {
           publishedAt: true,
           createdAt: true
         },
-        orderBy: (post, { asc, desc }) => [asc(post.sortOrder), desc(post.publishedAt), desc(post.createdAt)]
+        orderBy: (post, { desc }) => [desc(post.publishedAt)]
       }
-    }
-  })
-}
-
-export async function getSidebarPosts(categoryId: string): Promise<SidebarPost[]> {
-  const db = createDb()
-  return db.query.posts.findMany({
-    where: (post, { and, eq }) => and(eq(post.categoryId, categoryId), eq(post.status, 'PUBLISHED')),
-    orderBy: (post, { asc, desc }) => [asc(post.sortOrder), desc(post.publishedAt), desc(post.createdAt)],
-    columns: {
-      id: true,
-      title: true,
-      slug: true,
-      sortOrder: true,
-      publishedAt: true,
-      createdAt: true,
-      status: true
     }
   })
 }
@@ -85,11 +66,11 @@ export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .where(and(...conditions))
-    .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
+    .orderBy(desc(posts.publishedAt))
 
   const normalized = rows.map((row) => {
     const label = formatCategoryLabel(row.categoryKey ?? undefined) || 'Uncategorized'
-    const sortTimestamp = new Date(row.publishedAt ?? row.createdAt ?? new Date()).getTime()
+    const sortTimestamp = new Date(row.publishedAt ?? new Date()).getTime()
     return {
       ...row,
       categoryLabel: label,
@@ -110,41 +91,6 @@ export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }
         return b.sortTimestamp - a.sortTimestamp
     }
   })
-}
-
-export async function getPostBySlug(slug: string, options?: { includeDrafts?: boolean }): Promise<PostDetails | null> {
-  const db = createDb()
-  const cleanedSlug = normalizeSlug(slug)
-  const post = await db.query.posts.findFirst({
-    where: (post, { eq }) => eq(post.slug, cleanedSlug),
-    with: {
-      category: {
-        columns: {
-          id: true,
-          key: true,
-          sortOrder: true,
-          isVisible: true
-        }
-      },
-      author: {
-        columns: {
-          id: true,
-          name: true,
-          email: true
-        }
-      }
-    }
-  })
-
-  if (!post) {
-    return null
-  }
-
-  if (!options?.includeDrafts && post.status !== 'PUBLISHED') {
-    return null
-  }
-
-  return post
 }
 
 export async function getPostById(id: string, options?: { includeDrafts?: boolean }): Promise<PostDetails | null> {

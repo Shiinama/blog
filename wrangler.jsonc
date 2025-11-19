@@ -18,7 +18,7 @@
 	},
 	"d1_databases": [
 		{
-			"binding": "blog",
+			"binding": "BLOG_DATABASE",
 			"database_name": "blog",
 			"database_id": "ce73ae09-d75b-4701-99bd-8dda6de6816e",
 			"migrations_dir": "./drizzle/migrations"
@@ -32,6 +32,18 @@
 		{
 			"binding": "WORKER_SELF_REFERENCE",
 			"service": "blog"
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "blog-bucket",
+			"binding": "BLOG_BUCKET",
+			"remote": true
+		},
+		{
+			"bucket_name": "open-next-cache-blog",
+			"binding": "NEXT_INC_CACHE_R2_BUCKET",
+			"remote": true
 		}
 	]
 }

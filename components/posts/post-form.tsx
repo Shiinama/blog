@@ -1,18 +1,26 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useEffect, useMemo, useState, useTransition } from 'react'
-import { useFormState } from 'react-dom'
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 
 import { deletePostAction, savePostAction } from '@/actions/posts'
 import { initialPostFormState } from '@/actions/posts/form-state'
 import { MarkdownEditor } from '@/components/posts/markdown-editor'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AutoResizeTextarea } from '@/components/ui/textarea'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { useRouter } from '@/i18n/navigation'
+import useRouter from '@/hooks/use-router'
 import { formatCategoryLabel } from '@/lib/categories'
 
 import type { PostStatus } from '@/drizzle/schema'
@@ -32,17 +40,30 @@ function formatDateValue(date?: Date | null) {
 }
 
 export function PostForm({ post, categories }: PostFormProps) {
+  const formRef = useRef<HTMLFormElement | null>(null)
   const router = useRouter()
   const { toast } = useToast()
   const t = useTranslations('admin')
   const [content, setContent] = useState(post?.content ?? '')
-  const [tagsValue, setTagsValue] = useState(post?.tags?.join(', ') ?? '')
-  const [state, formAction] = useFormState(savePostAction, initialPostFormState)
+  const [state, formAction] = useActionState(savePostAction, initialPostFormState)
   const [isDeleting, startDelete] = useTransition()
   const statusOptions = [
     { label: t('status.draft'), value: 'DRAFT' as PostStatus },
     { label: t('status.published'), value: 'PUBLISHED' as PostStatus }
   ]
+  const [metadata, setMetadata] = useState(() => ({
+    title: post?.title ?? '',
+    slug: post?.slug ?? '',
+    coverImageUrl: post?.coverImageUrl ?? '',
+    tags: post?.tags?.join(', ') ?? '',
+    categoryId: post?.categoryId ?? '',
+    language: post?.language ?? 'zh',
+    publishedAt: post?.publishedAt ? formatDateValue(post?.publishedAt) : '',
+    summary: post?.summary ?? '',
+    sortOrder: String(post?.sortOrder ?? 0),
+    status: post?.status ?? 'DRAFT'
+  }))
+  const [isPublishModalOpen, setPublishModalOpen] = useState(false)
 
   useEffect(() => {
     if (state.status === 'success') {
@@ -50,17 +71,15 @@ export function PostForm({ post, categories }: PostFormProps) {
         title: t('form.saveSuccessTitle'),
         description: t('form.saveSuccessDescription')
       })
-      if (state.redirectTo) {
-        router.replace(state.redirectTo)
-      }
+      router.back()
     } else if (state.status === 'error') {
       toast({
         title: t('form.saveFailedTitle'),
-        description: state.message ?? t('form.saveFailedDescription'),
+        description: t('form.saveFailedDescription'),
         variant: 'destructive'
       })
     }
-  }, [state, router, toast, t])
+  }, [state.status, toast, t, router])
 
   const categoryOptions = useMemo(
     () =>
@@ -80,7 +99,7 @@ export function PostForm({ post, categories }: PostFormProps) {
       const result = await deletePostAction(post.id)
       if (result.status === 'success') {
         toast({ title: t('form.deleteSuccess') })
-        router.replace('/admin/posts')
+        router.back()
       } else {
         toast({
           title: t('form.deleteFailed'),
@@ -93,111 +112,35 @@ export function PostForm({ post, categories }: PostFormProps) {
 
   const fieldError = (field: string) => state.errors?.[field]?.join(', ')
 
+  const handlePublishConfirm = () => {
+    setMetadata((prev) => ({ ...prev, status: 'PUBLISHED' }))
+    setPublishModalOpen(false)
+    formRef.current?.requestSubmit()
+  }
+
+  const handleSaveDraft = () => {
+    setMetadata((prev) => ({ ...prev, status: 'DRAFT' }))
+  }
+
+  const updateMetadataField = (key: keyof typeof metadata, value: string) => {
+    setMetadata((prev) => ({ ...prev, [key]: value }))
+  }
+
   return (
-    <form action={formAction} className="space-y-8">
+    <form ref={formRef} action={formAction} className="space-y-8">
       <input type="hidden" name="postId" value={post?.id ?? ''} />
-      <div className="grid gap-6 md:grid-cols-2">
-        <div>
-          <Label htmlFor="title">{t('form.fields.title')}</Label>
-          <Input
-            id="title"
-            name="title"
-            defaultValue={post?.title}
-            placeholder={t('form.placeholders.title')}
-            required
-          />
-          {fieldError('title') && <p className="text-destructive text-sm">{fieldError('title')}</p>}
-        </div>
-        <div>
-          <Label htmlFor="slug">{t('form.fields.slug')}</Label>
-          <Input id="slug" name="slug" defaultValue={post?.slug} placeholder={t('form.placeholders.slug')} required />
-          {fieldError('slug') && <p className="text-destructive text-sm">{fieldError('slug')}</p>}
-        </div>
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <div>
-          <Label htmlFor="categoryId">{t('form.fields.category')}</Label>
-          <select
-            id="categoryId"
-            name="categoryId"
-            defaultValue={post?.categoryId}
-            className="bg-background mt-2 w-full rounded-md border p-2"
-            required
-          >
-            <option value="">{t('form.placeholders.category')}</option>
-            {categoryOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {fieldError('categoryId') && <p className="text-destructive text-sm">{fieldError('categoryId')}</p>}
-        </div>
-        <div>
-          <Label htmlFor="status">{t('form.fields.status')}</Label>
-          <select
-            id="status"
-            name="status"
-            defaultValue={post?.status ?? 'DRAFT'}
-            className="bg-background mt-2 w-full rounded-md border p-2"
-            required
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <div>
-          <Label htmlFor="coverImageUrl">{t('form.fields.coverImageUrl')}</Label>
-          <Input
-            id="coverImageUrl"
-            name="coverImageUrl"
-            defaultValue={post?.coverImageUrl ?? ''}
-            placeholder={t('form.placeholders.coverImageUrl')}
-          />
-          {fieldError('coverImageUrl') && <p className="text-destructive text-sm">{fieldError('coverImageUrl')}</p>}
-        </div>
-        <div>
-          <Label htmlFor="tags">{t('form.fields.tags')}</Label>
-          <Input id="tags" name="tags" value={tagsValue} onChange={(event) => setTagsValue(event.target.value)} />
-        </div>
-      </div>
-      <div className="grid gap-6 md:grid-cols-3">
-        <div>
-          <Label htmlFor="sortOrder">{t('form.fields.sortOrder')}</Label>
-          <Input id="sortOrder" name="sortOrder" type="number" defaultValue={post?.sortOrder ?? 0} placeholder="0" />
-        </div>
-        <div>
-          <Label htmlFor="language">{t('form.fields.language')}</Label>
-          <Input id="language" name="language" defaultValue={post?.language ?? 'zh'} />
-        </div>
-        <div>
-          <Label htmlFor="publishedAt">{t('form.fields.publishedAt')}</Label>
-          <Input
-            id="publishedAt"
-            name="publishedAt"
-            type="datetime-local"
-            defaultValue={formatDateValue(post?.publishedAt)}
-          />
-        </div>
-      </div>
-      <div>
-        <Label htmlFor="summary">{t('form.fields.summary')}</Label>
-        <AutoResizeTextarea
-          id="summary"
-          name="summary"
-          defaultValue={post?.summary ?? ''}
-          placeholder={t('form.placeholders.summary')}
-          minRows={4}
-          maxRows={8}
-        />
-      </div>
+      <input type="hidden" name="content" value={content} />
+      <input type="hidden" name="title" value={metadata.title} />
+      <input type="hidden" name="slug" value={metadata.slug} />
+      <input type="hidden" name="coverImageUrl" value={metadata.coverImageUrl} />
+      <input type="hidden" name="tags" value={metadata.tags} />
+      <input type="hidden" name="categoryId" value={metadata.categoryId} />
+      <input type="hidden" name="language" value={metadata.language} />
+      <input type="hidden" name="publishedAt" value={metadata.publishedAt} />
+      <input type="hidden" name="summary" value={metadata.summary} />
+      <input type="hidden" name="sortOrder" value={metadata.sortOrder} />
+      <input type="hidden" name="status" value={metadata.status} />
       <div className="space-y-2">
-        <Label>{t('form.fields.content')}</Label>
         <MarkdownEditor
           name="content"
           value={content}
@@ -207,8 +150,11 @@ export function PostForm({ post, categories }: PostFormProps) {
         {fieldError('content') && <p className="text-destructive text-sm">{fieldError('content')}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-4">
-        <Button type="submit" disabled={state.status === 'success'}>
-          {t('form.actions.save')}
+        <Button type="submit" disabled={state.status === 'success'} onClick={handleSaveDraft}>
+          {t('form.actions.saveDraft')}
+        </Button>
+        <Button type="button" onClick={() => setPublishModalOpen(true)}>
+          {t('form.actions.publish')}
         </Button>
         {post && (
           <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
@@ -216,6 +162,138 @@ export function PostForm({ post, categories }: PostFormProps) {
           </Button>
         )}
       </div>
+      <Dialog open={isPublishModalOpen} onOpenChange={setPublishModalOpen}>
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>{t('form.publishModal.title')}</DialogTitle>
+            <DialogDescription>{t('form.publishModal.description')}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto pr-2">
+            <div className="grid gap-6">
+              <div>
+                <Label htmlFor="modal-title">{t('form.fields.title')}</Label>
+                <Input
+                  id="modal-title"
+                  onChange={(event) => updateMetadataField('title', event.target.value)}
+                  value={metadata.title}
+                  placeholder={t('form.placeholders.title')}
+                  required
+                />
+                {fieldError('title') && <p className="text-destructive text-sm">{fieldError('title')}</p>}
+              </div>
+              <div>
+                <Label htmlFor="modal-category">{t('form.fields.category')}</Label>
+                <select
+                  id="modal-category"
+                  value={metadata.categoryId}
+                  onChange={(event) => updateMetadataField('categoryId', event.target.value)}
+                  className="bg-background mt-2 w-full rounded-md border p-2"
+                >
+                  <option value="">{t('form.placeholders.category')}</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {fieldError('categoryId') && <p className="text-destructive text-sm">{fieldError('categoryId')}</p>}
+              </div>
+              <div>
+                <Label htmlFor="modal-sort">{t('form.fields.sortOrder')}</Label>
+                <Input
+                  id="modal-sort"
+                  type="number"
+                  value={metadata.sortOrder}
+                  onChange={(event) => updateMetadataField('sortOrder', event.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="modal-slug">{t('form.fields.slug')}</Label>
+                <Input
+                  id="modal-slug"
+                  value={metadata.slug}
+                  onChange={(event) => updateMetadataField('slug', event.target.value)}
+                  placeholder={t('form.placeholders.slug')}
+                />
+                {fieldError('slug') && <p className="text-destructive text-sm">{fieldError('slug')}</p>}
+              </div>
+              <div>
+                <Label htmlFor="modal-status">{t('form.fields.status')}</Label>
+                <select
+                  id="modal-status"
+                  value={metadata.status}
+                  onChange={(event) => updateMetadataField('status', event.target.value)}
+                  className="bg-background mt-2 w-full rounded-md border p-2"
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="modal-cover">{t('form.fields.coverImageUrl')}</Label>
+                <Input
+                  id="modal-cover"
+                  value={metadata.coverImageUrl}
+                  onChange={(event) => updateMetadataField('coverImageUrl', event.target.value)}
+                  placeholder={t('form.placeholders.coverImageUrl')}
+                />
+                {fieldError('coverImageUrl') && (
+                  <p className="text-destructive text-sm">{fieldError('coverImageUrl')}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="modal-tags">{t('form.fields.tags')}</Label>
+                <Input
+                  id="modal-tags"
+                  value={metadata.tags}
+                  onChange={(event) => updateMetadataField('tags', event.target.value)}
+                  placeholder="tag1, tag2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="modal-language">{t('form.fields.language')}</Label>
+                <Input
+                  id="modal-language"
+                  value={metadata.language}
+                  onChange={(event) => updateMetadataField('language', event.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="modal-published">{t('form.fields.publishedAt')}</Label>
+                <Input
+                  id="modal-published"
+                  type="datetime-local"
+                  value={metadata.publishedAt}
+                  onChange={(event) => updateMetadataField('publishedAt', event.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="modal-summary">{t('form.fields.summary')}</Label>
+                <Textarea
+                  id="modal-summary"
+                  value={metadata.summary}
+                  onChange={(event) => {
+                    updateMetadataField('summary', event.target.value)
+                  }}
+                  rows={4}
+                  placeholder={t('form.placeholders.summary')}
+                />
+                <p className="text-muted-foreground text-xs">{t('form.publishModal.help')}</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="mt-6 flex justify-end gap-3">
+            <DialogClose asChild>
+              <Button variant="ghost">{t('form.actions.cancel')}</Button>
+            </DialogClose>
+            <Button onClick={handlePublishConfirm}>{t('form.actions.publish')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

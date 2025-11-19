@@ -110,7 +110,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   return (
     <div className="bg-background">
       <div className="mx-auto min-h-screen w-full max-w-5xl px-4 pt-8 pb-14 sm:px-6 lg:px-8">
-        <header className="border-border/60 space-y-5 border-b pb-8">
+        <header className="border-border/60 space-y-5 pb-8">
           <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-[11px] font-semibold tracking-[0.35em] uppercase">
             <span>{categoryLabel}</span>
             {formattedPublishedDate && (
@@ -119,7 +119,6 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
           </div>
           <div className="space-y-4">
             <h1 className="text-foreground text-3xl leading-tight font-semibold sm:text-4xl">{post.title}</h1>
-            {post.summary && <p className="text-muted-foreground text-base sm:text-lg">{post.summary}</p>}
           </div>
           <dl className="text-muted-foreground flex flex-wrap gap-8 text-sm">
             {metadataHighlights.map((item) => (
@@ -149,7 +148,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
           </figure>
         )}
 
-        <article className="text-foreground mx-auto max-w-3xl space-y-6 text-[0.95rem] leading-relaxed sm:text-base">
+        <article>
           <MarkdownRenderer content={post.content} />
         </article>
       </div>

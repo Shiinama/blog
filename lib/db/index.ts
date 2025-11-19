@@ -20,10 +20,10 @@ const createProxyDb = () => drizzleProxy(wrappedDriver, { schema }) as DrizzleD1
 
 const getEnvDb = () => {
   const context = getCloudflareContext()
-  if (!context?.env?.blog) {
+  if (!context?.env?.BLOG_DATABASE) {
     throw new Error('Cloudflare D1 binding `DB` is not available on this request.')
   }
-  return drizzleD1(context.env.blog, { schema })
+  return drizzleD1(context.env.BLOG_DATABASE, { schema })
 }
 
 export const createDb = (): DrizzleD1Database<typeof schema> => {

@@ -16,7 +16,7 @@ const config = [
     },
     rules: {
       'react/no-unescaped-entities': 'off',
-      'no-console': ['error', { allow: ['error', 'warn'] }],
+      // 'no-console': ['error', { allow: ['error', 'warn'] }],
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-asserted-optional-chain': 'off',

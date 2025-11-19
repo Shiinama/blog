@@ -23,7 +23,7 @@ export function AuthButton() {
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="link" size="sm">
+          <Button variant="link" size="sm" className="text-sm!">
             {common('common.loginIn')}
           </Button>
         </DialogTrigger>
@@ -44,7 +44,8 @@ export function AuthButton() {
           href="/admin/posts"
           className={buttonVariants({
             variant: 'link',
-            size: 'sm'
+            size: 'sm',
+            className: 'text-sm!'
           })}
         >
           {common('common.adminPanel')}
@@ -52,7 +53,7 @@ export function AuthButton() {
       )}
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="link" size="sm">
+          <Button variant="link" size="sm" className="text-sm!">
             {common('common.myAccount')}
           </Button>
         </DialogTrigger>

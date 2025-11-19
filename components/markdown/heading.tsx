@@ -25,7 +25,7 @@ export function Heading({ level, children }: HeadingProps) {
   const Tag = `h${level}` as keyof JSX.IntrinsicElements
 
   return (
-    <Tag id={slug} className="scroll-mt-24">
+    <Tag id={slug}>
       <Link href={`#${slug}`} className="no-underline hover:underline">
         {children}
       </Link>

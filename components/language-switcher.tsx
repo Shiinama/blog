@@ -6,7 +6,8 @@ import { useLocale } from 'next-intl'
 import { useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { useRouter, usePathname } from '@/i18n/navigation'
+import useRouter from '@/hooks/use-router'
+import { usePathname } from '@/i18n/navigation'
 import { DEFAULT_LOCALE, locales } from '@/i18n/routing'
 
 export default function LanguageSwitcher() {
@@ -26,20 +27,14 @@ export default function LanguageSwitcher() {
         // @ts-expect-error -- TypeScript will validate that only known `params`
         // are used in combination with a given `pathname`. Since the two will
         // always match for the current route, we can skip runtime checks.
-        {pathname, params},
-        {locale: nextLocale}
+        { pathname, params },
+        { locale: nextLocale }
       )
     })
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      title={nextLocaleLabel}
-      disabled={isPending}
-      onClick={onToggleLocale}
-    >
+    <Button variant="ghost" size="sm" title={nextLocaleLabel} disabled={isPending} onClick={onToggleLocale}>
       <Languages size={18} />
     </Button>
   )

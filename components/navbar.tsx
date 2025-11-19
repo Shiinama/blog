@@ -22,7 +22,7 @@ export default async function Navbar({
   return (
     <nav
       className={cn(
-        'sticky top-0 flex w-full flex-row items-center px-4 py-1.5 text-sm backdrop-blur-lg md:px-8 md:py-2.5',
+        'sticky top-0 z-100 flex w-full flex-row items-center px-4 py-1.5 text-sm backdrop-blur-lg md:px-8 md:py-2.5',
         className
       )}
     >
@@ -36,7 +36,8 @@ export default async function Navbar({
           href={'/about'}
           className={buttonVariants({
             variant: 'link',
-            size: 'sm'
+            size: 'sm',
+            className: 'text-sm!'
           })}
         >
           {t('common.about')}

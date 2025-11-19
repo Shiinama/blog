@@ -2,14 +2,7 @@ import { getTranslations } from 'next-intl/server'
 
 import { PostTable } from '@/components/posts/post-table'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
@@ -59,10 +52,10 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
 
   return (
     <div className="space-y-8">
-      <Card className="overflow-hidden border border-slate-200 bg-gradient-to-br from-white/80 to-slate-50/60 shadow-sm shadow-slate-900/10">
-        <CardHeader className="flex flex-col gap-3 pb-3 pt-6 sm:flex-row sm:items-start sm:justify-between">
+      <Card className="overflow-hidden border border-slate-200 bg-linear-to-br from-white/80 to-slate-50/60 shadow-sm shadow-slate-900/10">
+        <CardHeader className="flex flex-col gap-3 pt-6 pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <CardDescription className="text-sm text-muted-foreground">{t('posts.description')}</CardDescription>
+            <CardDescription className="text-muted-foreground text-sm">{t('posts.description')}</CardDescription>
             <CardTitle className="text-3xl font-semibold text-slate-900">{t('posts.title')}</CardTitle>
           </div>
           <Button asChild size="lg">
@@ -88,7 +81,7 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
               <select
                 name="status"
                 defaultValue={statusParam}
-                className="bg-white w-full rounded-lg border border-slate-200 px-3 py-2 text-sm transition focus:border-primary"
+                className="focus:border-primary w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition"
               >
                 <option value="all">{t('posts.filters.statusOptions.all')}</option>
                 <option value="PUBLISHED">{t('posts.filters.statusOptions.published')}</option>
@@ -100,7 +93,7 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
               <select
                 name="category"
                 defaultValue={categoryParam ?? 'all'}
-                className="bg-white w-full rounded-lg border border-slate-200 px-3 py-2 text-sm transition focus:border-primary"
+                className="focus:border-primary w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition"
               >
                 <option value="all">{t('posts.filters.categoryOptions.all')}</option>
                 {categories.map((category) => (
@@ -120,7 +113,7 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
         <CardContent className="p-0">
           <PostTable posts={data.posts} />
         </CardContent>
-        <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4 text-sm text-muted-foreground">
+        <CardFooter className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4 text-sm">
           <span>{t('posts.pagination.caption', { page, totalPages, total: data.total })}</span>
           <div className="flex gap-2">
             <Button asChild variant="outline" disabled={page <= 1}>

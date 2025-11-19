@@ -1,16 +1,16 @@
 'use client'
 
-import { useDebounce } from 'ahooks'
+import { useDebounce, useUpdateEffect } from 'ahooks'
 import { Loader2, RotateCcw } from 'lucide-react'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 
-import { fetchExplorerPostsAction } from '@/actions/posts'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Link } from '@/i18n/navigation'
 import { formatCategoryLabel } from '@/lib/categories'
+import { getExplorerPosts } from '@/lib/posts'
 import { cn } from '@/lib/utils'
 
 import { Button } from '../ui/button'
@@ -27,7 +27,6 @@ export type ExplorerPost = {
   categoryLabel: string
   publishedAt?: string | null
   createdAt?: string | null
-  sortTimestamp: number
 }
 
 export interface ExplorerCategory {
@@ -49,7 +48,6 @@ export function PostExplorer({ initialPosts, categories, className }: PostExplor
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all')
   const [sortBy, setSortBy] = useState<ExplorerSortOption>('newest')
   const [isPending, startTransition] = useTransition()
-  const hasInitialized = useRef(false)
   const t = useTranslations('explorer')
   const common = useTranslations('common')
   const uncategorizedLabel = common('uncategorized')
@@ -61,15 +59,10 @@ export function PostExplorer({ initialPosts, categories, className }: PostExplor
     }, {})
   }, [categories])
 
-  useEffect(() => {
-    if (!hasInitialized.current) {
-      hasInitialized.current = true
-      return
-    }
-
+  useUpdateEffect(() => {
     startTransition(async () => {
       const trimmedSearch = throttledSearch.trim()
-      const response = await fetchExplorerPostsAction({
+      const response = await getExplorerPosts({
         search: trimmedSearch || undefined,
         categoryId: selectedCategoryId === 'all' ? undefined : selectedCategoryId,
         sortBy
@@ -142,7 +135,7 @@ export function PostExplorer({ initialPosts, categories, className }: PostExplor
 
       <div className="divide-border/60 space-y-0">
         {posts.map((post) => (
-          <article key={post.id} className="grid gap-5 pb-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
+          <article key={post.id} className="grid gap-5 pb-6">
             <div className="space-y-3">
               <div className="text-muted-foreground/80 flex flex-wrap items-center gap-3 text-[11px] font-semibold tracking-[0.35em] uppercase">
                 <span>{post.categoryLabel}</span>

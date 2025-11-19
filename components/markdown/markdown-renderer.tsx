@@ -13,7 +13,7 @@ interface MarkdownRendererProps {
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
     <Markdown
-      className="prose prose-invert max-w-none dark:prose-invert"
+      className="prose dark:prose-invert max-w-none"
       options={{
         overrides: {
           p: { component: Paragraph },

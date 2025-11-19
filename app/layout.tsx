@@ -1,8 +1,5 @@
 import { Inter } from 'next/font/google'
-import { NextIntlClientProvider } from 'next-intl'
-import { getMessages } from 'next-intl/server'
 
-import Navbar from '@/components/navbar'
 import NextAuthProvider from '@/components/session-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
@@ -44,30 +41,22 @@ export const viewport: Viewport = {
   userScalable: false
 }
 
-export default async function RootLayout({
-  children,
-  params
+export default function RootLayout({
+  children
 }: Readonly<{
   children: React.ReactNode
-  params: Promise<{ locale: string }>
 }>) {
-  const { locale } = await params
-
-  const messages = await getMessages()
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
-      <NextAuthProvider>
-        <html lang={locale ?? 'en'} className={cn(inter.variable)} suppressHydrationWarning>
-          <body className={cn('bg-background min-h-screen font-sans antialiased')} suppressHydrationWarning>
-            <NextTopLoader />
-            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-              <Navbar />
-              <Toaster />
-              <main>{children}</main>
-            </ThemeProvider>
-          </body>
-        </html>
-      </NextAuthProvider>
-    </NextIntlClientProvider>
+    <NextAuthProvider>
+      <html className={cn(inter.variable)} suppressHydrationWarning>
+        <body className={cn('bg-background min-h-screen font-sans antialiased')} suppressHydrationWarning>
+          <NextTopLoader />
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            <Toaster />
+            {children}
+          </ThemeProvider>
+        </body>
+      </html>
+    </NextAuthProvider>
   )
 }

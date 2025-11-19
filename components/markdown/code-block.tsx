@@ -13,11 +13,11 @@ function isBlockCode(className?: string | null) {
 export function CodeBlock({ children, className }: CodeBlockProps) {
   if (isBlockCode(className)) {
     return (
-      <pre className="mb-6 overflow-x-auto rounded-lg bg-muted/50 p-4 text-sm">
-        <code className={cn('block font-mono text-sm', className)}>{children}</code>
+      <pre>
+        <code className={cn('block', className)}>{children}</code>
       </pre>
     )
   }
 
-  return <code className={cn('rounded bg-muted px-1.5 py-0.5 text-xs font-mono', className)}>{children}</code>
+  return <code className={cn(className)}>{children}</code>
 }

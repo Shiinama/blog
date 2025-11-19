@@ -1,13 +1,13 @@
 import 'dotenv/config'
 
 import Database from 'better-sqlite3'
-import { eq } from 'drizzle-orm'
 import { existsSync, readdirSync } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 
 import { drizzle as drizzleBetter } from 'drizzle-orm/better-sqlite3'
 import matter from 'gray-matter'
+import { execSync } from 'child_process'
 
 import { CATEGORY_PRESETS } from '../constant/category-presets'
 import { createDb, type DB } from '../lib/db'
@@ -29,7 +29,6 @@ interface PostUpsertPayload {
   content: string
   coverImageUrl: string | null
   status: PostStatus
-  publishedAt: Date | null
   categoryId: string
   sortOrder: number
   tags: string[]
@@ -46,6 +45,32 @@ let dynamicCategoryIndex = 0
 type DatabaseContext = {
   db: DB
   close?: () => void
+}
+
+async function getFileTimestamps(filePath: string) {
+  const stat = await fs.stat(filePath)
+
+  return {
+    createdAt: stat.birthtime && stat.birthtime.getTime() > 0 ? stat.birthtime : stat.mtime,
+    updatedAt: stat.mtime
+  }
+}
+
+function getGitTimestamps(filePath: string) {
+  try {
+    const createdStr = execSync(`git log --diff-filter=A --follow --format=%aI -- "${filePath}" | tail -1`, {
+      encoding: 'utf8'
+    }).trim()
+
+    const updatedStr = execSync(`git log -1 --format=%aI -- "${filePath}"`, { encoding: 'utf8' }).trim()
+
+    return {
+      createdAt: createdStr ? new Date(createdStr) : null,
+      updatedAt: updatedStr ? new Date(updatedStr) : null
+    }
+  } catch {
+    return { createdAt: null, updatedAt: null }
+  }
 }
 
 function findLocalSqliteFile(): string | null {
@@ -223,6 +248,14 @@ function extractHeading(content: string) {
   return match ? match[1].trim() : null
 }
 
+function removeLeadingHeading(content: string) {
+  const match = content.match(/^\s*#\s+[^\r\n]*(?:\r?\n)?/)
+  if (!match) {
+    return content
+  }
+  return content.slice(match[0].length)
+}
+
 function deriveSortOrder(filePath: string): number {
   const baseName = path.basename(filePath, path.extname(filePath))
   const match = baseName.match(/^(\d+)/)
@@ -251,26 +284,6 @@ function parseTags(raw: unknown): string[] {
   return []
 }
 
-function parseBooleanField(value: unknown): boolean | null {
-  if (typeof value === 'boolean') {
-    return value
-  }
-  if (typeof value === 'number') {
-    if (value === 1) return true
-    if (value === 0) return false
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase()
-    if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) {
-      return true
-    }
-    if (['false', '0', 'no', 'n', 'off'].includes(normalized)) {
-      return false
-    }
-  }
-  return null
-}
-
 interface BuildPostPayloadOptions {
   frontmatter: Frontmatter
   content: string
@@ -288,9 +301,9 @@ function buildPostPayload({
 }: BuildPostPayloadOptions): PostUpsertPayload {
   const titleCandidate = typeof frontmatter.title === 'string' ? frontmatter.title.trim() : ''
   const title = titleCandidate || extractHeading(content) || ''
-  const summaryCandidate = typeof frontmatter.description === 'string' ? frontmatter.description.trim() : ''
-  const summary = summaryCandidate || extractSummary(content)
-  const readingTime = calculateReadingTime(content)
+  const cleanedContent = removeLeadingHeading(content)
+  const summary = extractSummary(cleanedContent)
+  const readingTime = calculateReadingTime(cleanedContent)
   const coverImageCandidate = frontmatter.coverImageUrl ?? frontmatter.coverImage ?? frontmatter.cover
   const coverImageUrl = typeof coverImageCandidate === 'string' ? coverImageCandidate.trim() || null : null
   const tags = parseTags(frontmatter.tags)
@@ -301,10 +314,9 @@ function buildPostPayload({
     title,
     slug,
     summary,
-    content,
+    content: cleanedContent,
     coverImageUrl,
     status: 'PUBLISHED',
-    publishedAt: new Date(),
     categoryId,
     sortOrder,
     tags,
@@ -340,22 +352,23 @@ async function importMdxFile(filePath: string) {
     sortOrder
   })
 
-  const now = new Date()
+  const gitTimes = getGitTimestamps(filePath)
+  const fileTimes = await getFileTimestamps(filePath)
 
-  await db
-    .insert(postsTable)
-    .values({
-      ...postPayload,
-      createdAt: now,
-      updatedAt: now
-    })
-    .onConflictDoUpdate({
-      target: postsTable.slug,
-      set: {
-        ...postPayload,
-        updatedAt: now
-      }
-    })
+  const createdAt =
+    parseDate(frontmatter.createdAt as any) ??
+    parseDate(frontmatter.date as any) ??
+    gitTimes.createdAt ??
+    fileTimes.createdAt ??
+    new Date()
+
+  await db.insert(postsTable).values({
+    ...postPayload,
+    authorId: process.env.NEXT_PUBLIC_ADMIN_ID,
+    createdAt: createdAt,
+    updatedAt: createdAt,
+    publishedAt: createdAt
+  })
 
   console.log(`Imported: ${slug}${postPayload.isSubscriptionOnly ? ' (subscription only)' : ''}`)
 }

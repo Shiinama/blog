@@ -64,8 +64,10 @@
       "title": "文章列表",
       "actions": {
         "newPost": "撰写新文章",
+        "edit": "编辑文章",
         "toDraft": "改为草稿",
         "publish": "发布",
+        "preview": "预览",
         "delete": "删除",
         "updatePublishTime": "更新发布时间"
       },
@@ -145,6 +147,9 @@
       },
       "actions": {
         "save": "保存文章",
+        "saveDraft": "保存草稿",
+        "publish": "发布文章",
+        "cancel": "取消",
         "deleting": "删除中...",
         "delete": "删除文章"
       },
@@ -152,6 +157,11 @@
         "invalid": "请选择有效的发布时间",
         "updateSuccess": "发布时间已更新",
         "updateFailed": "发布时间更新失败"
+      },
+      "publishModal": {
+        "title": "发布前确认",
+        "description": "最后确认一下 slug、封面和摘要，让文章准备好上线。",
+        "help": "摘要会默认使用文章前 100 个字符。"
       }
     }
   },

@@ -5,18 +5,24 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { posts, PostStatus, postStatusEnum } from '@/drizzle/schema'
-import { assertAdmin } from '@/lib/authz'
+import { auth } from '@/lib/auth'
 import { createDb, DB } from '@/lib/db'
-import { getExplorerPosts } from '@/lib/posts'
 import { calculateReadingTime, extractSummary, normalizeSlug } from '@/lib/posts/utils'
-
-import type { ExplorerFilterInput } from '@/lib/posts/types'
 
 type PostFormState = {
   status: 'idle' | 'success' | 'error'
   message?: string
   errors?: Record<string, string[]>
-  redirectTo?: string
+}
+
+async function assertAdmin() {
+  const session = await auth()
+  console.log(session)
+  if (!session?.user || session.user?.id !== process.env.NEXT_PUBLIC_ADMIN_ID) {
+    throw new Error('Unauthorized')
+  }
+
+  return session.user
 }
 
 const postStatusValues = [...postStatusEnum] as [PostStatus, ...PostStatus[]]
@@ -134,11 +140,7 @@ function revalidatePostRoutes(postId: string) {
   revalidatePath('/admin/posts')
 }
 
-export async function fetchExplorerPostsAction(params: ExplorerFilterInput) {
-  return getExplorerPosts(params)
-}
-
-export async function savePostAction(prevState: PostFormState, formData: FormData): Promise<PostFormState> {
+export async function savePostAction(_prevState: PostFormState, formData: FormData): Promise<PostFormState> {
   const db = createDb()
   try {
     const user = await assertAdmin()
@@ -159,8 +161,7 @@ export async function savePostAction(prevState: PostFormState, formData: FormDat
 
     return {
       status: 'success',
-      message: '文章已保存',
-      redirectTo: `/admin/posts/${post.slug}`
+      message: '文章已保存'
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -189,7 +190,6 @@ export async function savePostAction(prevState: PostFormState, formData: FormDat
 }
 
 export async function deletePostAction(postId: string) {
-  await assertAdmin()
   const db = createDb()
   const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ id: posts.id })
 
@@ -203,7 +203,6 @@ export async function deletePostAction(postId: string) {
 }
 
 export async function togglePostStatusAction(postId: string, status: PostStatus) {
-  await assertAdmin()
   const db = createDb()
   const existing = await db.query.posts.findFirst({
     where: (post, { eq }) => eq(post.id, postId)
