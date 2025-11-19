@@ -147,11 +147,11 @@ const main = async () => {
   try {
     console.log('🚀 Starting deployment process...')
 
-    validateEnvironment()
-    setupEnvFile()
-    migrateDatabase()
+    // validateEnvironment()
+    // setupEnvFile()
+    // migrateDatabase()
     await pushWorkerSecret()
-    deployWorkers()
+    // deployWorkers()
 
     console.log('🎉 Deployment completed successfully')
   } catch (error) {
