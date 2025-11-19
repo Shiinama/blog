@@ -17,8 +17,8 @@ type PostFormState = {
 
 async function assertAdmin() {
   const session = await auth()
-  console.log(session)
-  if (!session?.user || session.user?.id !== process.env.NEXT_PUBLIC_ADMIN_ID) {
+
+  if (!session?.user || !process.env.NEXT_PUBLIC_ADMIN_ID.split(',').includes(session?.user?.id ?? '')) {
     throw new Error('Unauthorized')
   }
 

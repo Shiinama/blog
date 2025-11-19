@@ -14,8 +14,7 @@ const environments = [
   'GMI_API_KEY',
   'NEXT_PUBLIC_BASE_URL',
   'NEXT_PUBLIC_ADMIN_ID',
-  'NEXT_PUBLIC_R2_DOMAIN',
-  'ELEVENLABS_API_KEY'
+  'NEXT_PUBLIC_R2_DOMAIN'
 ]
 
 /**
