@@ -18,6 +18,7 @@ export function AuthButton() {
 
   const user = session.data?.user
   const isAdmin = process.env.NEXT_PUBLIC_ADMIN_ID?.split(',').includes(user?.id ?? '')
+  console.log(process.env.NEXT_PUBLIC_ADMIN_ID)
 
   if (session.status === 'unauthenticated')
     return (
