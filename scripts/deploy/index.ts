@@ -11,7 +11,6 @@ const environments = [
   'AUTH_GOOGLE_SECRET',
   'AUTH_RESEND_KEY',
   'AUTH_TRUST_HOST',
-  'GMI_API_KEY',
   'NEXT_PUBLIC_BASE_URL',
   'NEXT_PUBLIC_ADMIN_ID',
   'NEXT_PUBLIC_R2_DOMAIN'
@@ -147,11 +146,11 @@ const main = async () => {
   try {
     console.log('🚀 Starting deployment process...')
 
-    // validateEnvironment()
-    // setupEnvFile()
-    // migrateDatabase()
+    validateEnvironment()
+    setupEnvFile()
+    migrateDatabase()
     await pushWorkerSecret()
-    // deployWorkers()
+    deployWorkers()
 
     console.log('🎉 Deployment completed successfully')
   } catch (error) {
