@@ -34,6 +34,11 @@
 			"service": "blog"
 		}
 	],
+	"vars": {
+    "NEXT_PUBLIC_BASE_URL": "static.xibaoyu.xyz",
+		"NEXT_PUBLIC_ADMIN_ID": "3c53b9e7-a398-4f63-9a0e-053c923c94eb,f4dac393-cf3b-4455-b511-4822f1a0ef58",
+		"NEXT_PUBLIC_R2_DOMAIN": "https://static.getwhynot.org"
+  },
 	"r2_buckets": [
 		{
 			"bucket_name": "blog-bucket",

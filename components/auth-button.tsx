@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Link } from '@/i18n/navigation'
-import { NEXT_PUBLIC_ADMIN_ID } from '@/lib/getEnvirment'
 
 import { Button, buttonVariants } from './ui/button'
 
@@ -19,7 +18,7 @@ export function AuthButton() {
 
   const user = session.data?.user
   const isAdmin = process.env.NEXT_PUBLIC_ADMIN_ID?.split(',').includes(user?.id ?? '')
-  console.log(process.env.NEXT_PUBLIC_ADMIN_ID, NEXT_PUBLIC_ADMIN_ID, session, user?.id)
+  console.log(process.env.NEXT_PUBLIC_ADMIN_ID, session, user?.id)
 
   if (session.status === 'unauthenticated')
     return (
