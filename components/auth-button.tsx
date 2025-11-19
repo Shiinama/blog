@@ -17,7 +17,7 @@ export function AuthButton() {
   const auth = useTranslations('auth')
 
   const user = session.data?.user
-  const isAdmin = process.env.NEXT_PUBLIC_ADMIN_ID.split(',').includes(user?.id ?? '')
+  const isAdmin = process.env.NEXT_PUBLIC_ADMIN_ID?.split(',').includes(user?.id ?? '')
 
   if (session.status === 'unauthenticated')
     return (
