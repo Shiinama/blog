@@ -108,34 +108,30 @@ function findLocalSqliteFile(): string | null {
 }
 
 function createDatabaseContext(): DatabaseContext {
+  if (process.env.NEXT_PUBLIC_DB_PROXY) {
+    const requiredEnv = ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'DATABASE_ID'] as const
+    const missingEnv = requiredEnv.filter((key) => !process.env[key])
+
+    if (missingEnv.length > 0) {
+      throw new Error(
+        `Missing ${missingEnv.join(
+          ', '
+        )}. Provide LOCAL_DB_PATH/SQLITE_PATH or ensure a local Miniflare D1 database exists, or set Cloudflare credentials.`
+      )
+    }
+
+    console.log('Using remote Cloudflare D1 database via HTTP driver.')
+    return { db: createDb() }
+  }
+
   const localFile = findLocalSqliteFile()
 
-  if (localFile) {
-    console.log(`Using local SQLite database: ${localFile}`)
-    const sqlite = new Database(localFile)
-    return {
-      db: drizzleBetter(sqlite, { schema }) as unknown as DB,
-      close: () => sqlite.close()
-    }
+  console.log(`Using local SQLite database: ${localFile}`)
+  const sqlite = new Database(localFile!)
+  return {
+    db: drizzleBetter(sqlite, { schema }) as unknown as DB,
+    close: () => sqlite.close()
   }
-
-  if (!process.env.NEXT_PUBLIC_DB_PROXY) {
-    process.env.NEXT_PUBLIC_DB_PROXY = '1'
-  }
-
-  const requiredEnv = ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'DATABASE_ID'] as const
-  const missingEnv = requiredEnv.filter((key) => !process.env[key])
-
-  if (missingEnv.length > 0) {
-    throw new Error(
-      `Missing ${missingEnv.join(
-        ', '
-      )}. Provide LOCAL_DB_PATH/SQLITE_PATH or ensure a local Miniflare D1 database exists, or set Cloudflare credentials.`
-    )
-  }
-
-  console.log('Using remote Cloudflare D1 database via HTTP driver.')
-  return { db: createDb() }
 }
 
 const databaseContext = createDatabaseContext()
@@ -364,7 +360,7 @@ async function importMdxFile(filePath: string) {
 
   await db.insert(postsTable).values({
     ...postPayload,
-    authorId: process.env.NEXT_PUBLIC_ADMIN_ID,
+    authorId: '31a8a939-c995-42fa-9b37-a242014a1b43',
     createdAt: createdAt,
     updatedAt: createdAt,
     publishedAt: createdAt

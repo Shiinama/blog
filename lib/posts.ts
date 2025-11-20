@@ -186,7 +186,7 @@ export async function getPaginatedPosts({
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(users, eq(posts.authorId, users.id))
-    .orderBy(desc(posts.updatedAt))
+    .orderBy(desc(posts.publishedAt))
     .limit(pageSize)
     .offset((page - 1) * pageSize)
 
