@@ -1,6 +1,6 @@
 'use server'
 
-import { and, eq, gte } from 'drizzle-orm'
+import { and, desc, eq, gte } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { orders, products, subscriptions, users, type Currency } from '@/drizzle/schema'
@@ -46,6 +46,43 @@ const addYear = (date: Date) => {
   const next = new Date(date)
   next.setFullYear(next.getFullYear() + 1)
   return next
+}
+
+export type CurrentSubscriptionInfo =
+  | { status: 'none' }
+  | { status: 'active' | 'expired'; planName: string; expiredAt: string }
+
+export async function getCurrentSubscription(): Promise<CurrentSubscriptionInfo> {
+  const session = await auth()
+
+  if (!session?.user?.id) {
+    return { status: 'none' }
+  }
+
+  const db = createDb()
+  const [record] = await db
+    .select({
+      expiredAt: subscriptions.expiredAt,
+      productName: products.name
+    })
+    .from(subscriptions)
+    .leftJoin(products, eq(subscriptions.productId, products.id))
+    .where(eq(subscriptions.userId, session.user.id))
+    .orderBy(desc(subscriptions.expiredAt))
+    .limit(1)
+
+  if (!record?.expiredAt) {
+    return { status: 'none' }
+  }
+
+  const expiredAt = new Date(record.expiredAt)
+  const isActive = expiredAt > new Date()
+
+  return {
+    status: isActive ? 'active' : 'expired',
+    planName: record.productName ?? PRODUCT_NAME,
+    expiredAt: expiredAt.toISOString()
+  }
 }
 
 async function ensureAnnualSubscriptionProduct(db: DB) {

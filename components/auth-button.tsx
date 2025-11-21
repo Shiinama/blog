@@ -1,8 +1,11 @@
 'use client'
 
+import { useRequest } from 'ahooks'
 import { signOut, useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
+import { useMemo } from 'react'
 
+import { getCurrentSubscription } from '@/actions/subscriptions'
 import LoginForm from '@/components/login-form'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -18,6 +21,30 @@ export function AuthButton() {
 
   const user = session.data?.user
   const isAdmin = process.env.NEXT_PUBLIC_ADMIN_ID?.split(',').includes(user?.id ?? '')
+  const ready = Boolean(user?.id)
+
+  const { data: subscription, loading } = useRequest(() => getCurrentSubscription(), {
+    ready,
+    refreshDeps: [user?.id]
+  })
+
+  const planLabel = useMemo(() => {
+    if (!ready) return common('common.planFree')
+    if (loading) return common('common.planLoading')
+    if (!subscription || subscription.status === 'none') return common('common.planFree')
+    return subscription.planName
+  }, [common, loading, ready, subscription])
+
+  const expiredAtLabel = useMemo(() => {
+    if (!ready) return common('common.notAvailable')
+    if (loading) return common('common.planLoading')
+    if (!subscription || subscription.status === 'none') return common('common.notAvailable')
+
+    const expiredAt = new Date(subscription.expiredAt)
+    const formatted = expiredAt.toLocaleString()
+
+    return subscription.status === 'expired' ? `${formatted} (${common('common.expiredTag')})` : formatted
+  }, [common, loading, ready, subscription])
 
   if (session.status === 'unauthenticated')
     return (
@@ -70,10 +97,14 @@ export function AuthButton() {
               <Label htmlFor="username">{common('common.username')}</Label>
               <Input disabled id="username" value={user?.name ?? ''} />
             </div>
-            {/* <div className="gap-1.5">
-              <Label>{common('common.currentTier')}</Label>
-              <div className="text-muted-foreground ml-2 capitalize">{planType}</div>
-            </div> */}
+            <div className="gap-1.5">
+              <Label>{common('common.currentPlan')}</Label>
+              <div className="text-muted-foreground ml-2">{planLabel}</div>
+            </div>
+            <div className="gap-1.5">
+              <Label>{common('common.expiresAt')}</Label>
+              <div className="text-muted-foreground ml-2">{expiredAtLabel}</div>
+            </div>
             <Button
               className="w-24 self-end"
               variant="destructive"
