@@ -1,9 +1,9 @@
 'use server'
 
-import { and } from 'drizzle-orm'
+import { and, eq, gte } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { orders, products, subscriptions, type Currency } from '@/drizzle/schema'
+import { orders, products, subscriptions, users, type Currency } from '@/drizzle/schema'
 import { auth } from '@/lib/auth'
 import { createDb, type DB } from '@/lib/db'
 
@@ -49,10 +49,11 @@ const addYear = (date: Date) => {
 }
 
 async function ensureAnnualSubscriptionProduct(db: DB) {
-  const existing = await db.query.products.findFirst({
-    where: (product, { eq }) => and(eq(product.name, PRODUCT_NAME), eq(product.type, 'subscription')),
-    columns: { id: true }
-  })
+  const [existing] = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(and(eq(products.name, PRODUCT_NAME), eq(products.type, 'subscription')))
+    .limit(1)
 
   if (existing?.id) {
     return existing
@@ -99,15 +100,26 @@ export async function grantAnnualSubscriptionAction(
     }
 
     const { email, note } = parsed.data
-    const targetUser = await db.query.users.findFirst({
-      where: (user, { eq }) => eq(user.email, email),
-      columns: { id: true, email: true }
-    })
+    const now = new Date()
+    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
 
     if (!targetUser?.id) {
       return {
         status: 'error',
         message: '无法找到该邮箱对应的用户'
+      }
+    }
+
+    const [existingSubscription] = await db
+      .select({ id: subscriptions.id })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.userId, targetUser.id), gte(subscriptions.expiredAt, now)))
+      .limit(1)
+
+    if (existingSubscription?.id) {
+      return {
+        status: 'error',
+        message: '该用户已有有效会员，无需重复发放'
       }
     }
 
@@ -119,7 +131,6 @@ export async function grantAnnualSubscriptionAction(
       }
     }
 
-    const now = new Date()
     const expiresAt = addYear(now)
 
     const [order] = await db
