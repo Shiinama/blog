@@ -227,6 +227,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 If you need a more customized implementation or have interesting commercial projects, I'd love to hear from you. You can reach me via email:
 
-- Email: [contact@linkai.website](mailto:contact@linkai.website)
+- Email: [contact@xibaoyu.xyz](mailto:contact@xibaoyu.xyz)
 
 Feel free to get in touch if you have any questions, need assistance with implementation, or want to discuss potential collaborations. I'm always open to exciting new projects and opportunities!

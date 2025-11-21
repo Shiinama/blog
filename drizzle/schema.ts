@@ -162,7 +162,7 @@ export type PaymentMethod = 'credit_card' | 'paypal' | 'upgrade.chat' | 'other'
 export type TransactionType = 'purchase' | 'usage' | 'refund' | 'subscription_renewal' | 'gift' | 'promotion'
 export type Currency = 'USD' | 'CNY' | 'EUR' | 'JPY' | 'GBP'
 
-// 产品表 - 存储可购买的产品或订阅计划
+// Products table for purchasable items and subscriptions
 export const products = sqliteTable('products', {
   id: text('id')
     .primaryKey()
@@ -171,7 +171,7 @@ export const products = sqliteTable('products', {
   type: text('type').$type<ProductType>().notNull(),
   price: real('price').notNull(),
   currency: text('currency').$type<Currency>().notNull().default('USD'),
-  interval: text('interval').$type<SubscriptionInterval>(), // 仅用于订阅
+  interval: text('interval').$type<SubscriptionInterval>(), // Only used for subscription products
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`CURRENT_TIMESTAMP`)
@@ -181,7 +181,7 @@ export const products = sqliteTable('products', {
     .notNull()
 })
 
-// 订单表 - 记录所有交易
+// Orders table recording all transactions
 export const orders = sqliteTable('orders', {
   id: text('id')
     .primaryKey()
@@ -195,8 +195,8 @@ export const orders = sqliteTable('orders', {
   status: text('status').$type<OrderStatus>().notNull().default('pending'),
   transactionType: text('transactionType').$type<TransactionType>(),
   paymentMethod: text('paymentMethod').$type<PaymentMethod>(),
-  paymentIntentId: text('paymentIntentId'), // 支付网关的交易ID
-  metadata: text('metadata'), // 存储JSON格式的额外信息
+  paymentIntentId: text('paymentIntentId'), // Payment processor transaction ID
+  metadata: text('metadata'), // Extra metadata stored as JSON
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -205,7 +205,7 @@ export const orders = sqliteTable('orders', {
     .notNull()
 })
 
-// 订阅表 - 记录用户的活跃订阅
+// Subscriptions table tracking active subscriptions
 export const subscriptions = sqliteTable('subscriptions', {
   id: text('id')
     .primaryKey()

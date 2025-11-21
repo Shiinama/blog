@@ -8,8 +8,6 @@
     "lifeDescription": "我结婚有子。但生活主旋律还是两眼一睁就是看数据，写代码。对于享受方面喜欢喝好一点的酒。",
     "dreamsTitle": "梦想",
     "dreamsDescription": "已经实现了~享受赌博和探险的乐趣、享受沉迷的快乐。",
-    "blogPurpose": "为什么写博客?",
-    "blogPurposeReason": "赌徒希望有观众喝彩、创作者需要内容的价值认定。",
     "myTimeLine": "我的简单时间线",
     "timelinePart1Title": "两年半前",
     "timelinePart1Description": "我比较专注工程化（打包/依赖/加速/工程化场景）、源码（Vue/React/工具）、面试技巧、算法这些东西。",
@@ -25,10 +23,8 @@
     "myAccount": "我的账号",
     "email": "邮箱",
     "username": "用户名",
-    "currentTier": "当前等级",
     "signout": "退出",
     "loginIn": "登录",
-    "language": "语言",
     "toggleTheme": "切换主题",
     "uncategorized": "未分类",
     "adminPanel": "管理后台"
@@ -50,11 +46,6 @@
     "flutter": "Flutter 移动开发"
   },
   "admin": {
-    "layout": {
-      "welcome": "欢迎回来，{name}",
-      "title": "内容管理",
-      "backHome": "返回首页"
-    },
     "status": {
       "draft": "草稿",
       "published": "已发布"
@@ -64,7 +55,6 @@
       "title": "文章列表",
       "actions": {
         "newPost": "撰写新文章",
-        "edit": "编辑文章",
         "toDraft": "改为草稿",
         "publish": "发布",
         "preview": "预览",
@@ -155,7 +145,6 @@
         "content": "使用 Markdown/MDX 进行写作..."
       },
       "actions": {
-        "save": "保存文章",
         "saveDraft": "保存草稿",
         "publish": "发布文章",
         "cancel": "取消",
@@ -182,7 +171,6 @@
     "login": {
       "page": {
         "title": "欢迎来到鱼的手记",
-        "badge": "手记",
         "description": "登录以继续你的旅程"
       },
       "google": "使用 Google 登录",
@@ -241,13 +229,16 @@
     }
   },
   "home": {
-    "heroBadge": "手记",
     "brandTitle": "鱼的手记",
     "heroTitle": "为深思熟虑的构建者整理的策略",
-    "heroDescription": "长篇笔记、实施指南与研究总结被收集在一个安静的阅读列表中。使用下方筛选器直接找到你需要的内容。",
-    "stats": {
-      "articlesLabel": "文章",
-      "categoriesLabel": "分类"
-    }
+    "heroDescription": "长篇笔记、实施指南与研究总结被收集在一个安静的阅读列表中。使用下方筛选器直接找到你需要的内容。"
+  },
+  "seo": {
+    "siteTitle": "鱼的手记",
+    "siteDescription": "收录工程、模型与商业实践的长篇笔记、指南与研究总结，安静地阅读与搜索。",
+    "homeTitle": "文章库 | 鱼的手记",
+    "homeDescription": "按主题浏览工程、SEO、增长、独立开发等精选文章，支持中英阅读。",
+    "aboutTitle": "关于作者",
+    "aboutDescription": "了解溪抱鱼（Felix）的背景、时间轴与联系方式。"
   }
 }

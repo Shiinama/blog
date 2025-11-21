@@ -23,7 +23,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth(() => {
     providers: [
       GoogleProvider,
       ResendProvider({
-        from: 'no-reply@linkai.website'
+        from: 'no-reply@xibaoyu.xyz'
       }),
       GitHub
     ],

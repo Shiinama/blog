@@ -1,12 +1,38 @@
 import { getTranslations } from 'next-intl/server'
 
 import { PostExplorer } from '@/components/posts/post-explorer'
+import { routing } from '@/i18n/routing'
 import { formatCategoryLabel } from '@/lib/categories'
+import { buildAbsoluteUrl, buildLanguageAlternates } from '@/lib/metadata'
 import { getVisibleCategoriesWithPosts } from '@/lib/posts'
 
-export const metadata = {
-  title: 'Documentation',
-  description: 'Manage and view all documentation'
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'seo' })
+  const pageTitle = t('homeTitle')
+  const description = t('homeDescription')
+  const canonicalPath = routing.defaultLocale === locale ? '/' : `/${locale}`
+
+  return {
+    title: pageTitle,
+    description,
+    alternates: {
+      canonical: canonicalPath,
+      languages: buildLanguageAlternates('/')
+    },
+    openGraph: {
+      title: pageTitle,
+      description,
+      url: buildAbsoluteUrl(canonicalPath),
+      siteName: t('siteTitle'),
+      locale
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: pageTitle,
+      description
+    }
+  }
 }
 
 export default async function ContentPage() {

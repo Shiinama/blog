@@ -6,18 +6,20 @@ import { getTranslations } from 'next-intl/server'
 import { LockedPaywall } from '@/components/content/locked-paywall'
 import { LockedPreview } from '@/components/content/locked-preview'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
-import { siteConfig } from '@/config/site.config'
+import { routing } from '@/i18n/routing'
 import { auth } from '@/lib/auth'
 import { formatCategoryLabel } from '@/lib/categories'
+import { buildLanguageAlternates } from '@/lib/metadata'
 import { getPostById } from '@/lib/posts'
 import { hasActiveSubscription } from '@/lib/subscriptions'
 import { absoluteUrl } from '@/lib/utils'
 
 type DocPageProps = {
   id: string
+  locale: string
 }
 
-async function getPostFromParams({ params }: { params: Promise<DocPageProps> }) {
+async function getPostFromParams(params: Promise<DocPageProps>) {
   const parameters = await params
 
   if (!parameters.id) {
@@ -28,45 +30,42 @@ async function getPostFromParams({ params }: { params: Promise<DocPageProps> }) 
 }
 
 export async function generateMetadata({ params }: { params: Promise<DocPageProps> }): Promise<Metadata> {
-  const post = await getPostFromParams({ params })
+  const parameters = await params
+  const post = await getPostFromParams(Promise.resolve(parameters))
 
   if (!post) {
     return {}
   }
 
+  const seoT = await getTranslations({ locale: parameters.locale, namespace: 'seo' })
+
   const summary = post.summary
   const slugUrl = `/content/${post.id}`
+  const siteTitle = seoT('siteTitle')
+  const canonical =
+    parameters.locale === routing.defaultLocale ? `/content/${post.id}` : `/${parameters.locale}/content/${post.id}`
 
   return {
-    title: `${post.title} - ${siteConfig.name}`,
+    title: `${post.title} | ${siteTitle}`,
     description: summary,
+    alternates: {
+      canonical,
+      languages: buildLanguageAlternates(`/content/${post.id}`)
+    },
     openGraph: {
       title: post.title,
       description: summary,
       type: 'article',
       url: absoluteUrl(slugUrl),
-      images: [
-        {
-          url: post.coverImageUrl ?? siteConfig.og,
-          width: 2880,
-          height: 1800,
-          alt: siteConfig.name
-        }
-      ]
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: post.title,
-      description: summary,
-      images: [post.coverImageUrl ?? siteConfig.og],
-      creator: '@rds_agi'
+      locale: parameters.locale,
+      siteName: siteTitle
     }
   }
 }
 
 export default async function DocPage({ params }: { params: Promise<DocPageProps> }) {
   const [post, articleT, contentT] = await Promise.all([
-    getPostFromParams({ params }),
+    getPostFromParams(params),
     getTranslations('article'),
     getTranslations('content')
   ])
@@ -103,7 +102,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
       })
     : null
   const publishedDateISO = publishedDate?.toISOString()
-  const authorName = post.author?.name ?? siteConfig.name
+  const authorName = post.author?.name
   const metadataHighlights = [
     {
       label: contentT('metadata.published'),

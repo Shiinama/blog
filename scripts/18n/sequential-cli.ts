@@ -18,10 +18,10 @@ async function main() {
     })
     .help().argv
 
-  // 解析目标语言
+  // Parse target locales
   const targetLocales = argv.locales ? argv.locales.split(',').map((l) => l.trim()) : undefined
 
-  // 解析不需要翻译的键
+  // Parse keys that should be skipped
   const noTranslateKeys = argv['no-translate'] ? argv['no-translate'].split(',').map((k) => k.trim()) : []
 
   console.log('开始顺序翻译过程...')

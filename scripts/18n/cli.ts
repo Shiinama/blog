@@ -42,7 +42,7 @@ async function main() {
     })
     .help().argv
 
-  // 如果请求列出语言
+  // List available locales if requested
   if (argv['list-locales']) {
     console.log('可用语言:')
     locales.forEach((locale) => {
@@ -51,7 +51,7 @@ async function main() {
     return
   }
 
-  // 如果请求删除键
+  // Delete keys if requested
   if (argv['delete-keys']) {
     const keysToDelete = argv['delete-keys'].split(',').map((k) => k.trim())
 
@@ -63,7 +63,7 @@ async function main() {
     console.log(`将从所有语言文件中删除以下键: ${keysToDelete.join(', ')}`)
     console.log('警告: 此操作不可撤销！')
 
-    // 这里可以添加一个确认提示，但为简单起见，我们直接执行
+    // A confirmation prompt could be added here; keeping it simple for now
     try {
       const results = await deleteKeysFromMessages(keysToDelete)
 
@@ -108,16 +108,16 @@ async function main() {
     }
   }
 
-  // 解析目标语言
+  // Parse target locales
   const targetLocales = argv.locales ? argv.locales.split(',').map((l) => l.trim()) : undefined
 
-  // 解析键
+  // Parse keys
   const keys = argv.keys ? argv.keys.split(',').map((k) => k.trim()) : []
 
-  // 解析不需要翻译的键
+  // Parse keys that should be skipped
   const noTranslateKeys = argv['no-translate'] ? argv['no-translate'].split(',').map((k) => k.trim()) : []
 
-  // 验证在'keys'模式下是否提供了键
+  // Ensure keys are provided when using the "keys" mode
   if (argv.mode === 'keys' && keys.length === 0) {
     console.error('错误: 使用"keys"模式时必须提供键')
     process.exit(1)

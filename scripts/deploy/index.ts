@@ -17,7 +17,7 @@ const environments = [
 ]
 
 /**
- * 验证必要的环境变量
+ * Validate required environment variables
  */
 const validateEnvironment = () => {
   const missing = environments.filter((varName) => !process.env[varName])
@@ -28,7 +28,7 @@ const validateEnvironment = () => {
 }
 
 /**
- * 迁移数据库
+ * Run database migrations
  */
 const migrateDatabase = () => {
   console.log('📝 Migrating remote database...')
@@ -45,24 +45,24 @@ const pushWorkerSecret = () => {
   console.log('🔐 Pushing environment secrets to Pages...')
 
   try {
-    // 确保.env文件存在
+    // Ensure .env file exists
     if (!existsSync(resolve('.env'))) {
       setupEnvFile()
     }
 
-    // 创建一个临时文件，只包含运行时所需的环境变量
+    // Create a temp file with runtime-only env vars
     const envContent = readFileSync(resolve('.env'), 'utf-8')
     const runtimeEnvFile = resolve('.env.runtime')
 
-    // 从.env文件中提取运行时变量
+    // Extract runtime variables from .env
     const runtimeEnvContent = envContent
       .split('\n')
       .filter((line) => {
         const trimmedLine = line.trim()
-        // 跳过注释和空行
+        // Skip comments and empty lines
         if (!trimmedLine || trimmedLine.startsWith('#')) return false
 
-        // 检查是否为运行时所需的环境变量
+        // Keep only the runtime env variables
         for (const varName of environments) {
           if (line.startsWith(`${varName} =`) || line.startsWith(`${varName}=`)) {
             return true
@@ -72,13 +72,13 @@ const pushWorkerSecret = () => {
       })
       .join('\n')
 
-    // 写入临时文件
+    // Write the temporary file
     writeFileSync(runtimeEnvFile, runtimeEnvContent)
 
-    // 使用临时文件推送secrets
+    // Push secrets using the temp file
     execSync(`pnpm dlx wrangler secret bulk ${runtimeEnvFile} --name ${PROJECT_NAME}`, { stdio: 'inherit' })
 
-    // 清理临时文件
+    // Clean up the temp file
     execSync(`rm ${runtimeEnvFile}`, { stdio: 'inherit' })
 
     console.log('✅ Secrets pushed successfully')
@@ -89,7 +89,7 @@ const pushWorkerSecret = () => {
 }
 
 /**
- * 部署Pages应用
+ * Deploy the Pages app
  */
 const deployWorkers = () => {
   console.log('🚧 Deploying to Cloudflare Pages...')
@@ -103,21 +103,21 @@ const deployWorkers = () => {
 }
 
 /**
- * 创建或更新环境变量文件
+ * Create or update the environment file
  */
 const setupEnvFile = () => {
   console.log('📄 Setting up environment file...')
   const envFilePath = resolve('.env')
   const envExamplePath = resolve('.env.example')
 
-  // 如果.env文件不存在，则从.env.example复制创建
+  // If .env is missing, create it from .env.example
   if (!existsSync(envFilePath) && existsSync(envExamplePath)) {
     console.log('⚠️ .env file does not exist, creating from example...')
 
-    // 从示例文件复制
+    // Copy the example file
     let envContent = readFileSync(envExamplePath, 'utf-8')
 
-    // 填充当前的环境变量
+    // Fill in currently set environment variables
     const envVarMatches = envContent.match(/^([A-Z_]+)\s*=\s*".*?"/gm)
     if (envVarMatches) {
       for (const match of envVarMatches) {
@@ -140,7 +140,7 @@ const setupEnvFile = () => {
 }
 
 /**
- * 主函数
+ * Entrypoint
  */
 const main = async () => {
   try {

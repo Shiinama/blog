@@ -5,11 +5,11 @@ import 'dotenv/config'
 import { locales } from '@/i18n/routing'
 
 /**
- * 递归查找缺失或空值的键
- * @param source 源对象（通常是英文消息）
- * @param target 目标对象（通常是其他语言消息）
- * @param prefix 当前路径前缀
- * @returns 缺失或空值键的数组（点表示法）
+ * Recursively find missing or empty keys.
+ * @param source Source object (usually the English messages)
+ * @param target Target object (another locale)
+ * @param prefix Current path prefix
+ * @returns Missing or empty keys in dot notation
  */
 function findMissingOrEmptyKeys(source: Record<string, any>, target: Record<string, any>, prefix = ''): string[] {
   const missingOrEmptyKeys: string[] = []
@@ -19,13 +19,13 @@ function findMissingOrEmptyKeys(source: Record<string, any>, target: Record<stri
     const sourceValue = source[key]
 
     if (!(key in target)) {
-      // 键完全缺失
+      // Key is completely missing
       if (typeof sourceValue === 'object' && sourceValue !== null) {
-        // 如果是对象，递归添加所有叶子节点
+        // If it's an object, add all leaf nodes recursively
         const leafKeys = extractAllKeys(sourceValue, currentPath)
         missingOrEmptyKeys.push(...leafKeys)
       } else {
-        // 如果是叶子节点，直接添加
+        // For leaf nodes, add directly
         missingOrEmptyKeys.push(currentPath)
       }
     } else {
@@ -33,17 +33,17 @@ function findMissingOrEmptyKeys(source: Record<string, any>, target: Record<stri
 
       if (typeof sourceValue === 'object' && sourceValue !== null) {
         if (typeof targetValue !== 'object' || targetValue === null) {
-          // 类型不匹配：源是对象，但目标不是
-          // 添加所有叶子节点而不是父节点
+          // Type mismatch: source is an object but target is not
+          // Add all leaf nodes instead of the parent
           const leafKeys = extractAllKeys(sourceValue, currentPath)
           missingOrEmptyKeys.push(...leafKeys)
         } else {
-          // 递归检查嵌套对象
+          // Recurse into nested objects
           const nestedMissing = findMissingOrEmptyKeys(sourceValue, targetValue, currentPath)
           missingOrEmptyKeys.push(...nestedMissing)
         }
       } else if (
-        // 检查空值或类型不匹配的情况
+        // Handle empty values or type mismatches
         targetValue === '' ||
         targetValue === null ||
         targetValue === undefined ||
@@ -58,10 +58,10 @@ function findMissingOrEmptyKeys(source: Record<string, any>, target: Record<stri
 }
 
 /**
- * 递归提取所有键（使用点表示法）
- * @param obj 对象
- * @param prefix 前缀
- * @returns 键数组
+ * Recursively extract all keys using dot notation.
+ * @param obj Source object
+ * @param prefix Current prefix
+ * @returns Array of keys
  */
 function extractAllKeys(obj: any, prefix = ''): string[] {
   let keys: string[] = []
@@ -79,18 +79,18 @@ function extractAllKeys(obj: any, prefix = ''): string[] {
 }
 
 /**
- * 顺序翻译所有键
- * @param options 翻译选项
+ * Translate all keys sequentially.
+ * @param options Translation options
  */
 export async function sequentialTranslate(options: Omit<TranslationOptions, 'mode' | 'keys'> = {}): Promise<void> {
   try {
-    // 读取英文消息文件（作为基准）
+    // Load the English messages as the baseline
     const messagesDir = path.join(process.cwd(), 'messages')
     const englishMessagesPath = path.join(messagesDir, 'en.json')
     const englishMessagesText = await fs.readFile(englishMessagesPath, 'utf-8')
     const englishMessages = JSON.parse(englishMessagesText)
 
-    // 确定要翻译的目标语言
+    // Determine which target locales to translate
     const { targetLocales } = options
     const localesToTranslate = targetLocales
       ? locales.filter((l) => targetLocales.includes(l.code) && l.code !== 'en')
@@ -101,7 +101,7 @@ export async function sequentialTranslate(options: Omit<TranslationOptions, 'mod
       return
     }
 
-    // 提取英文文件中的所有键
+    // Extract every key from the English file
     const allKeys = extractAllKeys(englishMessages)
     console.log(`英文文件中共有 ${allKeys.length} 个键`)
 
@@ -111,7 +111,7 @@ export async function sequentialTranslate(options: Omit<TranslationOptions, 'mod
     for (const locale of localesToTranslate) {
       const localeFilePath = path.join(messagesDir, `${locale.code}.json`)
 
-      // 检查目标语言文件是否存在
+      // Check whether the locale file exists
       let existingTranslations = {}
       let fileExists = true
 
@@ -128,15 +128,15 @@ export async function sequentialTranslate(options: Omit<TranslationOptions, 'mod
         fileExists = false
       }
 
-      // 确定缺失的键
+      // Determine missing keys
       let missingKeys: string[] = []
 
       if (!fileExists || Object.keys(existingTranslations).length === 0) {
-        // 如果文件不存在或为空，则所有键都是缺失的
+        // If the file is missing or empty, every key is missing
         missingKeys = [...allKeys]
         console.log(`📝 ${locale.code}: 需要翻译所有 ${missingKeys.length} 个键`)
       } else {
-        // 递归查找缺失的键
+        // Recursively find missing keys
         missingKeys = findMissingOrEmptyKeys(englishMessages, existingTranslations)
         if (missingKeys.length > 0) {
           console.log(`📝 ${locale.code}: 需要翻译 ${missingKeys.length} 个键`)
@@ -145,13 +145,13 @@ export async function sequentialTranslate(options: Omit<TranslationOptions, 'mod
         }
       }
 
-      // 记录这个语言的缺失键
+      // Record missing keys for this locale
       if (missingKeys.length > 0) {
         allMissingKeys = [...new Set([...allMissingKeys, ...missingKeys])]
       }
     }
 
-    // 如果没有缺失的键，提前结束
+    // Exit early if nothing is missing
     if (allMissingKeys.length === 0) {
       console.log('✨ 所有语言文件都已包含所有键，无需翻译')
       return
@@ -159,18 +159,18 @@ export async function sequentialTranslate(options: Omit<TranslationOptions, 'mod
 
     console.log(`\n总共发现 ${allMissingKeys.length} 个不同的键需要翻译`)
 
-    // 设置批次大小和分批
-    const batchSize = 3 // 每批处理一个键，可以根据需要调整
+    // Set batch size for translation
+    const batchSize = 3 // Process three keys per batch; adjust if needed
     const batches = []
 
-    // 将键分成批次
+    // Split keys into batches
     for (let i = 0; i < allMissingKeys.length; i += batchSize) {
       batches.push(allMissingKeys.slice(i, i + batchSize))
     }
 
     console.log(`将分 ${batches.length} 批进行翻译\n`)
 
-    // 顺序翻译每个批次
+    // Translate each batch sequentially
     let successCount = 0
     let failureCount = 0
     let skippedCount = 0
@@ -188,7 +188,7 @@ export async function sequentialTranslate(options: Omit<TranslationOptions, 'mod
       try {
         const results = await translateMessages(translationOptions)
 
-        // 处理结果
+        // Handle results
         for (const result of results) {
           if (result.success) {
             if (result.translatedKeys && result.translatedKeys.length > 0) {

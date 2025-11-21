@@ -10,14 +10,14 @@ const toAbsoluteURL = (url: string): string => {
 const isHashAnchor = (currentUrl: string, newUrl: string): boolean => {
   const current = new URL(toAbsoluteURL(currentUrl))
   const next = new URL(toAbsoluteURL(newUrl))
-  // 比较URL去掉哈希部分后是否相同
+  // Compare URLs while ignoring hash fragments
   return current.href.split('#')[0] === next.href.split('#')[0]
 }
 
 const isSameHostName = (currentUrl: string, newUrl: string): boolean => {
   const current = new URL(toAbsoluteURL(currentUrl))
   const next = new URL(toAbsoluteURL(newUrl))
-  // 比较主机名（忽略www前缀）
+  // Compare hostnames (ignore www prefix)
   return current.hostname.replace(/^www\./, '') === next.hostname.replace(/^www\./, '')
 }
 
@@ -110,20 +110,15 @@ const NextTopLoader = ({
   showAtBottom = false,
   showForHashAnchor = true
 }: NextTopLoaderProps): React.JSX.Element => {
-  // 定义默认颜色为蓝色
+  // Defaults
   const defaultColor = '#29d'
-  // 定义默认高度为3像素
   const defaultHeight = 3
 
-  // 使用提供的颜色或默认颜色
+  // Use provided values or fallbacks
   const color = propColor ?? defaultColor
-  // 使用提供的高度或默认高度
   const height = propHeight ?? defaultHeight
 
-  // 处理阴影效果
-  // 如果shadow是false，则不显示阴影
-  // 如果提供了自定义shadow，则使用自定义值
-  // 否则使用默认阴影效果
+  // Resolve shadow styling
   const boxShadow =
     !shadow && shadow !== undefined
       ? ''
@@ -131,13 +126,12 @@ const NextTopLoader = ({
         ? `box-shadow:${shadow}`
         : `box-shadow:0 0 10px ${color},0 0 5px ${color}`
 
-  // 确定进度条的位置样式，默认在顶部，可选择在底部
+  // Position bar and spinner at top or bottom
   const positionStyle = showAtBottom ? 'bottom: 0;' : 'top: 0;'
-  // 确定加载旋转图标的位置样式
   const spinnerPositionStyle = showAtBottom ? 'bottom: 15px;' : 'top: 15px;'
 
   /**
-   * 为NextTopLoader定义CSS样式
+   * Define CSS for NextTopLoader
    */
   const styles = (
     <style>
@@ -146,36 +140,33 @@ const NextTopLoader = ({
   )
 
   React.useEffect((): ReturnType<React.EffectCallback> => {
-    // 配置NProgress进度条的行为
+    // Configure NProgress behaviour
     NProgress.configure({
-      showSpinner: showSpinner ?? true, // 是否显示加载旋转图标
-      trickle: crawl ?? true, // 是否启用自动增长
-      trickleSpeed: crawlSpeed ?? 200, // 自动增长的速度
-      minimum: initialPosition ?? 0.08, // 初始位置（百分比）
-      easing: easing ?? 'ease', // 动画缓动函数
-      speed: speed ?? 200, // 动画速度
-      // HTML模板
+      showSpinner: showSpinner ?? true, // Show spinner or not
+      trickle: crawl ?? true, // Auto-increment behaviour
+      trickleSpeed: crawlSpeed ?? 200, // Auto-increment speed
+      minimum: initialPosition ?? 0.08, // Initial position (percentage)
+      easing: easing ?? 'ease', // Animation easing
+      speed: speed ?? 200, // Animation speed
+      // HTML template
       template:
         template ??
         '<div class="bar" role="bar"><div class="peg"></div></div><div class="spinner" role="spinner"><div class="spinner-icon"></div></div>'
     })
 
     /**
-     * 检查当前URL和新URL是否为同一页面的不同锚点
-     * @param currentUrl {string} 当前URL
-     * @param newUrl {string} 新URL
-     * @returns {boolean} 是否为同一页面的不同锚点
+     * Check whether the new URL is just a different anchor on the same page.
      */
     function isAnchorOfCurrentUrl(currentUrl: string, newUrl: string): boolean {
       const currentUrlObj = new URL(currentUrl)
       const newUrlObj = new URL(newUrl)
-      // 比较主机名、路径和搜索参数
+      // Compare hostname, path, and search params
       if (
         currentUrlObj.hostname === newUrlObj.hostname &&
         currentUrlObj.pathname === newUrlObj.pathname &&
         currentUrlObj.search === newUrlObj.search
       ) {
-        // 检查新URL是否只是当前URL页面的锚点
+        // Check if the new URL is only an anchor change
         const currentHash = currentUrlObj.hash
         const newHash = newUrlObj.hash
         return (
@@ -185,18 +176,16 @@ const NextTopLoader = ({
       return false
     }
 
-    // 获取所有HTML元素，用于移除nprogress-busy类
+    // Grab the html element to remove the nprogress-busy class when needed
     // deno-lint-ignore no-var
     const nProgressClass: NodeListOf<HTMLHtmlElement> = document.querySelectorAll('html')
 
-    // 移除nprogress-busy类的函数
+    // Helper to clear the busy class
     const removeNProgressClass = (): void =>
       nProgressClass.forEach((el: Element) => el.classList.remove('nprogress-busy'))
 
     /**
-     * 查找最近的锚点元素
-     * @param element {HTMLElement | null} 起始元素
-     * @returns {HTMLAnchorElement | null} 找到的锚点元素
+     * Find the closest anchor element in the DOM tree.
      */
     function findClosestAnchor(element: HTMLElement | null): HTMLAnchorElement | null {
       while (element && element.tagName.toLowerCase() !== 'a') {
@@ -206,57 +195,55 @@ const NextTopLoader = ({
     }
 
     /**
-     * 处理点击事件
-     * @param event {MouseEvent} 鼠标点击事件
-     * @returns {void}
+     * Handle click events and start the loader when appropriate.
      */
     function handleClick(event: MouseEvent): void {
       try {
         const target = event.target as HTMLElement
-        // 查找被点击元素最近的锚点
+        // Find the closest anchor to the click target
         const anchor = findClosestAnchor(target)
         const newUrl = anchor?.href
         if (newUrl) {
           const currentUrl = window.location.href
-          // 检查是否为外部链接（有target属性）
+          // External link if a target is set
           const isExternalLink = ((anchor as HTMLAnchorElement).target as React.HTMLAttributeAnchorTarget) !== ''
 
-          // 检查是否为特殊协议链接
+          // Special protocol links
           const isSpecialScheme = ['tel:', 'mailto:', 'sms:', 'blob:', 'download:'].some((scheme) =>
             newUrl.startsWith(scheme)
           )
 
-          // 检查是否为不同主机名
+          // Different hostname
           const notSameHost = !isSameHostName(window.location.href, anchor.href)
           if (notSameHost) {
             return
           }
 
-          // 检查是否为锚点或哈希锚点
+          // Is the navigation just an anchor/hash change
           const isAnchorOrHashAnchor =
             isAnchorOfCurrentUrl(currentUrl, newUrl) || isHashAnchor(window.location.href, anchor.href)
           if (!showForHashAnchor && isAnchorOrHashAnchor) {
             return
           }
 
-          // 根据不同情况决定是否显示进度条
+          // Decide whether the loader should run
           if (
-            newUrl === currentUrl || // 相同URL
-            isExternalLink || // 外部链接
-            isSpecialScheme || // 特殊协议
-            isAnchorOrHashAnchor || // 锚点链接
-            event.ctrlKey || // Ctrl键点击
-            event.metaKey || // Meta键点击
-            event.shiftKey || // Shift键点击
-            event.altKey || // Alt键点击
-            !toAbsoluteURL(anchor.href).startsWith('http') // 非HTTP链接
+            newUrl === currentUrl || // Same URL
+            isExternalLink || // External link
+            isSpecialScheme || // Special protocol
+            isAnchorOrHashAnchor || // Anchor-only navigation
+            event.ctrlKey || // Ctrl click
+            event.metaKey || // Cmd/Meta click
+            event.shiftKey || // Shift click
+            event.altKey || // Alt click
+            !toAbsoluteURL(anchor.href).startsWith('http') // Non-HTTP link
           ) {
-            // 对于特殊情况，立即开始并完成进度条
+            // For these cases, flash the loader instantly
             NProgress.start()
             NProgress.done()
             removeNProgressClass()
           } else {
-            // 对于正常导航，开始进度条
+            // For normal navigation, start the loader
             NProgress.start()
           }
         }
@@ -270,9 +257,7 @@ const NextTopLoader = ({
     }
 
     /**
-     * 监听历史记录pushState方法，在添加新条目到历史堆栈时完成进度条
-     * @param {History} 浏览器历史对象
-     * @returns {void}
+     * Finish the loader when pushState adds a new history entry.
      */
     ;((history: History): void => {
       const pushState = history.pushState
@@ -284,9 +269,7 @@ const NextTopLoader = ({
     })((window as Window).history)
 
     /**
-     * 监听历史记录replaceState方法，在替换当前历史条目时完成进度条
-     * @param {History} 浏览器历史对象
-     * @returns {void}
+     * Finish the loader when replaceState updates the current entry.
      */
     ;((history: History): void => {
       const replaceState = history.replaceState
@@ -298,8 +281,7 @@ const NextTopLoader = ({
     })((window as Window).history)
 
     /**
-     * 处理页面隐藏事件
-     * @returns {void}
+     * Handle pagehide events.
      */
     function handlePageHide(): void {
       NProgress.done()
@@ -307,19 +289,18 @@ const NextTopLoader = ({
     }
 
     /**
-     * 处理浏览器前进后退导航
-     * @returns {void}
+     * Handle browser back/forward navigation.
      */
     function handleBackAndForth(): void {
       NProgress.done()
     }
 
-    // 添加全局事件监听器
-    window.addEventListener('popstate', handleBackAndForth) // 监听历史记录变化
-    document.addEventListener('click', handleClick) // 监听点击事件
-    window.addEventListener('pagehide', handlePageHide) // 监听页面隐藏事件
+    // Add global listeners
+    window.addEventListener('popstate', handleBackAndForth)
+    document.addEventListener('click', handleClick)
+    window.addEventListener('pagehide', handlePageHide)
 
-    // 组件卸载时清理全局事件监听器
+    // Clean up listeners on unmount
     return (): void => {
       document.removeEventListener('click', handleClick)
       window.removeEventListener('pagehide', handlePageHide)
@@ -327,7 +308,7 @@ const NextTopLoader = ({
     }
   }, [crawl, crawlSpeed, easing, initialPosition, showForHashAnchor, showSpinner, speed, template])
 
-  // 返回样式元素
+  // Return the style element
   return styles
 }
 export default NextTopLoader

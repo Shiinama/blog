@@ -11,8 +11,6 @@ declare const messages: {
     "lifeDescription": "I'm married with a kid. But the main theme of my life is still opening my eyes to look at data and write code. For enjoyment, I like to drink good quality alcohol.",
     "dreamsTitle": "Dreams",
     "dreamsDescription": "Already realized~ Enjoying the fun of gambling and adventure, and the pleasure of immersion.",
-    "blogPurpose": "Why Write a Blog?",
-    "blogPurposeReason": "A gambler wants an audience to cheer, a creator needs recognition of the value of their content.",
     "myTimeLine": "My Simple Timeline",
     "timelinePart1Title": "Two and a Half Years Ago",
     "timelinePart1Description": "I was more focused on engineering (bundling/dependencies/optimization/engineering scenarios), source code (Vue/React/tools), interview skills, and algorithms.",
@@ -23,16 +21,13 @@ declare const messages: {
     "contactMe": "Contact Me"
   },
   "common": {
-    "navigation": "Navigation",
     "home": "Home",
     "about": "About",
     "myAccount": "My Account",
     "email": "Email",
     "username": "Username",
-    "currentTier": "Current Tier",
     "loginIn": "Login",
     "signout": "Sign Out",
-    "language": "Language",
     "toggleTheme": "Toggle theme",
     "uncategorized": "Uncategorized",
     "adminPanel": "Admin Dashboard"
@@ -54,11 +49,6 @@ declare const messages: {
     "flutter": "Flutter"
   },
   "admin": {
-    "layout": {
-      "welcome": "Welcome back, {name}",
-      "title": "Content management",
-      "backHome": "Back to home"
-    },
     "status": {
       "draft": "Draft",
       "published": "Published"
@@ -68,7 +58,6 @@ declare const messages: {
       "title": "Post list",
       "actions": {
         "newPost": "Write new post",
-        "edit": "Edit post",
         "toDraft": "Switch to draft",
         "publish": "Publish",
         "preview": "Preview",
@@ -164,7 +153,6 @@ declare const messages: {
         "content": "Write using Markdown/MDX..."
       },
       "actions": {
-        "save": "Save post",
         "saveDraft": "Save draft",
         "publish": "Publish post",
         "cancel": "Cancel",
@@ -186,7 +174,6 @@ declare const messages: {
     "login": {
       "page": {
         "title": "Welcome to Fish Notes",
-        "badge": "logbook",
         "description": "Sign in to continue your journey"
       },
       "google": "Continue with Google",
@@ -245,14 +232,17 @@ declare const messages: {
     }
   },
   "home": {
-    "heroBadge": "Notebook",
     "brandTitle": "Fish Notes",
     "heroTitle": "Curated strategies for thoughtful builders",
-    "heroDescription": "Long-form notes, implementation guides, and research summaries collected in one quiet reading list. Use the filters below to cut directly to what you need.",
-    "stats": {
-      "articlesLabel": "Articles",
-      "categoriesLabel": "Categories"
-    }
+    "heroDescription": "Long-form notes, implementation guides, and research summaries collected in one quiet reading list. Use the filters below to cut directly to what you need."
+  },
+  "seo": {
+    "siteTitle": "Fish Notes",
+    "siteDescription": "A quiet reading list of long-form notes, engineering guides, and applied AI/SEO growth playbooks.",
+    "homeTitle": "Content Library | Fish Notes",
+    "homeDescription": "Browse curated articles on engineering, SEO, growth, and independent development across languages.",
+    "aboutTitle": "About River Fish",
+    "aboutDescription": "Background, timeline, and contact details for River Fish (Felix)."
   }
 };
 export default messages;

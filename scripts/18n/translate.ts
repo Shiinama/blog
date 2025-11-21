@@ -1,6 +1,6 @@
 /**
- * 国际化翻译核心功能
- * 使用AI模型自动翻译消息文件
+ * Core i18n translation utilities.
+ * Uses an AI model to automatically translate message files.
  */
 import fs from 'fs/promises'
 import path from 'path'
@@ -10,43 +10,43 @@ import { locales } from '@/i18n/routing'
 import { extractKeys, findMissingKeys, deepMerge } from './utils'
 
 /**
- * 翻译模式
- * - missing: 仅翻译缺失的键
- * - keys: 仅翻译指定的键
+ * Translation modes
+ * - missing: translate only missing keys
+ * - keys: translate the explicitly provided keys
  */
 export type TranslationMode = 'missing' | 'keys'
 
 /**
- * 翻译选项
+ * Translation options
  */
 export type TranslationOptions = {
-  /** 翻译模式 */
+  /** Selected translation mode */
   mode: TranslationMode
-  /** 目标语言代码（如果未提供，则翻译所有语言） */
+  /** Target locales; defaults to translating all locales */
   targetLocales?: string[]
-  /** 要翻译的键（仅在'keys'模式下使用） */
+  /** Keys to translate when using the 'keys' mode */
   keys?: string[]
-  /** 使用的AI模型 */
+  /** Model identifier to use for translation */
   model?: string
-  /** 不需要翻译的键列表（如品牌名、公司信息等） */
+  /** Keys that should be copied without translation (e.g. brand names) */
   noTranslateKeys?: string[]
 }
 
 /**
- * 翻译结果
+ * Translation result
  */
 export type TranslationResult = {
-  /** 翻译是否成功 */
+  /** Whether translation succeeded */
   success: boolean
-  /** 语言代码 */
+  /** Locale code */
   locale: string
-  /** 成功消息 */
+  /** Success message */
   message?: string
-  /** 已翻译的键 */
+  /** Keys that were translated */
   translatedKeys?: string[]
-  /** 已复制但未翻译的键 */
+  /** Keys that were copied without translation */
   copiedKeys?: string[]
-  /** 错误信息 */
+  /** Error message if translation failed */
   error?: string
 }
 
@@ -62,13 +62,13 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
   const results: TranslationResult[] = []
 
   try {
-    // 读取英文消息文件作为源
+    // Read English messages as the source
     const messagesDir = path.join(process.cwd(), 'messages')
     const englishMessagesPath = path.join(messagesDir, 'en.json')
     const englishMessagesText = await fs.readFile(englishMessagesPath, 'utf-8')
     const englishMessages = JSON.parse(englishMessagesText)
 
-    // 确定要翻译的语言
+    // Determine which locales to translate
     const localesToTranslate = targetLocales
       ? locales.filter((l) => targetLocales.includes(l.code) && l.code !== 'en')
       : locales.filter((l) => l.code !== 'en')
@@ -77,7 +77,7 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
       return [{ success: false, locale: 'all', error: '没有找到要翻译的目标语言' }]
     }
 
-    // 根据模式确定要翻译的内容
+    // Decide what to translate based on the selected mode
     let sourceToTranslate: any
     let missingKeysByLocale: Record<string, string[]> = {}
 
@@ -86,13 +86,13 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
         if (keys.length === 0) {
           throw new Error('Keys模式需要至少一个要翻译的键')
         }
-        // 过滤掉不需要翻译的键
+        // Filter out keys that should not be translated
         const keysToTranslate = keys.filter((key) => !noTranslateKeys.includes(key))
         sourceToTranslate = extractKeys(englishMessages, keysToTranslate)
         break
 
       case 'missing':
-        // 收集所有语言的缺失键
+        // Collect missing keys for each locale
         for (const locale of localesToTranslate) {
           let existingTranslations = {}
           const localeFilePath = path.join(messagesDir, `${locale.code}.json`)
@@ -106,12 +106,12 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
 
           const missingKeys = findMissingKeys(englishMessages, existingTranslations)
           if (missingKeys.length > 0) {
-            // 过滤掉不需要翻译的键，但保留它们用于后续处理
+            // Skip keys that should not be translated but keep them for later merging
             missingKeysByLocale[locale.code] = missingKeys
           }
         }
 
-        // 如果所有语言都没有缺失键，则提前返回
+        // If no locales have missing keys, exit early
         if (Object.keys(missingKeysByLocale).length === 0) {
           return localesToTranslate.map((locale) => ({
             success: true,
@@ -121,31 +121,31 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
           }))
         }
 
-        // 使用所有缺失键的并集作为源
+        // Use every missing key across locales as the source set
         const allMissingKeys = [...new Set(Object.values(missingKeysByLocale).flat())]
-        // 过滤掉不需要翻译的键
+        // Remove keys that should not be translated
         const missingKeysToTranslate = allMissingKeys.filter((key) => !noTranslateKeys.includes(key))
         sourceToTranslate = extractKeys(englishMessages, missingKeysToTranslate)
         break
     }
 
-    // 准备翻译内容
+    // Prepare translation payload
     let translationPayload: Record<string, any> = {}
     let translationNeeded = false
-    // 记录每个语言不需要翻译的键
+    // Track keys that should be copied per locale
     let noTranslateKeysByLocale: Record<string, string[]> = {}
 
     if (mode === 'missing') {
-      // 对于missing模式，为每种语言只包含它缺失的键
+      // In missing mode, include only keys that are absent for each locale
       for (const locale of localesToTranslate) {
         const localeCode = locale.code
         const missingKeys = missingKeysByLocale[localeCode] || []
 
-        // 分离需要翻译和不需要翻译的键
+        // Split translatable vs non-translatable keys
         const keysToTranslate = missingKeys.filter((key) => !noTranslateKeys.includes(key))
         const keysNotToTranslate = missingKeys.filter((key) => noTranslateKeys.includes(key))
 
-        // 记录不需要翻译的键
+        // Track keys that should be copied
         if (keysNotToTranslate.length > 0) {
           noTranslateKeysByLocale[localeCode] = keysNotToTranslate
         }
@@ -156,15 +156,15 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
         }
       }
     } else {
-      // 对于keys模式，所有语言使用相同的源
-      // 分离需要翻译和不需要翻译的键
+      // In keys mode, use the same source set for every locale
+      // Split translatable vs non-translatable keys
       const keysToTranslate = keys.filter((key) => !noTranslateKeys.includes(key))
       const keysNotToTranslate = keys.filter((key) => noTranslateKeys.includes(key))
 
       for (const locale of localesToTranslate) {
         const localeCode = locale.code
 
-        // 记录不需要翻译的键
+        // Track keys that should be copied
         if (keysNotToTranslate.length > 0) {
           noTranslateKeysByLocale[localeCode] = keysNotToTranslate
         }
@@ -176,13 +176,13 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
       }
     }
 
-    // 处理不需要翻译的键（直接从英文复制）
+    // Handle keys that should be copied without translation
     for (const locale of localesToTranslate) {
       const localeCode = locale.code
       const keysNotToTranslate = noTranslateKeysByLocale[localeCode] || []
 
       if (keysNotToTranslate.length > 0) {
-        // 读取现有翻译（如果有）
+        // Load existing translations if present
         let existingTranslations = {}
         const localeFilePath = path.join(messagesDir, `${localeCode}.json`)
 
@@ -190,17 +190,17 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
           const existingContent = await fs.readFile(localeFilePath, 'utf-8')
           existingTranslations = JSON.parse(existingContent)
         } catch (err) {
-          // 文件不存在，将创建新文件
+          // If the file is missing, it will be created
         }
 
-        // 从英文复制不需要翻译的键
+        // Copy the non-translated keys from English
         const untranslatedContent = extractKeys(englishMessages, keysNotToTranslate)
         const mergedContent = deepMerge(existingTranslations, untranslatedContent)
 
-        // 写入文件
+        // Persist to disk
         await fs.writeFile(localeFilePath, JSON.stringify(mergedContent, null, 2), 'utf-8')
 
-        // 如果没有需要翻译的内容，添加结果
+        // If nothing needs translation, record the result now
         if (!translationPayload[localeCode]) {
           results.push({
             success: true,
@@ -213,9 +213,9 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
       }
     }
 
-    // 如果没有需要翻译的内容，提前返回
+    // Exit early if there is no translation work left
     if (!translationNeeded) {
-      // 过滤掉已经处理过的语言
+      // Filter out locales already handled
       const remainingLocales = localesToTranslate.filter((locale) => !results.some((r) => r.locale === locale.code))
 
       return [
@@ -229,9 +229,9 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
       ]
     }
 
-    // 准备多语言翻译提示
+    // Prepare the multi-language translation prompt
     const languagesToTranslate = localesToTranslate
-      .filter((l) => translationPayload[l.code]) // 只包含需要翻译的语言
+      .filter((l) => translationPayload[l.code]) // Include only locales that need translation
       .map((l) => `${l.code}: ${l.name}`)
 
     const languageList = languagesToTranslate.join(', ')
@@ -258,7 +258,7 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
 
     console.log(JSON.stringify(translationPayload, null, 2))
 
-    // 调用AI模型进行批量翻译
+    // Invoke the AI model for batch translation
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/${model}`,
       {
@@ -283,7 +283,7 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
 
     console.log(result.response)
 
-    // 提取JSON响应
+    // Extract the JSON response
     const jsonMatch = result.response?.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       throw new Error('响应中未找到有效的JSON')
@@ -292,14 +292,14 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
     const jsonString = jsonMatch[0]
     const allTranslations = JSON.parse(jsonString)
 
-    // 处理每种语言的翻译结果
+    // Process translations per locale
     for (const locale of localesToTranslate) {
       try {
         const localeCode = locale.code
 
-        // 如果这个语言没有需要翻译的内容，跳过
+        // Skip locales without translation payload
         if (!translationPayload[localeCode]) {
-          // 如果已经处理过不需要翻译的键，则跳过
+          // If we already handled copy-only keys, skip
           if (!results.some((r) => r.locale === localeCode)) {
             results.push({
               success: true,
@@ -322,7 +322,7 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
           continue
         }
 
-        // 读取现有翻译（如果有）
+        // Load existing translations if present
         let existingTranslations = {}
         const localeFilePath = path.join(messagesDir, `${localeCode}.json`)
 
@@ -330,16 +330,16 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
           const existingContent = await fs.readFile(localeFilePath, 'utf-8')
           existingTranslations = JSON.parse(existingContent)
         } catch (err) {
-          // 文件不存在，将创建新文件
+          // If the file is missing, create it
         }
 
-        // 确定最终内容
+        // Merge final content
         let finalContent = deepMerge(existingTranslations, translatedContent)
 
-        // 写入文件
+        // Write merged content to disk
         await fs.writeFile(localeFilePath, JSON.stringify(finalContent, null, 2), 'utf-8')
 
-        // 确定哪些键被翻译了
+        // Determine which keys were translated
         let translatedKeys: string[]
         if (mode === 'keys') {
           translatedKeys = keys.filter((key) => !noTranslateKeys.includes(key))
@@ -348,7 +348,7 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
           translatedKeys = (missingKeysByLocale[localeCode] || []).filter((key) => !noTranslateKeys.includes(key))
         }
 
-        // 获取已复制但未翻译的键
+        // Capture keys that were copied without translation
         const copiedKeys = noTranslateKeysByLocale[localeCode] || []
 
         results.push({
@@ -382,9 +382,9 @@ export async function translateMessages(options: TranslationOptions): Promise<Tr
 }
 
 /**
- * 从所有语言文件中删除指定的键
- * @param keys 要删除的键（使用点表示法表示嵌套键）
- * @returns 删除结果
+ * Remove specified keys from every locale file.
+ * @param keys Keys to remove (dot notation for nested access)
+ * @returns Deletion results per locale
  */
 export async function deleteKeysFromMessages(keys: string[]): Promise<Record<string, any>> {
   if (!keys || keys.length === 0) {
@@ -400,7 +400,7 @@ export async function deleteKeysFromMessages(keys: string[]): Promise<Record<str
   try {
     const messagesDir = path.join(process.cwd(), 'messages')
 
-    // 获取所有JSON文件
+    // Get all JSON message files
     const files = await fs.readdir(messagesDir)
     const jsonFiles = files.filter((file) => file.endsWith('.json'))
 
@@ -415,7 +415,7 @@ export async function deleteKeysFromMessages(keys: string[]): Promise<Record<str
 
         let modified = false
 
-        // 尝试删除每个键
+        // Attempt to delete each key
         for (const key of keys) {
           const deleted = removeKey(messages, key)
           if (deleted) {
@@ -424,7 +424,7 @@ export async function deleteKeysFromMessages(keys: string[]): Promise<Record<str
           }
         }
 
-        // 如果有修改，写回文件
+        // Write file back if it was modified
         if (modified) {
           await fs.writeFile(filePath, JSON.stringify(messages, null, 2), 'utf-8')
         }

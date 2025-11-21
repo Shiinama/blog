@@ -4,6 +4,7 @@ import NextAuthProvider from '@/components/session-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import NextTopLoader from '@/components/ui/top-loader'
+import { getSiteOrigin } from '@/lib/metadata'
 import { cn } from '@/lib/utils'
 
 import type { Metadata, Viewport } from 'next'
@@ -16,22 +17,9 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: '鱼的手记',
-  description: 'An OpenAI based chat system',
-  keywords: [
-    '鱼的手记',
-    'business AI',
-    'AI chatbot',
-    'chatbot templates',
-    'AI-powered communication',
-    'business automation',
-    'customer service AI',
-    'AI templates',
-    'conversational AI',
-    'business intelligence',
-    'AI solutions',
-    'custom chatbots'
-  ]
+  metadataBase: new URL(getSiteOrigin()),
+  title: 'Fish Notes',
+  description: 'A quiet reading list of long-form notes, engineering guides, and applied AI/SEO growth playbooks.'
 }
 
 export const viewport: Viewport = {

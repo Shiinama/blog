@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://linkai.website/sitemap.xml
+Sitemap: https://xibaoyu.xyz/sitemap.xml
