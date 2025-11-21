@@ -2,13 +2,12 @@
 
 import { and, count, desc, eq, like, or, type SQL } from 'drizzle-orm'
 
-import { categories, posts, type PostStatus, users } from '@/drizzle/schema'
+import { categories, posts, type PostStatus } from '@/drizzle/schema'
 import { formatCategoryLabel } from '@/lib/categories'
 import {
   type CategorySummary,
   type ExplorerFilterInput,
   type ExplorerPostRecord,
-  type PaginatedPostListItem,
   type PaginatedPostsResult,
   type PostDetails
 } from '@/lib/posts/types'
@@ -169,23 +168,21 @@ export async function getPaginatedPosts({
   }
   const whereClause = conditions.length ? and(...conditions) : undefined
 
+  const postSelection = {
+    id: posts.id,
+    title: posts.title,
+    slug: posts.slug,
+    status: posts.status,
+    publishedAt: posts.publishedAt,
+    updatedAt: posts.updatedAt,
+    createdAt: posts.createdAt,
+    isSubscriptionOnly: posts.isSubscriptionOnly,
+    categoryId: posts.categoryId
+  }
+
   const postQuery = db
-    .select({
-      post: posts,
-      category: {
-        id: categories.id,
-        key: categories.key,
-        sortOrder: categories.sortOrder,
-        isVisible: categories.isVisible
-      },
-      author: {
-        id: users.id,
-        name: users.name
-      }
-    })
+    .select(postSelection)
     .from(posts)
-    .leftJoin(categories, eq(posts.categoryId, categories.id))
-    .leftJoin(users, eq(posts.authorId, users.id))
     .orderBy(desc(posts.publishedAt))
     .limit(pageSize)
     .offset((page - 1) * pageSize)
@@ -197,14 +194,8 @@ export async function getPaginatedPosts({
 
   const [rows, totalResult] = await Promise.all([filteredPostQuery, filteredTotalQuery])
 
-  const formattedPosts: PaginatedPostListItem[] = rows.map(({ post, category, author }) => ({
-    ...post,
-    category,
-    author
-  }))
-
   return {
-    posts: formattedPosts,
+    posts: rows,
     total: totalResult[0]?.value ?? 0,
     page,
     pageSize

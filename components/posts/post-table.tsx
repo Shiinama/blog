@@ -17,7 +17,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/use-toast'
 import useRouter from '@/hooks/use-router'
 import { Link } from '@/i18n/navigation'
-import { formatCategoryLabel } from '@/lib/categories'
 
 import type { PostStatus } from '@/drizzle/schema'
 import type { PaginatedPostListItem } from '@/lib/posts/types'
@@ -186,7 +185,7 @@ export function PostTable({ posts }: PostTableProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm shadow-slate-900/10">
       <Table className="bg-white/90">
-        <TableHeader className="bg-slate-50/70 text-[12px] uppercase tracking-[0.18em] text-slate-500">
+        <TableHeader className="bg-slate-50/70 text-[12px] tracking-[0.18em] text-slate-500 uppercase">
           <TableRow className="[&_th]:px-4 [&_th]:py-3">
             <TableHead>{t('posts.table.headers.title')}</TableHead>
             <TableHead className="w-[180px]">{t('posts.table.headers.access')}</TableHead>
@@ -201,21 +200,17 @@ export function PostTable({ posts }: PostTableProps) {
             const pendingToggle = actionTarget?.type === 'toggle' && actionTarget.id === post.id && isPending
             const pendingPublishTime = actionTarget?.type === 'publishTime' && actionTarget.id === post.id && isPending
             const pendingAccess = actionTarget?.type === 'access' && actionTarget.id === post.id && isPending
-            const categoryLabel = formatCategoryLabel(post.category?.key) || t('posts.table.uncategorized')
             return (
               <TableRow key={post.id} className="bg-white/70 transition hover:bg-slate-50/80">
                 <TableCell className="align-top">
                   <div className="flex flex-col gap-1">
                     <Link
                       href={`/admin/posts/${post.id}`}
-                      className="text-foreground text-base font-semibold hover:text-primary"
+                      className="text-foreground hover:text-primary text-base font-semibold"
                     >
                       {post.title}
                     </Link>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="border-slate-200 bg-slate-100/80 text-slate-700">
-                        {categoryLabel}
-                      </Badge>
+                    <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                       <span className="text-slate-500">
                         {t('posts.table.headers.updated')}: {formatLocaleDate(post.updatedAt ?? post.createdAt)}
                       </span>
@@ -234,7 +229,7 @@ export function PostTable({ posts }: PostTableProps) {
                     >
                       {post.isSubscriptionOnly ? t('posts.access.subscriptionOnly') : t('posts.access.public')}
                     </Badge>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
                       <Switch
                         checked={post.isSubscriptionOnly}
                         onCheckedChange={(checked) => handleAccessToggle(post, checked)}

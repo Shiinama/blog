@@ -35,9 +35,16 @@ export interface PostDetails extends Post {
   author: PostAuthorSummary | null
 }
 
-export interface PaginatedPostListItem extends Post {
-  category: CategorySummary | null
-  author: Pick<PostAuthorSummary, 'id' | 'name'> | null
+export interface PaginatedPostListItem {
+  id: string
+  title: string
+  slug: string
+  status: Post['status']
+  publishedAt: Post['publishedAt']
+  updatedAt: Post['updatedAt']
+  createdAt: Post['createdAt']
+  isSubscriptionOnly: Post['isSubscriptionOnly']
+  categoryId: Post['categoryId']
 }
 
 export interface PaginatedPostsResult {

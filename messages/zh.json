@@ -43,7 +43,11 @@
     "sdk": "SDK",
     "fontEnd": "前端",
     "interview": "面试",
-    "flutter": "Flutter 移动开发"
+    "flutter": "Flutter 移动开发",
+    "app": "App 应用",
+    "backend": "后端",
+    "commonBaseProject": "通用基础项目",
+    "nextjs": "Next.js"
   },
   "admin": {
     "status": {
@@ -111,6 +115,29 @@
       "new": {
         "description": "创建新文章",
         "title": "撰写内容"
+      }
+    },
+    "subscriptions": {
+      "title": "会员订阅发放",
+      "description": "输入邮箱即可下发一年期会员，系统会自动创建商品、订单和订阅记录。",
+      "formTitle": "发放一年会员",
+      "helper": "用于线下收款或赠送场景，请先确认该邮箱已经注册。",
+      "bullet": {
+        "price": "价格：200 cny（订阅商品）",
+        "interval": "周期：1 年，一次性发放",
+        "howItWorks": "流程：通过邮箱匹配用户 → 创建订单 → 写入订阅记录"
+      },
+      "actions": {
+        "open": "下发会员订阅"
+      },
+      "form": {
+        "emailLabel": "用户邮箱",
+        "emailPlaceholder": "user@example.com",
+        "noteLabel": "备注（可选）",
+        "notePlaceholder": "记录发放原因或线下支付信息",
+        "submit": "发送一年会员",
+        "successTitle": "发放成功",
+        "errorTitle": "发放失败"
       }
     },
     "form": {

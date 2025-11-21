@@ -58,9 +58,14 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
             <CardDescription className="text-muted-foreground text-sm">{t('posts.description')}</CardDescription>
             <CardTitle className="text-3xl font-semibold text-slate-900">{t('posts.title')}</CardTitle>
           </div>
-          <Button asChild size="lg">
-            <Link href="/admin/posts/new">{t('posts.actions.newPost')}</Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline" size="lg">
+              <Link href="/admin/subscriptions">{t('subscriptions.actions.open')}</Link>
+            </Button>
+            <Button asChild size="lg">
+              <Link href="/admin/posts/new">{t('posts.actions.newPost')}</Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-0 pb-6">
           <form
