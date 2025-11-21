@@ -119,18 +119,6 @@ export async function grantAnnualSubscriptionAction(
       }
     }
 
-    const productExists = await db.query.products.findFirst({
-      where: (productTable, { eq }) => eq(productTable.id, product.id),
-      columns: { id: true }
-    })
-
-    if (!productExists?.id) {
-      return {
-        status: 'error',
-        message: '订阅商品不存在，请稍后重试'
-      }
-    }
-
     const now = new Date()
     const expiresAt = addYear(now)
 
