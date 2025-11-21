@@ -39,7 +39,8 @@ const postFormSchema = z.object({
   status: z.enum(postStatusValues).default('DRAFT'),
   sortOrder: z.coerce.number().optional(),
   publishedAt: z.string().optional(),
-  language: z.string().optional()
+  language: z.string().optional(),
+  isSubscriptionOnly: z.coerce.boolean().default(false)
 })
 
 function formatFieldErrors(error: z.ZodError): Record<string, string[]> {
@@ -72,6 +73,7 @@ async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: 
   const readingTime = calculateReadingTime(data.content)
   const language = data.language?.trim() || 'zh'
   const sortOrder = Number.isFinite(data.sortOrder) ? (data.sortOrder as number) : 0
+  const isSubscriptionOnly = Boolean(data.isSubscriptionOnly)
 
   const publishedAt =
     data.status === 'PUBLISHED'
@@ -89,6 +91,7 @@ async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: 
     coverImageUrl,
     categoryId: data.categoryId,
     status: data.status,
+    isSubscriptionOnly,
     tags,
     readingTime,
     language,
@@ -190,6 +193,7 @@ export async function savePostAction(_prevState: PostFormState, formData: FormDa
 }
 
 export async function deletePostAction(postId: string) {
+  await assertAdmin()
   const db = createDb()
   const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ id: posts.id })
 
@@ -203,6 +207,7 @@ export async function deletePostAction(postId: string) {
 }
 
 export async function togglePostStatusAction(postId: string, status: PostStatus) {
+  await assertAdmin()
   const db = createDb()
   const existing = await db.query.posts.findFirst({
     where: (post, { eq }) => eq(post.id, postId)
@@ -270,4 +275,26 @@ export async function updatePostPublishedAtAction(postId: string, publishedAt?: 
   revalidatePostRoutes(updated[0].id)
 
   return { status: 'success' }
+}
+
+export async function updatePostSubscriptionAction(postId: string, isSubscriptionOnly: boolean) {
+  await assertAdmin()
+  const db = createDb()
+  const updated = await db
+    .update(posts)
+    .set({
+      isSubscriptionOnly,
+      updatedAt: new Date()
+    })
+    .where(eq(posts.id, postId))
+    .returning({ id: posts.id, isSubscriptionOnly: posts.isSubscriptionOnly })
+
+  const record = updated[0]
+  if (!record) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  revalidatePostRoutes(record.id)
+
+  return { status: 'success', value: record.isSubscriptionOnly }
 }

@@ -3,9 +3,17 @@
 import { useTranslations } from 'next-intl'
 import { useRef, useState, useTransition } from 'react'
 
-import { deletePostAction, togglePostStatusAction, updatePostPublishedAtAction } from '@/actions/posts'
+import {
+  deletePostAction,
+  togglePostStatusAction,
+  updatePostPublishedAtAction,
+  updatePostSubscriptionAction
+} from '@/actions/posts'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 import useRouter from '@/hooks/use-router'
 import { Link } from '@/i18n/navigation'
@@ -15,7 +23,7 @@ import type { PostStatus } from '@/drizzle/schema'
 import type { PaginatedPostListItem } from '@/lib/posts/types'
 
 type PostListItem = PaginatedPostListItem
-type PostActionType = 'delete' | 'toggle' | 'publishTime'
+type PostActionType = 'delete' | 'toggle' | 'publishTime' | 'access'
 type PostActionTarget = { type: PostActionType; id: string }
 
 function formatDateTimeForInput(value?: string | Date | null) {
@@ -53,18 +61,27 @@ export function PostTable({ posts }: PostTableProps) {
     }
     setActionTarget({ type: 'delete', id })
     startTransition(async () => {
-      const result = await deletePostAction(id)
-      if (result.status === 'success') {
-        toast({ title: t('posts.deleteSuccess') })
-        router.refresh()
-      } else {
+      try {
+        const result = await deletePostAction(id)
+        if (result.status === 'success') {
+          toast({ title: t('posts.deleteSuccess') })
+          router.refresh()
+        } else {
+          toast({
+            title: t('posts.deleteFailed'),
+            description: result.message ?? t('posts.deleteFailedDescription'),
+            variant: 'destructive'
+          })
+        }
+      } catch (error) {
         toast({
           title: t('posts.deleteFailed'),
-          description: result.message ?? t('posts.deleteFailedDescription'),
+          description: error instanceof Error ? error.message : t('posts.deleteFailedDescription'),
           variant: 'destructive'
         })
+      } finally {
+        setActionTarget(null)
       }
-      setActionTarget(null)
     })
   }
 
@@ -72,20 +89,29 @@ export function PostTable({ posts }: PostTableProps) {
     const nextStatus = post.status === 'PUBLISHED' ? ('DRAFT' as PostStatus) : ('PUBLISHED' as PostStatus)
     setActionTarget({ type: 'toggle', id: post.id })
     startTransition(async () => {
-      const result = await togglePostStatusAction(post.id, nextStatus)
-      if (result.status === 'success') {
-        toast({
-          title: t('posts.statusSwitchSuccess', { status: statusLabel[nextStatus] })
-        })
-        router.refresh()
-      } else {
+      try {
+        const result = await togglePostStatusAction(post.id, nextStatus)
+        if (result.status === 'success') {
+          toast({
+            title: t('posts.statusSwitchSuccess', { status: statusLabel[nextStatus] })
+          })
+          router.refresh()
+        } else {
+          toast({
+            title: t('posts.statusUpdateFailed'),
+            description: result.message ?? t('posts.statusUpdateFailedDescription'),
+            variant: 'destructive'
+          })
+        }
+      } catch (error) {
         toast({
           title: t('posts.statusUpdateFailed'),
-          description: result.message ?? t('posts.statusUpdateFailedDescription'),
+          description: error instanceof Error ? error.message : t('posts.statusUpdateFailedDescription'),
           variant: 'destructive'
         })
+      } finally {
+        setActionTarget(null)
       }
-      setActionTarget(null)
     })
   }
 
@@ -101,18 +127,55 @@ export function PostTable({ posts }: PostTableProps) {
 
     setActionTarget({ type: 'publishTime', id: post.id })
     startTransition(async () => {
-      const result = await updatePostPublishedAtAction(post.id, trimmedValue || null)
-      if (result.status === 'success') {
-        toast({ title: t('posts.publishTime.updateSuccess') })
-        router.refresh()
-      } else {
+      try {
+        const result = await updatePostPublishedAtAction(post.id, trimmedValue || null)
+        if (result.status === 'success') {
+          toast({ title: t('posts.publishTime.updateSuccess') })
+          router.refresh()
+        } else {
+          toast({
+            title: t('posts.publishTime.updateFailed'),
+            description: result.message,
+            variant: 'destructive'
+          })
+        }
+      } catch (error) {
         toast({
           title: t('posts.publishTime.updateFailed'),
-          description: result.message,
+          description: error instanceof Error ? error.message : t('posts.publishTime.updateFailed'),
           variant: 'destructive'
         })
+      } finally {
+        setActionTarget(null)
       }
-      setActionTarget(null)
+    })
+  }
+
+  const handleAccessToggle = (post: PostListItem, isSubscriptionOnly: boolean) => {
+    setActionTarget({ type: 'access', id: post.id })
+    startTransition(async () => {
+      try {
+        const result = await updatePostSubscriptionAction(post.id, isSubscriptionOnly)
+        if (result.status === 'success') {
+          const label = isSubscriptionOnly ? t('posts.access.subscriptionOnly') : t('posts.access.public')
+          toast({ title: t('posts.access.updateSuccess', { label }) })
+          router.refresh()
+        } else {
+          toast({
+            title: t('posts.access.updateFailed'),
+            description: result.message ?? t('posts.access.updateFailedDescription'),
+            variant: 'destructive'
+          })
+        }
+      } catch (error) {
+        toast({
+          title: t('posts.access.updateFailed'),
+          description: error instanceof Error ? error.message : t('posts.access.updateFailedDescription'),
+          variant: 'destructive'
+        })
+      } finally {
+        setActionTarget(null)
+      }
     })
   }
 
@@ -121,62 +184,98 @@ export function PostTable({ posts }: PostTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-separate text-left text-sm">
-        <thead className="text-muted-foreground bg-slate-50 text-[11px] tracking-[0.18em] uppercase">
-          <tr>
-            <th className="px-4 py-3">{t('posts.table.headers.title')}</th>
-            <th className="px-4 py-3">{t('posts.table.headers.category')}</th>
-            <th className="px-4 py-3">{t('posts.table.headers.status')}</th>
-            <th className="px-4 py-3">{t('posts.table.headers.updated')}</th>
-            <th className="px-4 py-3">{t('posts.table.headers.publishedAt')}</th>
-            <th className="px-4 py-3 text-right">{t('posts.table.headers.actions')}</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm shadow-slate-900/10">
+      <Table className="bg-white/90">
+        <TableHeader className="bg-slate-50/70 text-[12px] uppercase tracking-[0.18em] text-slate-500">
+          <TableRow className="[&_th]:px-4 [&_th]:py-3">
+            <TableHead>{t('posts.table.headers.title')}</TableHead>
+            <TableHead className="w-[180px]">{t('posts.table.headers.access')}</TableHead>
+            <TableHead className="w-[200px]">{t('posts.table.headers.publishedAt')}</TableHead>
+            <TableHead className="w-[150px]">{t('posts.table.headers.status')}</TableHead>
+            <TableHead className="text-right">{t('posts.table.headers.actions')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {posts.map((post) => {
             const pendingDelete = actionTarget?.type === 'delete' && actionTarget.id === post.id && isPending
             const pendingToggle = actionTarget?.type === 'toggle' && actionTarget.id === post.id && isPending
             const pendingPublishTime = actionTarget?.type === 'publishTime' && actionTarget.id === post.id && isPending
+            const pendingAccess = actionTarget?.type === 'access' && actionTarget.id === post.id && isPending
+            const categoryLabel = formatCategoryLabel(post.category?.key) || t('posts.table.uncategorized')
             return (
-              <tr key={post.id} className="border-t bg-white transition hover:bg-slate-50">
-                <td className="px-4 py-3">
+              <TableRow key={post.id} className="bg-white/70 transition hover:bg-slate-50/80">
+                <TableCell className="align-top">
                   <div className="flex flex-col gap-1">
-                    <Link href={`/admin/posts/${post.id}`} className="text-primary font-medium hover:underline">
+                    <Link
+                      href={`/admin/posts/${post.id}`}
+                      className="text-foreground text-base font-semibold hover:text-primary"
+                    >
                       {post.title}
                     </Link>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="border-slate-200 bg-slate-100/80 text-slate-700">
+                        {categoryLabel}
+                      </Badge>
+                      <span className="text-slate-500">
+                        {t('posts.table.headers.updated')}: {formatLocaleDate(post.updatedAt ?? post.createdAt)}
+                      </span>
+                    </div>
                   </div>
-                </td>
-                <td className="px-4 py-3">
-                  {formatCategoryLabel(post.category?.key) || t('posts.table.uncategorized')}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
-                      post.status === 'PUBLISHED'
-                        ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200'
-                        : 'bg-amber-100 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200'
-                    }`}
-                  >
-                    {statusLabel[post.status]}
-                  </span>
-                </td>
-                <td className="text-muted-foreground px-4 py-3 text-sm">
-                  {formatLocaleDate(post.updatedAt ?? post.createdAt)}
-                </td>
-                <td className="px-4 py-3">
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      variant={post.isSubscriptionOnly ? 'secondary' : 'outline'}
+                      className={
+                        post.isSubscriptionOnly
+                          ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100'
+                          : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100'
+                      }
+                    >
+                      {post.isSubscriptionOnly ? t('posts.access.subscriptionOnly') : t('posts.access.public')}
+                    </Badge>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch
+                        checked={post.isSubscriptionOnly}
+                        onCheckedChange={(checked) => handleAccessToggle(post, checked)}
+                        disabled={pendingAccess}
+                      />
+                      <span>{t('posts.access.switchLabel')}</span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
                   <PublishTimeField
                     post={post}
                     buttonLabel={t('posts.actions.updatePublishTime')}
                     onSave={handlePublishTimeUpdate}
                     isSaving={pendingPublishTime}
                   />
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleToggle(post)} disabled={pendingToggle}>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="flex flex-col gap-2">
+                    <span
+                      className={`inline-flex w-fit rounded-full px-2 py-1 text-xs font-semibold ${
+                        post.status === 'PUBLISHED'
+                          ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200'
+                          : 'bg-amber-100 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200'
+                      }`}
+                    >
+                      {statusLabel[post.status]}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggle(post)}
+                      disabled={pendingToggle}
+                      className="w-fit"
+                    >
                       {post.status === 'PUBLISHED' ? t('posts.actions.toDraft') : t('posts.actions.publish')}
                     </Button>
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <Button asChild size="sm" variant="ghost">
                       <Link href={`/content/${post.id}`} target="_blank" rel="noopener noreferrer">
                         {t('posts.actions.preview')}
@@ -191,12 +290,12 @@ export function PostTable({ posts }: PostTableProps) {
                       {t('posts.actions.delete')}
                     </Button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   )
 }

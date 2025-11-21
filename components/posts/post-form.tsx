@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useActionState, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react'
 
 import { deletePostAction, savePostAction } from '@/actions/posts'
 import { initialPostFormState } from '@/actions/posts/form-state'
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import useRouter from '@/hooks/use-router'
@@ -27,6 +28,20 @@ import type { PostStatus } from '@/drizzle/schema'
 import type { CategorySummary, PostDetails } from '@/lib/posts/types'
 
 type EditablePost = PostDetails
+
+type MetadataState = {
+  title: string
+  slug: string
+  coverImageUrl: string
+  tags: string
+  categoryId: string
+  language: string
+  publishedAt: string
+  summary: string
+  sortOrder: string
+  status: PostStatus
+  isSubscriptionOnly: boolean
+}
 
 interface PostFormProps {
   post?: EditablePost
@@ -41,6 +56,7 @@ function formatDateValue(date?: Date | null) {
 
 export function PostForm({ post, categories }: PostFormProps) {
   const formRef = useRef<HTMLFormElement | null>(null)
+  const formId = useId()
   const router = useRouter()
   const { toast } = useToast()
   const t = useTranslations('admin')
@@ -51,7 +67,7 @@ export function PostForm({ post, categories }: PostFormProps) {
     { label: t('status.draft'), value: 'DRAFT' as PostStatus },
     { label: t('status.published'), value: 'PUBLISHED' as PostStatus }
   ]
-  const [metadata, setMetadata] = useState(() => ({
+  const [metadata, setMetadata] = useState<MetadataState>(() => ({
     title: post?.title ?? '',
     slug: post?.slug ?? '',
     coverImageUrl: post?.coverImageUrl ?? '',
@@ -61,7 +77,8 @@ export function PostForm({ post, categories }: PostFormProps) {
     publishedAt: post?.publishedAt ? formatDateValue(post?.publishedAt) : '',
     summary: post?.summary ?? '',
     sortOrder: String(post?.sortOrder ?? 0),
-    status: post?.status ?? 'DRAFT'
+    status: post?.status ?? 'DRAFT',
+    isSubscriptionOnly: post?.isSubscriptionOnly ?? false
   }))
   const [isPublishModalOpen, setPublishModalOpen] = useState(false)
 
@@ -122,12 +139,12 @@ export function PostForm({ post, categories }: PostFormProps) {
     setMetadata((prev) => ({ ...prev, status: 'DRAFT' }))
   }
 
-  const updateMetadataField = (key: keyof typeof metadata, value: string) => {
+  const updateMetadataField = <K extends keyof MetadataState>(key: K, value: MetadataState[K]) => {
     setMetadata((prev) => ({ ...prev, [key]: value }))
   }
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-8">
+    <form ref={formRef} id={formId} action={formAction} className="relative space-y-8">
       <input type="hidden" name="postId" value={post?.id ?? ''} />
       <input type="hidden" name="content" value={content} />
       <input type="hidden" name="title" value={metadata.title} />
@@ -140,6 +157,27 @@ export function PostForm({ post, categories }: PostFormProps) {
       <input type="hidden" name="summary" value={metadata.summary} />
       <input type="hidden" name="sortOrder" value={metadata.sortOrder} />
       <input type="hidden" name="status" value={metadata.status} />
+      <input type="hidden" name="isSubscriptionOnly" value={metadata.isSubscriptionOnly ? 'true' : 'false'} />
+      <div className="pointer-events-none fixed top-24 right-4 z-40 hidden max-w-xs flex-col gap-3 md:flex lg:right-10">
+        <div className="bg-background/90 pointer-events-auto rounded-2xl border border-slate-200 px-4 py-3 shadow-xl shadow-slate-900/10 backdrop-blur">
+          <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.22em] uppercase">
+            {t('form.sticky.title')}
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button type="submit" form={formId} disabled={state.status === 'success'} onClick={handleSaveDraft}>
+              {t('form.actions.saveDraft')}
+            </Button>
+            <Button type="button" onClick={() => setPublishModalOpen(true)}>
+              {t('form.actions.publish')}
+            </Button>
+            {post && (
+              <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+                {isDeleting ? t('form.actions.deleting') : t('form.actions.delete')}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="space-y-2">
         <MarkdownEditor
           name="content"
@@ -149,7 +187,7 @@ export function PostForm({ post, categories }: PostFormProps) {
         />
         {fieldError('content') && <p className="text-destructive text-sm">{fieldError('content')}</p>}
       </div>
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4 md:hidden">
         <Button type="submit" disabled={state.status === 'success'} onClick={handleSaveDraft}>
           {t('form.actions.saveDraft')}
         </Button>
@@ -223,7 +261,7 @@ export function PostForm({ post, categories }: PostFormProps) {
                 <select
                   id="modal-status"
                   value={metadata.status}
-                  onChange={(event) => updateMetadataField('status', event.target.value)}
+                  onChange={(event) => updateMetadataField('status', event.target.value as 'DRAFT' | 'PUBLISHED')}
                   className="bg-background mt-2 w-full rounded-md border p-2"
                 >
                   {statusOptions.map((option) => (
@@ -232,6 +270,19 @@ export function PostForm({ post, categories }: PostFormProps) {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="flex items-start justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 shadow-inner shadow-slate-900/5">
+                <div className="pr-3">
+                  <Label htmlFor="modal-subscription" className="text-sm font-semibold">
+                    {t('form.fields.subscriptionOnly')}
+                  </Label>
+                  <p className="text-muted-foreground mt-1 text-xs">{t('form.publishModal.subscriptionHint')}</p>
+                </div>
+                <Switch
+                  id="modal-subscription"
+                  checked={metadata.isSubscriptionOnly}
+                  onCheckedChange={(checked) => updateMetadataField('isSubscriptionOnly', checked)}
+                />
               </div>
               <div>
                 <Label htmlFor="modal-cover">{t('form.fields.coverImageUrl')}</Label>

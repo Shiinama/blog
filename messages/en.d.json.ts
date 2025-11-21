@@ -75,6 +75,14 @@ declare const messages: {
         "delete": "Delete",
         "updatePublishTime": "Update publish time"
       },
+      "access": {
+        "subscriptionOnly": "Subscription only",
+        "public": "Public",
+        "switchLabel": "Toggle access",
+        "updateSuccess": "Access updated to {label}",
+        "updateFailed": "Failed to update access",
+        "updateFailedDescription": "Please try again later."
+      },
       "filters": {
         "searchLabel": "Search",
         "searchPlaceholder": "Title or summary keywords",
@@ -106,7 +114,7 @@ declare const messages: {
       "table": {
         "headers": {
           "title": "Title",
-          "category": "Category",
+          "access": "Access",
           "status": "Status",
           "updated": "Updated at",
           "publishedAt": "Published at",
@@ -144,7 +152,8 @@ declare const messages: {
         "language": "Language",
         "publishedAt": "Published at",
         "summary": "Summary",
-        "content": "Content"
+        "content": "Content",
+        "subscriptionOnly": "This is a member-only post"
       },
       "placeholders": {
         "title": "Enter a title",
@@ -165,7 +174,11 @@ declare const messages: {
       "publishModal": {
         "title": "Finalize publishing",
         "description": "Double-check the slug, metadata, and summary before going live.",
-        "help": "Summary defaults to the first 100 characters of your article."
+        "help": "Summary defaults to the first 100 characters of your article.",
+        "subscriptionHint": "When enabled, non-members only see 30% of the article."
+      },
+      "sticky": {
+        "title": "Quick actions"
       }
     }
   },
@@ -187,10 +200,28 @@ declare const messages: {
     "metadata": {
       "published": "Published",
       "readingTime": "Reading Time",
-      "author": "Author"
+      "author": "Author",
+      "access": "Access",
+      "subscriptionOnly": "Members only",
+      "free": "Public"
     },
     "updated": "Updated {date}",
-    "coverImage": "Cover image"
+    "coverImage": "Cover image",
+    "badges": {
+      "subscriptionOnly": "Member content",
+      "member": "Unlocked"
+    },
+    "locked": {
+      "previewTitle": "Preview only",
+      "previewDescription": "Non-members can read 30% of the article.",
+      "title": "Subscribe to unlock the full article",
+      "description": "Support the writing, unlock every paragraph, and receive future updates instantly.",
+      "fullAccess": "Read the entire story and all media without cuts",
+      "updates": "Get new versions and addenda as soon as they drop",
+      "support": "Priority support channel for feedback and questions",
+      "primaryCta": "Sign in / Subscribe",
+      "secondaryCta": "See member benefits"
+    }
   },
   "explorer": {
     "searchLabel": "Search",

@@ -71,6 +71,14 @@
         "delete": "删除",
         "updatePublishTime": "更新发布时间"
       },
+      "access": {
+        "subscriptionOnly": "需要订阅",
+        "public": "公开阅读",
+        "switchLabel": "订阅开关",
+        "updateSuccess": "访问控制已更新为 {label}",
+        "updateFailed": "更新访问控制失败",
+        "updateFailedDescription": "请稍后再试。"
+      },
       "filters": {
         "searchLabel": "搜索",
         "searchPlaceholder": "标题或摘要关键字",
@@ -102,7 +110,7 @@
       "table": {
         "headers": {
           "title": "标题",
-          "category": "分类",
+          "access": "订阅限制",
           "status": "状态",
           "updated": "更新时间",
           "publishedAt": "发布时间",
@@ -135,7 +143,8 @@
         "language": "语言",
         "publishedAt": "发布时间",
         "summary": "摘要",
-        "content": "正文内容"
+        "content": "正文内容",
+        "subscriptionOnly": "这是一篇订阅文章"
       },
       "placeholders": {
         "title": "请输入标题",
@@ -161,7 +170,11 @@
       "publishModal": {
         "title": "发布前确认",
         "description": "最后确认一下 slug、封面和摘要，让文章准备好上线。",
-        "help": "摘要会默认使用文章前 100 个字符。"
+        "help": "摘要会默认使用文章前 100 个字符。",
+        "subscriptionHint": "开启后，未订阅用户只能看到 30% 的正文。"
+      },
+      "sticky": {
+        "title": "快速操作"
       }
     }
   },
@@ -183,10 +196,28 @@
     "metadata": {
       "published": "发布时间",
       "readingTime": "阅读时间",
-      "author": "作者"
+      "author": "作者",
+      "access": "访问",
+      "subscriptionOnly": "会员专享",
+      "free": "公开阅读"
     },
     "updated": "更新于 {date}",
-    "coverImage": "封面图"
+    "coverImage": "封面图",
+    "badges": {
+      "subscriptionOnly": "订阅内容",
+      "member": "会员已解锁"
+    },
+    "locked": {
+      "previewTitle": "这是预览内容",
+      "previewDescription": "非会员仅可阅读 30% 的正文。",
+      "title": "订阅后解锁完整文章",
+      "description": "支持创作、解锁全文，未来更新也会第一时间送达。",
+      "fullAccess": "看完全文与高清图片，不再被截断",
+      "updates": "新版本、补充内容第一时间推送",
+      "support": "专属支持通道，反馈会被优先处理",
+      "primaryCta": "登录 / 订阅解锁",
+      "secondaryCta": "了解订阅权益"
+    }
   },
   "explorer": {
     "searchLabel": "搜索",
