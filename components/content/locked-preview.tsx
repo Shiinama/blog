@@ -27,8 +27,7 @@ export function LockedPreview({ content, label, description }: LockedPreviewProp
           <MarkdownRenderer content={content} />
         </div>
       </div>
-      <div className="pointer-events-none absolute inset-0 z-10 bg-linear-to-b from-white/50 via-white/0 to-white/95 dark:from-slate-950/40 dark:via-slate-950/10 dark:to-slate-950/95" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-32 bg-linear-to-b from-transparent via-white/92 to-white backdrop-blur-[2px] dark:via-slate-950/85 dark:to-slate-950" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-32 bg-linear-to-b from-transparent via-white/92 to-white backdrop-blur-md dark:via-slate-950/85 dark:to-slate-950" />
     </div>
   )
 }

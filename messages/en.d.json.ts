@@ -203,9 +203,6 @@ declare const messages: {
       "previewDescription": "Non-members can read 30% of the article.",
       "title": "Subscribe to unlock the full article",
       "description": "Support the writing, unlock every paragraph, and receive future updates instantly.",
-      "fullAccess": "Read the entire story and all media without cuts",
-      "updates": "Get new versions and addenda as soon as they drop",
-      "support": "Priority support channel for feedback and questions",
       "primaryCta": "Sign in / Subscribe",
       "secondaryCta": "See member benefits"
     }

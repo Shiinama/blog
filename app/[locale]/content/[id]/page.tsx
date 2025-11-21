@@ -184,7 +184,6 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
             <LockedPaywall
               title={contentT('locked.title')}
               description={contentT('locked.description')}
-              bullets={['fullAccess', 'updates', 'support'].map((key) => contentT(`locked.${key}`))}
               authorLine={`${authorName} · ${contentT('metadata.subscriptionOnly')}`}
               badgeLabel={contentT('metadata.subscriptionOnly')}
             />

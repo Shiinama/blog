@@ -1,4 +1,5 @@
 import { type MetadataRoute } from 'next'
+import { connection } from 'next/server'
 
 import { DEFAULT_LOCALE, routing } from '@/i18n/routing'
 import { getSiteOrigin } from '@/lib/metadata'
@@ -33,6 +34,7 @@ function buildEntry(pathname: string, lastModified: string | Date): MetadataRout
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection()
   const categories = await getVisibleCategoriesWithPosts()
   const posts = categories.flatMap((category) => category.posts)
 
