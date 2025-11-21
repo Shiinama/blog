@@ -1,6 +1,7 @@
 'use client'
 
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import { EditorContent, useEditor } from '@tiptap/react'
@@ -43,6 +44,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Image,
       Placeholder.configure({
         placeholder: placeholder ?? 'Write some Markdown...'
       }),
