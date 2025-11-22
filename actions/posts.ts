@@ -207,6 +207,15 @@ export async function savePostAction(_prevState: PostFormState, formData: FormDa
             updatedAt: now
           })
         }
+        if (payload.data.categoryId && payload.data.categoryId !== existing.categoryId) {
+          await db
+            .update(posts)
+            .set({
+              categoryId: payload.data.categoryId,
+              updatedAt: now
+            })
+            .where(eq(posts.id, existing.id))
+        }
 
         revalidatePostRoutes(existing.id)
 

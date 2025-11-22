@@ -62,7 +62,8 @@
     "app": "App 应用",
     "backend": "后端",
     "commonBaseProject": "通用基础项目",
-    "nextjs": "Next.js"
+    "nextjs": "Next.js",
+    "other": "其他"
   },
   "admin": {
     "status": {
