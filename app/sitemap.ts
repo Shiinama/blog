@@ -3,7 +3,7 @@ import { connection } from 'next/server'
 
 import { DEFAULT_LOCALE, routing } from '@/i18n/routing'
 import { getSiteOrigin } from '@/lib/metadata'
-import { getVisibleCategoriesWithPosts } from '@/lib/posts'
+import { getPublishedPostsForSitemap } from '@/lib/posts'
 
 const origin = getSiteOrigin()
 
@@ -12,7 +12,7 @@ function localePath(pathname: string, locale: string) {
   return locale === DEFAULT_LOCALE ? normalized : `/${locale}${normalized}`
 }
 
-function buildEntry(pathname: string, lastModified: string | Date): MetadataRoute.Sitemap[number] {
+function buildEntry(pathname: string): MetadataRoute.Sitemap[number] {
   const defaultUrl = `${origin}${localePath(pathname, DEFAULT_LOCALE)}`
   const alternates = routing.locales.reduce<Record<string, string>>(
     (acc, locale) => {
@@ -26,7 +26,6 @@ function buildEntry(pathname: string, lastModified: string | Date): MetadataRout
 
   return {
     url: defaultUrl,
-    lastModified,
     alternates: {
       languages: alternates
     }
@@ -35,18 +34,15 @@ function buildEntry(pathname: string, lastModified: string | Date): MetadataRout
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection()
-  const categories = await getVisibleCategoriesWithPosts()
-  const posts = categories.flatMap((category) => category.posts)
+  const posts = await getPublishedPostsForSitemap()
 
   const staticPaths = ['/', '/about']
-  const staticEntries = staticPaths.map((path) => buildEntry(path, new Date()))
+  const staticEntries = staticPaths.map((path) => buildEntry(path))
 
   const postEntries = posts.map((post) => {
-    const lastModified = post.publishedAt ?? post.createdAt ?? new Date().toISOString()
-    return buildEntry(`/content/${post.id}`, lastModified)
+    return buildEntry(`/content/${post.id}`)
   })
 
-  // Deduplicate in case posts are shared across categories
   const uniqueByUrl = new Map<string, MetadataRoute.Sitemap[number]>()
   for (const entry of [...staticEntries, ...postEntries]) {
     uniqueByUrl.set(entry.url, entry)

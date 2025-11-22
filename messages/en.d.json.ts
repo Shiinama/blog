@@ -207,6 +207,17 @@ declare const messages: {
         "help": "Summary defaults to the first 100 characters of your article.",
         "subscriptionHint": "When enabled, non-members only see 30% of the article."
       },
+      "translation": {
+        "title": "Translate post",
+        "description": "Generate and save a machine translation for this article.",
+        "targetLabel": "Target language",
+        "translate": "Translate now",
+        "translating": "Translating...",
+        "successTitle": "Translation added",
+        "successDescription": "Saved the {locale} version.",
+        "errorTitle": "Translation failed",
+        "errorDescription": "Try again or choose another language."
+      },
       "sticky": {
         "title": "Quick actions"
       }
@@ -268,7 +279,9 @@ declare const messages: {
     "empty": {
       "title": "Nothing matches yet.",
       "description": "Adjust the filters or clear the search."
-    }
+    },
+    "loadMore": "Load more",
+    "loadingMore": "Loading..."
   },
   "home": {
     "brandTitle": "Fish Blog",

@@ -2,45 +2,66 @@
 
 import { and, count, desc, eq, like, or, type SQL } from 'drizzle-orm'
 
-import { categories, posts, type PostStatus } from '@/drizzle/schema'
+import { categories, postTranslations, posts, type PostStatus } from '@/drizzle/schema'
 import { formatCategoryLabel } from '@/lib/categories'
 import {
   type CategorySummary,
   type ExplorerFilterInput,
-  type ExplorerPostRecord,
+  type ExplorerPostsResponse,
   type PaginatedPostsResult,
   type PostDetails
 } from '@/lib/posts/types'
 
 import { createDb } from './db'
 
-export async function getVisibleCategoriesWithPosts() {
-  const db = createDb()
-  return db.query.categories.findMany({
-    where: (category, { eq }) => eq(category.isVisible, true),
-    orderBy: (category, { asc }) => asc(category.sortOrder),
-    with: {
-      posts: {
-        where: (post, { eq }) => eq(post.status, 'PUBLISHED'),
-        columns: {
-          id: true,
-          title: true,
-          slug: true,
-          summary: true,
-          coverImageUrl: true,
-          publishedAt: true,
-          createdAt: true
-        },
-        orderBy: (post, { desc }) => [desc(post.publishedAt)]
-      }
-    }
-  })
+type LocalizablePost = {
+  id: string
+  title: string
+  summary: string
+  coverImageUrl?: string | null
+  language?: string | null
 }
 
-export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }: ExplorerFilterInput = {}): Promise<
-  ExplorerPostRecord[]
-> {
+export async function getPublishedPostsForSitemap() {
   const db = createDb()
+  return db
+    .select({
+      id: posts.id
+    })
+    .from(posts)
+    .where(eq(posts.status, 'PUBLISHED'))
+    .orderBy(desc(posts.publishedAt))
+}
+
+export async function getVisibleCategoriesWithCounts() {
+  const db = createDb()
+  const rows = await db
+    .select({
+      id: categories.id,
+      key: categories.key,
+      sortOrder: categories.sortOrder,
+      isVisible: categories.isVisible,
+      postCount: count(posts.id)
+    })
+    .from(categories)
+    .leftJoin(posts, and(eq(posts.categoryId, categories.id), eq(posts.status, 'PUBLISHED')))
+    .where(eq(categories.isVisible, true))
+    .groupBy(categories.id)
+    .orderBy(categories.sortOrder)
+
+  return rows
+}
+
+export async function getExplorerPosts({
+  search,
+  categoryId,
+  sortBy = 'newest',
+  locale,
+  page = 1,
+  pageSize = 20
+}: ExplorerFilterInput = {}): Promise<ExplorerPostsResponse> {
+  const db = createDb()
+  const targetLocale = locale?.trim().toLowerCase()
   const conditions = [eq(posts.status, 'PUBLISHED'), eq(categories.isVisible, true)]
   if (categoryId) {
     conditions.push(eq(posts.categoryId, categoryId))
@@ -50,28 +71,63 @@ export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }
     conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)) as any)
   }
 
-  const rows = await db
-    .select({
-      id: posts.id,
-      slug: posts.slug,
-      title: posts.title,
-      summary: posts.summary,
-      coverImageUrl: posts.coverImageUrl,
-      categoryId: posts.categoryId,
-      categoryKey: categories.key,
-      publishedAt: posts.publishedAt,
-      createdAt: posts.createdAt
-    })
+  const offset = Math.max(0, (page - 1) * pageSize)
+
+  const baseSelection = {
+    id: posts.id,
+    slug: posts.slug,
+    title: posts.title,
+    summary: posts.summary,
+    coverImageUrl: posts.coverImageUrl,
+    categoryId: posts.categoryId,
+    categoryKey: categories.key,
+    publishedAt: posts.publishedAt,
+    createdAt: posts.createdAt
+  }
+
+  const rows =
+    targetLocale && targetLocale !== 'zh'
+      ? await db
+          .select({
+            ...baseSelection,
+            translationTitle: postTranslations.title,
+            translationSummary: postTranslations.summary,
+            translationCover: postTranslations.coverImageUrl
+          })
+          .from(posts)
+          .leftJoin(categories, eq(posts.categoryId, categories.id))
+          .leftJoin(
+            postTranslations,
+            and(eq(postTranslations.postId, posts.id), eq(postTranslations.locale, targetLocale))
+          )
+          .where(and(...conditions))
+          .orderBy(desc(posts.publishedAt))
+          .limit(pageSize)
+          .offset(offset)
+      : await db
+          .select(baseSelection)
+          .from(posts)
+          .leftJoin(categories, eq(posts.categoryId, categories.id))
+          .where(and(...conditions))
+          .orderBy(desc(posts.publishedAt))
+          .limit(pageSize)
+          .offset(offset)
+
+  const totalRows = await db
+    .select({ value: count(posts.id) })
     .from(posts)
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .where(and(...conditions))
-    .orderBy(desc(posts.publishedAt))
 
   const normalized = rows.map((row) => {
     const label = formatCategoryLabel(row.categoryKey ?? undefined) || 'Uncategorized'
     const sortTimestamp = new Date(row.publishedAt ?? new Date()).getTime()
+    const hasTranslation = Boolean(targetLocale && 'translationTitle' in row && row.translationTitle)
     return {
       ...row,
+      title: hasTranslation ? ((row as any).translationTitle ?? row.title) : row.title,
+      summary: hasTranslation ? ((row as any).translationSummary ?? row.summary) : row.summary,
+      coverImageUrl: hasTranslation ? ((row as any).translationCover ?? row.coverImageUrl) : row.coverImageUrl,
       categoryLabel: label,
       sortTimestamp,
       publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
@@ -79,7 +135,7 @@ export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }
     }
   })
 
-  return normalized.sort((a, b) => {
+  const sorted = normalized.sort((a, b) => {
     switch (sortBy) {
       case 'alphabetical':
         return a.title.localeCompare(b.title)
@@ -90,9 +146,14 @@ export async function getExplorerPosts({ search, categoryId, sortBy = 'newest' }
         return b.sortTimestamp - a.sortTimestamp
     }
   })
+
+  return { posts: sorted, total: totalRows[0]?.value ?? 0 }
 }
 
-export async function getPostById(id: string, options?: { includeDrafts?: boolean }): Promise<PostDetails | null> {
+export async function getPostById(
+  id: string,
+  options?: { includeDrafts?: boolean; locale?: string }
+): Promise<PostDetails | null> {
   const db = createDb()
   const post = await db.query.posts.findFirst({
     where: (post, { eq }) => eq(post.id, id),
@@ -121,6 +182,26 @@ export async function getPostById(id: string, options?: { includeDrafts?: boolea
 
   if (!options?.includeDrafts && post.status !== 'PUBLISHED') {
     return null
+  }
+
+  const targetLocale = options?.locale?.trim().toLowerCase()
+  const sourceLocale = (post.language ?? 'zh').trim().toLowerCase() || 'zh'
+
+  if (targetLocale && targetLocale !== sourceLocale) {
+    const existingTranslation = await db.query.postTranslations.findFirst({
+      where: (translation, { eq }) => and(eq(translation.postId, post.id), eq(translation.locale, targetLocale))
+    })
+
+    if (existingTranslation) {
+      return {
+        ...post,
+        title: existingTranslation.title,
+        summary: existingTranslation.summary,
+        content: existingTranslation.content,
+        coverImageUrl: existingTranslation.coverImageUrl ?? post.coverImageUrl ?? null,
+        language: targetLocale
+      }
+    }
   }
 
   return post

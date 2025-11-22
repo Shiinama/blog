@@ -37,17 +37,23 @@ export interface ExplorerCategory {
 
 interface PostExplorerProps {
   initialPosts: ExplorerPost[]
+  initialTotal: number
   categories: ExplorerCategory[]
   className?: string
+  locale?: string
 }
 
-export function PostExplorer({ initialPosts, categories, className }: PostExplorerProps) {
+export function PostExplorer({ initialPosts, initialTotal, categories, className, locale }: PostExplorerProps) {
   const [posts, setPosts] = useState<ExplorerPost[]>(initialPosts)
+  const [total, setTotal] = useState(initialTotal)
   const [searchInput, setSearchInput] = useState('')
   const throttledSearch = useDebounce(searchInput, { wait: 250 })
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all')
   const [sortBy, setSortBy] = useState<ExplorerSortOption>('newest')
+  const [page, setPage] = useState(1)
+  const pageSize = 20
   const [isPending, startTransition] = useTransition()
+  const [isLoadingMore, startLoadMore] = useTransition()
   const t = useTranslations('explorer')
   const common = useTranslations('common')
   const uncategorizedLabel = common('uncategorized')
@@ -65,9 +71,14 @@ export function PostExplorer({ initialPosts, categories, className }: PostExplor
       const response = await getExplorerPosts({
         search: trimmedSearch || undefined,
         categoryId: selectedCategoryId === 'all' ? undefined : selectedCategoryId,
-        sortBy
+        sortBy,
+        locale,
+        page: 1,
+        pageSize
       })
-      setPosts(mapServerPostsToDisplay(response, labelLookup, uncategorizedLabel))
+      setPosts(mapServerPostsToDisplay(response.posts, labelLookup, uncategorizedLabel))
+      setTotal(response.total)
+      setPage(1)
     })
   }, [throttledSearch, selectedCategoryId, sortBy, labelLookup, startTransition, uncategorizedLabel])
 
@@ -77,7 +88,7 @@ export function PostExplorer({ initialPosts, categories, className }: PostExplor
     <section className={cn('mt-8 space-y-8 pb-10', className)}>
       <div className="space-y-4">
         <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs font-semibold tracking-[0.45em] uppercase">
-          <span>{t('stats', { count: posts.length })}</span>
+          <span>{t('stats', { count: total })}</span>
           {hasActiveFilters && (
             <Button
               variant="ghost"
@@ -168,6 +179,33 @@ export function PostExplorer({ initialPosts, categories, className }: PostExplor
           <div className="text-muted-foreground py-16 text-center text-sm">
             <p className="text-foreground font-medium">{t('empty.title')}</p>
             <p className="mt-2">{t('empty.description')}</p>
+          </div>
+        )}
+        {posts.length < total && (
+          <div className="flex justify-center pt-4">
+            <Button
+              variant="outline"
+              onClick={() =>
+                startLoadMore(async () => {
+                  const nextPage = page + 1
+                  const trimmedSearch = throttledSearch.trim()
+                  const response = await getExplorerPosts({
+                    search: trimmedSearch || undefined,
+                    categoryId: selectedCategoryId === 'all' ? undefined : selectedCategoryId,
+                    sortBy,
+                    locale,
+                    page: nextPage,
+                    pageSize
+                  })
+                  setPosts((prev) => [...prev, ...mapServerPostsToDisplay(response.posts, labelLookup, uncategorizedLabel)])
+                  setTotal(response.total)
+                  setPage(nextPage)
+                })
+              }
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? t('loadingMore') : t('loadMore')}
+            </Button>
           </div>
         )}
       </div>

@@ -2,9 +2,8 @@ import { getTranslations } from 'next-intl/server'
 
 import { PostExplorer } from '@/components/posts/post-explorer'
 import { routing } from '@/i18n/routing'
-import { formatCategoryLabel } from '@/lib/categories'
 import { buildAbsoluteUrl, buildLanguageAlternates } from '@/lib/metadata'
-import { getVisibleCategoriesWithPosts } from '@/lib/posts'
+import { getExplorerPosts, getVisibleCategoriesWithCounts } from '@/lib/posts'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
@@ -35,57 +34,22 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   }
 }
 
-export default async function ContentPage() {
+export default async function ContentPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
   const [articleT, homeT] = await Promise.all([getTranslations('article'), getTranslations('home')])
-  const categories = await getVisibleCategoriesWithPosts()
+  const [{ posts: explorerPosts, total }, categories] = await Promise.all([
+    getExplorerPosts({ locale, page: 1, pageSize: 20 }),
+    getVisibleCategoriesWithCounts()
+  ])
 
-  const localizedCategories = categories.map((category) => {
-    const fallbackLabel = formatCategoryLabel(category.key) || 'Uncategorized'
-    let label = fallbackLabel
-    if (category.key) {
-      try {
-        label = articleT(category.key as any)
-      } catch {
-        label = fallbackLabel
-      }
-    }
-
+  const explorerCategories = categories.map((category) => {
+    const fallbackLabel = category.key ? (articleT(category.key as any) ?? category.key) : 'Uncategorized'
     return {
       id: category.id,
-      label,
-      posts: category.posts
+      label: fallbackLabel,
+      count: category.postCount ?? 0
     }
   })
-
-  const explorerPosts = localizedCategories
-    .flatMap((category) =>
-      category.posts.map((post) => {
-        const publishedAt = post.publishedAt ? new Date(post.publishedAt).toISOString() : null
-        const createdAt = post.createdAt ? new Date(post.createdAt).toISOString() : null
-        const sortTimestamp = new Date(post.publishedAt ?? post.createdAt ?? new Date()).getTime()
-        return {
-          id: post.id,
-          slug: post.slug,
-          title: post.title,
-          summary: post.summary,
-          coverImageUrl: post.coverImageUrl,
-          categoryId: category.id,
-          categoryLabel: category.label,
-          publishedAt,
-          createdAt,
-          sortTimestamp
-        }
-      })
-    )
-    .sort((a, b) => b.sortTimestamp - a.sortTimestamp)
-
-  const explorerCategories = localizedCategories
-    .filter((category) => category.posts.length > 0)
-    .map((category) => ({
-      id: category.id,
-      label: category.label,
-      count: category.posts.length
-    }))
 
   return (
     <>
@@ -97,7 +61,12 @@ export default async function ContentPage() {
           </div>
         </header>
 
-        <PostExplorer initialPosts={explorerPosts} categories={explorerCategories} />
+        <PostExplorer
+          initialPosts={explorerPosts}
+          initialTotal={total}
+          categories={explorerCategories}
+          locale={locale}
+        />
       </div>
     </>
   )

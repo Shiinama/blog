@@ -8,6 +8,14 @@ export interface ExplorerFilterInput {
   search?: string
   categoryId?: string
   sortBy?: ExplorerSortOption
+  locale?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface ExplorerPostsResponse {
+  posts: ExplorerPostRecord[]
+  total: number
 }
 
 export interface ExplorerPostRecord {

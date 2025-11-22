@@ -19,19 +19,9 @@ type DocPageProps = {
   locale: string
 }
 
-async function getPostFromParams(params: Promise<DocPageProps>) {
-  const parameters = await params
-
-  if (!parameters.id) {
-    return null
-  }
-
-  return getPostById(parameters.id)
-}
-
 export async function generateMetadata({ params }: { params: Promise<DocPageProps> }): Promise<Metadata> {
   const parameters = await params
-  const post = await getPostFromParams(Promise.resolve(parameters))
+  const post = await getPostById(parameters.id, { locale: parameters.locale })
 
   if (!post) {
     return {}
@@ -64,8 +54,9 @@ export async function generateMetadata({ params }: { params: Promise<DocPageProp
 }
 
 export default async function DocPage({ params }: { params: Promise<DocPageProps> }) {
+  const parameters = await params
   const [post, articleT, contentT] = await Promise.all([
-    getPostFromParams(params),
+    getPostById(parameters.id, { locale: parameters.locale }),
     getTranslations('article'),
     getTranslations('content')
   ])

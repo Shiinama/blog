@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { useActionState, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react'
 
-import { deletePostAction, savePostAction } from '@/actions/posts'
+import { deletePostAction, savePostAction, translatePostAction } from '@/actions/posts'
 import { initialPostFormState } from '@/actions/posts/form-state'
 import { MarkdownEditor } from '@/components/posts/markdown-editor'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import useRouter from '@/hooks/use-router'
+import { locales } from '@/i18n/routing'
 import { formatCategoryLabel } from '@/lib/categories'
 
 import type { PostStatus } from '@/drizzle/schema'
@@ -46,6 +47,7 @@ type MetadataState = {
 interface PostFormProps {
   post?: EditablePost
   categories: CategorySummary[]
+  locale?: string
 }
 
 function formatDateValue(date?: Date | null) {
@@ -54,7 +56,7 @@ function formatDateValue(date?: Date | null) {
   return iso.slice(0, 16)
 }
 
-export function PostForm({ post, categories }: PostFormProps) {
+export function PostForm({ post, categories, locale }: PostFormProps) {
   const formRef = useRef<HTMLFormElement | null>(null)
   const formId = useId()
   const router = useRouter()
@@ -63,6 +65,7 @@ export function PostForm({ post, categories }: PostFormProps) {
   const [content, setContent] = useState(post?.content ?? '')
   const [state, formAction] = useActionState(savePostAction, initialPostFormState)
   const [isDeleting, startDelete] = useTransition()
+  const [isTranslating, startTranslate] = useTransition()
   const statusOptions = [
     { label: t('status.draft'), value: 'DRAFT' as PostStatus },
     { label: t('status.published'), value: 'PUBLISHED' as PostStatus }
@@ -81,6 +84,11 @@ export function PostForm({ post, categories }: PostFormProps) {
     isSubscriptionOnly: post?.isSubscriptionOnly ?? false
   }))
   const [isPublishModalOpen, setPublishModalOpen] = useState(false)
+  const editorLocale = locale ?? post?.language ?? 'zh'
+  const [targetLocale, setTargetLocale] = useState(() => {
+    const source = post?.language ?? 'zh'
+    return locales.find((locale) => locale.code !== source)?.code ?? locales[0]?.code ?? 'en'
+  })
 
   useEffect(() => {
     if (state.status === 'success') {
@@ -143,6 +151,29 @@ export function PostForm({ post, categories }: PostFormProps) {
     setMetadata((prev) => ({ ...prev, [key]: value }))
   }
 
+  const handleTranslate = () => {
+    if (!post?.id || !targetLocale) {
+      return
+    }
+
+    startTranslate(async () => {
+      const result = await translatePostAction(post.id, targetLocale)
+
+      if (result.status === 'success') {
+        toast({
+          title: t('form.translation.successTitle'),
+          description: t('form.translation.successDescription', { locale: targetLocale })
+        })
+      } else {
+        toast({
+          title: t('form.translation.errorTitle'),
+          description: result.message ?? t('form.translation.errorDescription'),
+          variant: 'destructive'
+        })
+      }
+    })
+  }
+
   return (
     <form ref={formRef} id={formId} action={formAction} className="relative space-y-8">
       <input type="hidden" name="postId" value={post?.id ?? ''} />
@@ -153,6 +184,7 @@ export function PostForm({ post, categories }: PostFormProps) {
       <input type="hidden" name="tags" value={metadata.tags} />
       <input type="hidden" name="categoryId" value={metadata.categoryId} />
       <input type="hidden" name="language" value={metadata.language} />
+      <input type="hidden" name="editorLocale" value={editorLocale} />
       <input type="hidden" name="publishedAt" value={metadata.publishedAt} />
       <input type="hidden" name="summary" value={metadata.summary} />
       <input type="hidden" name="sortOrder" value={metadata.sortOrder} />
@@ -345,6 +377,37 @@ export function PostForm({ post, categories }: PostFormProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <div className="bg-muted/40 rounded-2xl border border-slate-200 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.3em] uppercase">
+              {t('form.translation.title')}
+            </p>
+            <p className="text-muted-foreground text-sm">{t('form.translation.description')}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-muted-foreground text-sm font-medium" htmlFor="translation-target">
+              {t('form.translation.targetLabel')}
+            </label>
+            <select
+              id="translation-target"
+              value={targetLocale}
+              onChange={(event) => setTargetLocale(event.target.value)}
+              className="bg-background rounded-md border px-3 py-2 text-sm"
+            >
+              {locales.map((locale) => (
+                <option key={locale.code} value={locale.code}>
+                  {locale.name}
+                </option>
+              ))}
+            </select>
+            <Button type="button" onClick={handleTranslate} disabled={!post?.id || isTranslating}>
+              {isTranslating ? t('form.translation.translating') : t('form.translation.translate')}
+            </Button>
+          </div>
+        </div>
+      </div>
     </form>
   )
 }

@@ -204,6 +204,17 @@
         "help": "摘要会默认使用文章前 100 个字符。",
         "subscriptionHint": "开启后，未订阅用户只能看到 30% 的正文。"
       },
+      "translation": {
+        "title": "文章翻译",
+        "description": "使用机器翻译生成并保存另一种语言的版本。",
+        "targetLabel": "目标语言",
+        "translate": "开始翻译",
+        "translating": "正在翻译...",
+        "successTitle": "翻译已保存",
+        "successDescription": "已保存 {locale} 版本。",
+        "errorTitle": "翻译失败",
+        "errorDescription": "请重试或更换目标语言。"
+      },
       "sticky": {
         "title": "快速操作"
       }
@@ -265,7 +276,9 @@
     "empty": {
       "title": "暂无匹配结果",
       "description": "调整筛选或清空搜索词"
-    }
+    },
+    "loadMore": "加载更多",
+    "loadingMore": "加载中..."
   },
   "home": {
     "brandTitle": "鱼的博客",

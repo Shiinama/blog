@@ -1,12 +1,13 @@
 'use server'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-import { posts, PostStatus, postStatusEnum } from '@/drizzle/schema'
+import { postTranslations, posts, PostStatus, postStatusEnum } from '@/drizzle/schema'
 import { auth } from '@/lib/auth'
 import { createDb, DB } from '@/lib/db'
+import { getOrCreatePostTranslation } from '@/lib/posts/translation'
 import { calculateReadingTime, extractSummary, normalizeSlug } from '@/lib/posts/utils'
 
 type PostFormState = {
@@ -40,6 +41,7 @@ const postFormSchema = z.object({
   sortOrder: z.coerce.number().optional(),
   publishedAt: z.string().optional(),
   language: z.string().optional(),
+  editorLocale: z.string().optional(),
   isSubscriptionOnly: z.coerce.boolean().default(false)
 })
 
@@ -155,6 +157,63 @@ export async function savePostAction(_prevState: PostFormState, formData: FormDa
         status: 'error',
         errors: formatFieldErrors(payload.error),
         message: '请检查表单信息'
+      }
+    }
+
+    const editorLocale = (payload.data.editorLocale || payload.data.language || '').trim().toLowerCase()
+
+    if (payload.data.postId && editorLocale) {
+      const existing = await db.query.posts.findFirst({
+        where: (post, { eq }) => eq(post.id, payload.data.postId!)
+      })
+
+      if (!existing) {
+        throw new Error('Post not found')
+      }
+
+      const sourceLocale = (existing.language ?? 'zh').trim().toLowerCase() || 'zh'
+
+      if (editorLocale !== sourceLocale) {
+        const summary = payload.data.summary?.trim() || extractSummary(payload.data.content)
+        const coverImageUrl = payload.data.coverImageUrl?.trim() ? payload.data.coverImageUrl.trim() : null
+        const title = payload.data.title.trim()
+        const content = payload.data.content
+        const now = new Date()
+
+        const existingTranslation = await db.query.postTranslations.findFirst({
+          where: (translation, { eq }) => and(eq(translation.postId, existing.id), eq(translation.locale, editorLocale))
+        })
+
+        if (existingTranslation) {
+          await db
+            .update(postTranslations)
+            .set({
+              title,
+              summary,
+              content,
+              coverImageUrl,
+              updatedAt: now
+            })
+            .where(and(eq(postTranslations.postId, existing.id), eq(postTranslations.locale, editorLocale)))
+        } else {
+          await db.insert(postTranslations).values({
+            postId: existing.id,
+            locale: editorLocale,
+            title,
+            summary,
+            content,
+            coverImageUrl,
+            createdAt: now,
+            updatedAt: now
+          })
+        }
+
+        revalidatePostRoutes(existing.id)
+
+        return {
+          status: 'success',
+          message: '翻译已保存'
+        }
       }
     }
 
@@ -297,4 +356,56 @@ export async function updatePostSubscriptionAction(postId: string, isSubscriptio
   revalidatePostRoutes(record.id)
 
   return { status: 'success', value: record.isSubscriptionOnly }
+}
+
+export async function translatePostAction(postId: string, targetLocale: string) {
+  await assertAdmin()
+  const db = createDb()
+  const trimmedLocale = targetLocale?.trim().toLowerCase()
+
+  if (!trimmedLocale) {
+    return { status: 'error', message: '请选择目标语言' }
+  }
+
+  const post = await db.query.posts.findFirst({
+    where: (post, { eq }) => eq(post.id, postId)
+  })
+
+  if (!post) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  const sourceLocale = (post.language ?? 'en').trim().toLowerCase() || 'en'
+  if (sourceLocale === trimmedLocale) {
+    return { status: 'error', message: '目标语言与原文相同' }
+  }
+
+  try {
+    const translation = await getOrCreatePostTranslation(
+      {
+        postId: post.id,
+        content: post.content,
+        targetLocale: trimmedLocale,
+        sourceLocale,
+        originalTitle: post.title,
+        originalSummary: post.summary,
+        coverImageUrl: post.coverImageUrl ?? null
+      },
+      true
+    )
+
+    if (!translation) {
+      return { status: 'error', message: '翻译失败，请稍后重试' }
+    }
+
+    revalidatePostRoutes(post.id)
+
+    return { status: 'success', translation }
+  } catch (error) {
+    console.error('Failed to translate post', error)
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : '翻译失败，请稍后重试'
+    }
+  }
 }
