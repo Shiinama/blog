@@ -9,9 +9,15 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { TableKit } from '@tiptap/extension-table'
 import { EditorContent, type Editor, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import bash from 'highlight.js/lib/languages/bash'
 import css from 'highlight.js/lib/languages/css'
 import javascript from 'highlight.js/lib/languages/javascript'
+import json from 'highlight.js/lib/languages/json'
+import markdown from 'highlight.js/lib/languages/markdown'
+import shell from 'highlight.js/lib/languages/shell'
 import typescript from 'highlight.js/lib/languages/typescript'
+import html from 'highlight.js/lib/languages/xml'
+import yaml from 'highlight.js/lib/languages/yaml'
 import { createLowlight } from 'lowlight'
 import MarkdownIt from 'markdown-it'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -21,7 +27,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useToast } from '@/components/ui/use-toast'
 
 const lowlightInstance = createLowlight()
-lowlightInstance.register({ javascript, typescript, css })
+lowlightInstance.register({ javascript, typescript, css, bash, shell, json, markdown, html, yaml, xml: html })
 
 interface MarkdownEditorProps {
   value: string

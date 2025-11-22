@@ -1,16 +1,33 @@
 'use client'
 
 import hljs from 'highlight.js/lib/core'
+import bash from 'highlight.js/lib/languages/bash'
 import css from 'highlight.js/lib/languages/css'
 import javascript from 'highlight.js/lib/languages/javascript'
+import json from 'highlight.js/lib/languages/json'
+import markdown from 'highlight.js/lib/languages/markdown'
+import shell from 'highlight.js/lib/languages/shell'
 import typescript from 'highlight.js/lib/languages/typescript'
-import React, { useState } from 'react'
+import html from 'highlight.js/lib/languages/xml'
+import yaml from 'highlight.js/lib/languages/yaml'
+import React, { useMemo, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
-hljs.registerLanguage('javascript', javascript)
-hljs.registerLanguage('typescript', typescript)
-hljs.registerLanguage('css', css)
+const languages: Array<[string, typeof javascript]> = [
+  ['javascript', javascript],
+  ['typescript', typescript],
+  ['css', css],
+  ['bash', bash],
+  ['shell', shell],
+  ['json', json],
+  ['markdown', markdown],
+  ['html', html],
+  ['xml', html],
+  ['yaml', yaml]
+]
+
+languages.forEach(([name, language]) => hljs.registerLanguage(name, language))
 
 interface CodeBlockProps {
   children: React.ReactNode
@@ -34,7 +51,18 @@ export function CodeBlock({ children, className }: CodeBlockProps) {
   const isBlock = isBlockCode(className)
   const language = isBlock ? extractLanguage(className) : null
   const code = isBlock ? getCodeString(children) : null
-  const highlighted = code ? (language ? hljs.highlight(code, { language }).value : hljs.highlightAuto(code).value) : ''
+  const highlighted = useMemo(() => {
+    if (!code) return ''
+    try {
+      if (language && hljs.getLanguage(language)) {
+        return hljs.highlight(code, { language }).value
+      }
+      return hljs.highlightAuto(code).value
+    } catch (err) {
+      console.error('Failed to highlight code, falling back to plain text', err)
+      return escapeHtml(code)
+    }
+  }, [code, language])
 
   if (isBlock) {
     const handleCopy = async () => {
@@ -73,4 +101,13 @@ export function CodeBlock({ children, className }: CodeBlockProps) {
 function getCodeString(children: React.ReactNode) {
   if (typeof children === 'string') return children
   return React.Children.toArray(children).join('')
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
