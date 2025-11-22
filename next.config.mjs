@@ -25,6 +25,12 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'static.xibaoyu.xyz',
+        port: '',
+        pathname: '/**'
+      },
+      {
+        protocol: 'https',
         hostname: 'p6-juejin.byteimg.com',
         port: '',
         pathname: '/**'
