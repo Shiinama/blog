@@ -4,13 +4,13 @@ import { useTranslations } from 'next-intl'
 import { useActionState, useEffect, useRef } from 'react'
 
 import { grantAnnualSubscriptionAction } from '@/actions/subscriptions'
+import { initialGrantSubscriptionState } from '@/actions/subscriptions/state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 
-import { initialGrantSubscriptionState } from '@/actions/subscriptions/state'
 
 export function GrantSubscriptionForm() {
   const formRef = useRef<HTMLFormElement | null>(null)
