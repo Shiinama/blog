@@ -226,6 +226,7 @@ interface PaginatedPostOptions {
   search?: string
   status?: PostStatus | 'all'
   categoryId?: string
+  locale?: string
 }
 
 export async function getPaginatedPosts({
@@ -233,9 +234,11 @@ export async function getPaginatedPosts({
   pageSize = 20,
   search,
   status = 'all',
-  categoryId
+  categoryId,
+  locale
 }: PaginatedPostOptions): Promise<PaginatedPostsResult> {
   const db = createDb()
+  const targetLocale = locale?.trim().toLowerCase()
   const conditions: SQL<unknown>[] = []
   if (status !== 'all') {
     conditions.push(eq(posts.status, status))
@@ -249,7 +252,7 @@ export async function getPaginatedPosts({
   }
   const whereClause = conditions.length ? and(...conditions) : undefined
 
-  const postSelection = {
+  const baseSelection = {
     id: posts.id,
     title: posts.title,
     slug: posts.slug,
@@ -261,12 +264,27 @@ export async function getPaginatedPosts({
     categoryId: posts.categoryId
   }
 
-  const postQuery = db
-    .select(postSelection)
-    .from(posts)
-    .orderBy(desc(posts.publishedAt))
-    .limit(pageSize)
-    .offset((page - 1) * pageSize)
+  const postQuery =
+    targetLocale && targetLocale !== 'zh'
+      ? db
+          .select({
+            ...baseSelection,
+            translationTitle: postTranslations.title
+          })
+          .from(posts)
+          .leftJoin(
+            postTranslations,
+            and(eq(postTranslations.postId, posts.id), eq(postTranslations.locale, targetLocale))
+          )
+          .orderBy(desc(posts.publishedAt))
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
+      : db
+          .select(baseSelection)
+          .from(posts)
+          .orderBy(desc(posts.publishedAt))
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
 
   const totalQuery = db.select({ value: count(posts.id) }).from(posts)
 
@@ -276,7 +294,10 @@ export async function getPaginatedPosts({
   const [rows, totalResult] = await Promise.all([filteredPostQuery, filteredTotalQuery])
 
   return {
-    posts: rows,
+    posts: rows.map((row) => ({
+      ...row,
+      title: 'translationTitle' in row && row.translationTitle ? (row as any).translationTitle : row.title
+    })),
     total: totalResult[0]?.value ?? 0,
     page,
     pageSize

@@ -183,9 +183,9 @@ export function PostTable({ posts }: PostTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm shadow-slate-900/10">
-      <Table className="bg-white/90">
-        <TableHeader className="bg-slate-50/70 text-[12px] tracking-[0.18em] text-slate-500 uppercase">
+    <div>
+      <Table>
+        <TableHeader>
           <TableRow className="[&_th]:px-4 [&_th]:py-3">
             <TableHead>{t('posts.table.headers.title')}</TableHead>
             <TableHead className="w-[180px]">{t('posts.table.headers.access')}</TableHead>
@@ -201,7 +201,7 @@ export function PostTable({ posts }: PostTableProps) {
             const pendingPublishTime = actionTarget?.type === 'publishTime' && actionTarget.id === post.id && isPending
             const pendingAccess = actionTarget?.type === 'access' && actionTarget.id === post.id && isPending
             return (
-              <TableRow key={post.id} className="bg-white/70 transition hover:bg-slate-50/80">
+              <TableRow key={post.id}>
                 <TableCell className="align-top">
                   <div className="flex flex-col gap-1">
                     <Link

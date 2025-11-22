@@ -22,7 +22,6 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import useRouter from '@/hooks/use-router'
-import { locales } from '@/i18n/routing'
 import { formatCategoryLabel } from '@/lib/categories'
 
 import type { PostStatus } from '@/drizzle/schema'
@@ -85,10 +84,7 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
   }))
   const [isPublishModalOpen, setPublishModalOpen] = useState(false)
   const editorLocale = locale ?? post?.language ?? 'zh'
-  const [targetLocale, setTargetLocale] = useState(() => {
-    const source = post?.language ?? 'zh'
-    return locales.find((locale) => locale.code !== source)?.code ?? locales[0]?.code ?? 'en'
-  })
+  const targetLocale = 'en'
 
   useEffect(() => {
     if (state.status === 'success') {
@@ -152,7 +148,7 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
   }
 
   const handleTranslate = () => {
-    if (!post?.id || !targetLocale) {
+    if (!post?.id) {
       return
     }
 
@@ -205,6 +201,11 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
             {post && (
               <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
                 {isDeleting ? t('form.actions.deleting') : t('form.actions.delete')}
+              </Button>
+            )}
+            {post && (
+              <Button type="button" variant="secondary" onClick={handleTranslate} disabled={isTranslating}>
+                {isTranslating ? t('form.translation.translating') : t('form.translation.translate')}
               </Button>
             )}
           </div>
@@ -378,36 +379,6 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
         </DialogContent>
       </Dialog>
 
-      <div className="bg-muted/40 rounded-2xl border border-slate-200 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.3em] uppercase">
-              {t('form.translation.title')}
-            </p>
-            <p className="text-muted-foreground text-sm">{t('form.translation.description')}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-muted-foreground text-sm font-medium" htmlFor="translation-target">
-              {t('form.translation.targetLabel')}
-            </label>
-            <select
-              id="translation-target"
-              value={targetLocale}
-              onChange={(event) => setTargetLocale(event.target.value)}
-              className="bg-background rounded-md border px-3 py-2 text-sm"
-            >
-              {locales.map((locale) => (
-                <option key={locale.code} value={locale.code}>
-                  {locale.name}
-                </option>
-              ))}
-            </select>
-            <Button type="button" onClick={handleTranslate} disabled={!post?.id || isTranslating}>
-              {isTranslating ? t('form.translation.translating') : t('form.translation.translate')}
-            </Button>
-          </div>
-        </div>
-      </div>
     </form>
   )
 }

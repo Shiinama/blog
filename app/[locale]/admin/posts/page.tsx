@@ -1,17 +1,17 @@
 import { getTranslations } from 'next-intl/server'
 
+import { AdminFilters } from '@/components/posts/admin-filters'
 import { PostTable } from '@/components/posts/post-table'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
-import { formatCategoryLabel } from '@/lib/categories'
 import { getAllCategories, getPaginatedPosts } from '@/lib/posts'
 
 import type { PostStatus } from '@/drizzle/schema'
 
 interface AdminPostsPageProps {
   searchParams: Promise<Record<string, string | undefined>>
+  params: Promise<{ locale: string }>
 }
 
 function buildQueryString(params: Record<string, string | number | undefined>) {
@@ -23,12 +23,14 @@ function buildQueryString(params: Record<string, string | number | undefined>) {
   return query.toString()
 }
 
-export default async function AdminPostsPage({ searchParams }: AdminPostsPageProps) {
-  const params = await searchParams
-  const page = Math.max(1, Number(params.page ?? '1') || 1)
-  const search = params.search ?? ''
-  const statusParam = params.status === 'PUBLISHED' || params.status === 'DRAFT' ? params.status : 'all'
-  const categoryParam = params.category && params.category !== 'all' ? params.category : undefined
+export default async function AdminPostsPage({ searchParams, params }: AdminPostsPageProps) {
+  const localeParams = await params
+  const paramsObj = await searchParams
+  const locale = localeParams.locale
+  const page = Math.max(1, Number(paramsObj.page ?? '1') || 1)
+  const search = paramsObj.search ?? ''
+  const statusParam = paramsObj.status === 'PUBLISHED' || paramsObj.status === 'DRAFT' ? paramsObj.status : 'all'
+  const categoryParam = paramsObj.category && paramsObj.category !== 'all' ? paramsObj.category : undefined
 
   const [data, categories] = await Promise.all([
     getPaginatedPosts({
@@ -36,7 +38,8 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
       pageSize: 20,
       search: search || undefined,
       status: statusParam === 'all' ? 'all' : (statusParam as PostStatus),
-      categoryId: categoryParam
+      categoryId: categoryParam,
+      locale
     }),
     getAllCategories()
   ])
@@ -45,18 +48,18 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
   const filterBase = {
     search,
     status: statusParam,
-    category: params.category ?? 'all'
+    category: paramsObj.category ?? 'all'
   }
 
   const t = await getTranslations('admin')
 
   return (
     <div className="space-y-8">
-      <Card className="overflow-hidden border border-slate-200 bg-linear-to-br from-white/80 to-slate-50/60 shadow-sm shadow-slate-900/10">
+      <Card>
         <CardHeader className="flex flex-col gap-3 pt-6 pb-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <CardDescription className="text-muted-foreground text-sm">{t('posts.description')}</CardDescription>
-            <CardTitle className="text-3xl font-semibold text-slate-900">{t('posts.title')}</CardTitle>
+            <CardDescription>{t('posts.description')}</CardDescription>
+            <CardTitle>{t('posts.title')}</CardTitle>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button asChild variant="outline" size="lg">
@@ -68,57 +71,20 @@ export default async function AdminPostsPage({ searchParams }: AdminPostsPagePro
           </div>
         </CardHeader>
         <CardContent className="pt-0 pb-6">
-          <form
-            className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-inner shadow-slate-900/5 md:grid-cols-4"
-            method="get"
-          >
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium">{t('posts.filters.searchLabel')}</label>
-              <Input
-                name="search"
-                placeholder={t('posts.filters.searchPlaceholder')}
-                defaultValue={search}
-                className="bg-white"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium">{t('posts.filters.statusLabel')}</label>
-              <select
-                name="status"
-                defaultValue={statusParam}
-                className="focus:border-primary w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition"
-              >
-                <option value="all">{t('posts.filters.statusOptions.all')}</option>
-                <option value="PUBLISHED">{t('posts.filters.statusOptions.published')}</option>
-                <option value="DRAFT">{t('posts.filters.statusOptions.draft')}</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium">{t('posts.filters.categoryLabel')}</label>
-              <select
-                name="category"
-                defaultValue={categoryParam ?? 'all'}
-                className="focus:border-primary w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm transition"
-              >
-                <option value="all">{t('posts.filters.categoryOptions.all')}</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {formatCategoryLabel(category.key) || category.key}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end md:col-span-4">
-              <Button type="submit">{t('posts.filters.apply')}</Button>
-            </div>
-          </form>
+          <AdminFilters
+            initialSearch={search}
+            initialStatus={statusParam}
+            initialCategory={categoryParam ?? 'all'}
+            categories={categories}
+            locale={locale}
+          />
         </CardContent>
       </Card>
-      <Card className="overflow-hidden border border-slate-200 bg-white/90 shadow-sm">
+      <Card>
         <CardContent className="p-0">
           <PostTable posts={data.posts} />
         </CardContent>
-        <CardFooter className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4 text-sm">
+        <CardFooter>
           <span>{t('posts.pagination.caption', { page, totalPages, total: data.total })}</span>
           <div className="flex gap-2">
             <Button asChild variant="outline" disabled={page <= 1}>
