@@ -4,15 +4,18 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, type Editor, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import css from 'highlight.js/lib/languages/css'
 import javascript from 'highlight.js/lib/languages/javascript'
 import typescript from 'highlight.js/lib/languages/typescript'
 import { createLowlight } from 'lowlight'
 import MarkdownIt from 'markdown-it'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import TurndownService from 'turndown'
+
+import { Spinner } from '@/components/ui/spinner'
+import { useToast } from '@/components/ui/use-toast'
 
 const lowlightInstance = createLowlight()
 lowlightInstance.register({ javascript, typescript, css })
@@ -40,6 +43,63 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   const htmlValue = useMemo(() => mdParser.render(value), [mdParser, value])
   const lastSyncRef = useRef(value)
   const editorScrollRef = useRef<HTMLDivElement | null>(null)
+  const editorRef = useRef<Editor | null>(null)
+  const { toast } = useToast()
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+
+  const uploadImage = useCallback(async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch('/api/uploads', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    })
+
+    if (!response.ok) {
+      let message = '上传图片失败'
+      try {
+        const data = await response.text()
+        message = data
+      } catch (error) {
+        console.error('Failed to parse upload error', error)
+      }
+      throw new Error(message)
+    }
+
+    const data = (await response.json()) as { url?: string }
+    if (!data.url) {
+      throw new Error('未获取到上传后的图片地址')
+    }
+
+    return data.url
+  }, [])
+
+  const handleImagePaste = useCallback(
+    async (files: File[]) => {
+      if (!files.length || !editorRef.current) {
+        return
+      }
+      try {
+        setIsUploadingImage(true)
+        for (const file of files) {
+          const url = await uploadImage(file)
+          editorRef.current.chain().focus().setImage({ src: url, alt: file.name }).run()
+        }
+      } catch (error) {
+        console.error('Image upload failed', error)
+        toast({
+          title: '上传图片失败',
+          description: error instanceof Error ? error.message : '请稍后再试',
+          variant: 'destructive'
+        })
+      } finally {
+        setIsUploadingImage(false)
+      }
+    },
+    [toast, uploadImage]
+  )
 
   const editor = useEditor({
     extensions: [
@@ -58,6 +118,25 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
     editorProps: {
       attributes: {
         class: 'min-h-[420px] focus:outline-none'
+      },
+      handlePaste: (_view, event) => {
+        const items = Array.from(event.clipboardData?.items || []).filter((item) => item.type.startsWith('image/'))
+        if (!items.length) {
+          return false
+        }
+
+        const files = items
+          .map((item) => item.getAsFile())
+          .filter(Boolean)
+          .map((file) => file as File)
+
+        if (!files.length) {
+          return false
+        }
+
+        event.preventDefault()
+        void handleImagePaste(files)
+        return true
       }
     },
     content: htmlValue,
@@ -71,6 +150,13 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       }
     }
   })
+
+  useEffect(() => {
+    editorRef.current = editor
+    return () => {
+      editorRef.current = null
+    }
+  }, [editor])
 
   useEffect(() => {
     if (!editor) {
@@ -87,8 +173,14 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   return (
     <div
       ref={editorScrollRef}
-      className="prose dark:prose-invert max-w-none rounded-2xl border px-4 shadow-inner shadow-slate-900/5"
+      className="prose dark:prose-invert relative max-w-none rounded-2xl border px-4 shadow-inner shadow-slate-900/5"
     >
+      {isUploadingImage ? (
+        <div className="bg-background/95 pointer-events-none absolute top-3 right-4 z-10 flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium shadow-sm ring-1 ring-slate-200/70">
+          <Spinner className="h-3.5 w-3.5" />
+          <span>图片上传中...</span>
+        </div>
+      ) : null}
       <EditorContent editor={editor} />
     </div>
   )
