@@ -154,7 +154,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
 
         {post.coverImageUrl && (
           <figure className="my-8">
-            <div className="relative h-56 w-full overflow-hidden rounded-[32px] sm:h-80">
+            <div className="relative h-56 w-full overflow-hidden rounded-4xl sm:h-80">
               <Image
                 src={post.coverImageUrl}
                 alt={post.title}
