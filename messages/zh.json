@@ -1,20 +1,29 @@
 {
   "about": {
     "title": "关于我",
-    "intro": "可以叫我溪抱鱼或者Felix，我是一名来自中国的软件开发工程师。享受旅程的探险家/赌徒。",
-    "workTitle": "工作",
-    "workDescription": "加入过早期Midjourney、早期MyShell、晚期李一舟的技术团队等等等。目前是在合伙创业，创业的方向是海外AI项目（盈利，不需要融资）。负责的主要部分是：工程侧-整个应用的推进以及承担部分增长职责，模型侧-图像类所有需求的实现。",
-    "lifeTitle": "生活",
-    "lifeDescription": "我结婚有子。但生活主旋律还是两眼一睁就是看数据，写代码。对于享受方面喜欢喝好一点的酒。",
-    "dreamsTitle": "梦想",
-    "dreamsDescription": "已经实现了~享受赌博和探险的乐趣、享受沉迷的快乐。",
-    "myTimeLine": "我的简单时间线",
-    "timelinePart1Title": "两年半前",
-    "timelinePart1Description": "我比较专注工程化（打包/依赖/加速/工程化场景）、源码（Vue/React/工具）、面试技巧、算法这些东西。",
-    "timelinePart2Title": "一年半前",
-    "timelinePart2Description": "接触海外生态、模型（音图文中我只有文字底层大模型公司没有去过）、App、后端、运维等。",
-    "timelinePart3Title": "去年到今年",
-    "timelinePart3Description": "直接跟技术、数据、钱、人打交道了~这应该是成长最快的时期-各种意义上来说。",
+    "intro": "关于我、这个博客以及会员的一些小 FAQ。",
+    "sections": {
+      "who": {
+        "title": "我是谁",
+        "content": "一个老是瞎折腾和折磨自己的全干工程师。"
+      },
+      "what": {
+        "title": "这是什么",
+        "content": "一个财宝库，展示在成长旅途中努力获得的一个个财宝。"
+      },
+      "whyBlog": {
+        "title": "为啥要专门写个博客",
+        "content": "写东西的自由度更高了。"
+      },
+      "whyMembership": {
+        "title": "为啥有些文章要会员",
+        "content": "因为有个知识星球，有很多小伙伴是付费过的，我要保护花了钱的人的权益（可以联系我添加会员）。"
+      },
+      "dreams": {
+        "title": "梦想",
+        "content": "工程师嘛，就是要造建筑，所以下阶段的梦想就是作为核心打造一个真正的盈利的，被用户真正认可的千万流量的项目（百万级已经达成啦！）"
+      }
+    },
     "contactMe": "联系我"
   },
   "common": {
@@ -203,8 +212,8 @@
   "auth": {
     "login": {
       "page": {
-        "title": "欢迎来到鱼的手记",
-        "description": "登录以继续你的旅程"
+        "title": "欢迎来到鱼的博客",
+        "description": "登录后继续阅读和管理内容"
       },
       "google": "使用 Google 登录",
       "github": "使用 GitHub 登录",
@@ -259,16 +268,16 @@
     }
   },
   "home": {
-    "brandTitle": "鱼的手记",
-    "heroTitle": "为深思熟虑的构建者整理的策略",
-    "heroDescription": "长篇笔记、实施指南与研究总结被收集在一个安静的阅读列表中。使用下方筛选器直接找到你需要的内容。"
+    "brandTitle": "鱼的博客",
+    "heroTitle": "工程、AI、产品的实战记录",
+    "heroDescription": "长篇文章、实战笔记都放在这里，按分类和搜索直接找到需要的内容。"
   },
   "seo": {
-    "siteTitle": "鱼的手记",
-    "siteDescription": "收录工程、模型与商业实践的长篇笔记、指南与研究总结，安静地阅读与搜索。",
-    "homeTitle": "文章库 | 鱼的手记",
-    "homeDescription": "按主题浏览工程、SEO、增长、独立开发等精选文章，支持中英阅读。",
+    "siteTitle": "鱼的博客",
+    "siteDescription": "记录工程、模型和商业实践的博客，直接分享可复用的经验与案例。",
+    "homeTitle": "文章库 | 鱼的博客",
+    "homeDescription": "按主题浏览工程、SEO、增长、独立开发等文章，支持中英阅读。",
     "aboutTitle": "关于作者",
-    "aboutDescription": "了解溪抱鱼（Felix）的背景、时间轴与联系方式。"
+    "aboutDescription": "关于溪抱鱼、博客和会员的小问答，以及联系方式。"
   }
 }

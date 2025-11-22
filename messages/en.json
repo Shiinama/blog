@@ -1,20 +1,29 @@
 {
   "about": {
     "title": "About Me",
-    "intro": "You can call me River Fish or Felix. I'm a software developer from China. An adventurer/gambler who enjoys the journey.",
-    "workTitle": "Work",
-    "workDescription": "My overall work experience has been quite adventurous with a gambling flavor. I've joined early-stage Midjourney, early-stage MyShell, late-stage Li Yizhou's tech team, and so on. Currently, I'm co-founding a startup focused on overseas AI projects (profitable, no funding needed). My main responsibilities are: on the engineering side - driving the entire application and taking on some growth responsibilities; on the model side - implementing all image-related requirements.",
-    "lifeTitle": "Life",
-    "lifeDescription": "I'm married with a kid. But the main theme of my life is still opening my eyes to look at data and write code. For enjoyment, I like to drink good quality alcohol.",
-    "dreamsTitle": "Dreams",
-    "dreamsDescription": "Already realized~ Enjoying the fun of gambling and adventure, and the pleasure of immersion.",
-    "myTimeLine": "My Simple Timeline",
-    "timelinePart1Title": "Two and a Half Years Ago",
-    "timelinePart1Description": "I was more focused on engineering (bundling/dependencies/optimization/engineering scenarios), source code (Vue/React/tools), interview skills, and algorithms.",
-    "timelinePart2Title": "One and a Half Years Ago",
-    "timelinePart2Description": "Got in touch with overseas ecosystems, models (among audio, image, and text, I've only not been to a foundational text model company), App development, backend, and DevOps.",
-    "timelinePart3Title": "Last Year to Now",
-    "timelinePart3Description": "Directly dealing with technology, data, money, and people~ This should be the fastest growing period - in all senses.",
+    "intro": "Quick answers about me, this blog, and membership.",
+    "sections": {
+      "who": {
+        "title": "Who am I",
+        "content": "A full-stack engineer who keeps tinkering and pushing myself."
+      },
+      "what": {
+        "title": "What is this",
+        "content": "A treasure vault that showcases the wins I've earned on my growth journey."
+      },
+      "whyBlog": {
+        "title": "Why a dedicated blog?",
+        "content": "It gives me more freedom when I write."
+      },
+      "whyMembership": {
+        "title": "Why members-only articles?",
+        "content": "I run a paid community; many folks there have supported me, so I protect their perks. Ping me if you need access."
+      },
+      "dreams": {
+        "title": "What's the dream",
+        "content": "Engineers build: next up I want to help lead a truly profitable project with tens of millions of users that people genuinely value (we're already at millions)."
+      }
+    },
     "contactMe": "Contact Me"
   },
   "common": {
@@ -203,8 +212,8 @@
   "auth": {
     "login": {
       "page": {
-        "title": "Welcome to Fish Notes",
-        "description": "Sign in to continue your journey"
+        "title": "Welcome to Fish Blog",
+        "description": "Sign in to keep reading and managing content"
       },
       "google": "Continue with Google",
       "github": "Continue with GitHub",
@@ -259,16 +268,16 @@
     }
   },
   "home": {
-    "brandTitle": "Fish Notes",
-    "heroTitle": "Curated strategies for thoughtful builders",
-    "heroDescription": "Long-form notes, implementation guides, and research summaries collected in one quiet reading list. Use the filters below to cut directly to what you need."
+    "brandTitle": "Fish Blog",
+    "heroTitle": "Practical notes on engineering, AI, and product",
+    "heroDescription": "Long form walkthroughs, playbooks, and debriefs. Filter below to jump to what you need."
   },
   "seo": {
-    "siteTitle": "Fish Notes",
-    "siteDescription": "A quiet reading list of long-form notes, engineering guides, and applied AI/SEO growth playbooks.",
-    "homeTitle": "Content Library | Fish Notes",
-    "homeDescription": "Browse curated articles on engineering, SEO, growth, and independent development across languages.",
+    "siteTitle": "Fish Blog",
+    "siteDescription": "Practical notes on engineering, applied AI, and growth, written to be used.",
+    "homeTitle": "Content Library | Fish Blog",
+    "homeDescription": "Browse articles on engineering, SEO, growth, and indie building in English and Chinese.",
     "aboutTitle": "About River Fish",
-    "aboutDescription": "Background, timeline, and contact details for River Fish (Felix)."
+    "aboutDescription": "Quick Q&A about River Fish (Felix), this blog, membership, and how to reach me."
   }
 }

@@ -35,7 +35,7 @@ export function Logo({ className }: { className?: string }) {
   )
 }
 
-export function NamedLogoWithLink({ brandTitle = '鱼的手记' }: { brandTitle?: string }) {
+export function NamedLogoWithLink({ brandTitle = '鱼的博客' }: { brandTitle?: string }) {
   return (
     <Link href="/" className="text-foreground flex flex-row items-center gap-3">
       <Logo className="size-7" />

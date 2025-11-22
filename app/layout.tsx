@@ -18,8 +18,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteOrigin()),
-  title: 'Fish Notes',
-  description: 'A quiet reading list of long-form notes, engineering guides, and applied AI/SEO growth playbooks.'
+  title: 'Fish Blog',
+  description: 'Practical notes on engineering, applied AI, and growth.'
 }
 
 export const viewport: Viewport = {

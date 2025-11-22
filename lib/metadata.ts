@@ -1,6 +1,6 @@
 import { DEFAULT_LOCALE, routing } from '@/i18n/routing'
 
-export const DEFAULT_SITE_NAME = 'Fish Notes'
+export const DEFAULT_SITE_NAME = 'Fish Blog'
 
 function normalizePathname(pathname: string) {
   if (!pathname) return '/'

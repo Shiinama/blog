@@ -4,28 +4,19 @@ import { motion } from 'framer-motion'
 
 import { Link } from '@/i18n/navigation'
 
-type TimelineItem = {
-  title: string
-  description: string
-}
-
 type ContactLink = {
   name: string
   url: string
 }
 
-type AboutContentProps = {
+type AboutSection = {
   title: string
-  intro: string
-  workTitle: string
-  workDescription: string
-  lifeTitle: string
-  lifeDescription: string
-  dreamsTitle: string
-  dreamsDescription: string
-  myTimeLine: string
+  content: string
+}
+
+type AboutContentProps = {
+  sections: AboutSection[]
   contactMe: string
-  timeline: TimelineItem[]
   contacts: ContactLink[]
 }
 
@@ -40,55 +31,40 @@ export function AboutContent(props: AboutContentProps) {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   }
 
-  const { timeline, contacts } = props
+  const { contacts, sections } = props
 
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="container mx-auto max-w-3xl space-y-12 p-6"
+      className="container mx-auto max-w-3xl space-y-10 p-6"
     >
-      <motion.header variants={itemVariants}>
-        <h1 className="mb-4 text-2xl font-semibold text-primary">{props.title}</h1>
-        <p className="text-lg text-muted-foreground">{props.intro}</p>
-      </motion.header>
-
       <motion.section variants={itemVariants}>
-        <h2 className="mb-3 text-2xl font-semibold text-primary">{props.workTitle}</h2>
-        <p className="text-base text-muted-foreground">{props.workDescription}</p>
+        <div className="mb-4 space-y-6">
+          {sections.map((section, index) => {
+            const Heading = index === 0 ? 'h1' : 'h2'
+            const headingClassName =
+              index === 0 ? 'text-primary text-3xl font-semibold' : 'text-primary text-2xl font-semibold'
+
+            return (
+              <div key={section.title} className="space-y-2">
+                <Heading className={headingClassName}>{section.title}</Heading>
+                <p className="text-muted-foreground text-base">{section.content}</p>
+              </div>
+            )
+          })}
+        </div>
       </motion.section>
 
       <motion.section variants={itemVariants}>
-        <h2 className="mb-3 text-2xl font-semibold text-primary">{props.lifeTitle}</h2>
-        <p className="text-base text-muted-foreground">{props.lifeDescription}</p>
-      </motion.section>
-
-      <motion.section variants={itemVariants}>
-        <h2 className="mb-3 text-2xl font-semibold text-primary">{props.dreamsTitle}</h2>
-        <p className="text-base text-muted-foreground">{props.dreamsDescription}</p>
-      </motion.section>
-
-      <motion.section variants={itemVariants}>
-        <h2 className="mb-4 text-2xl font-semibold text-primary">{props.myTimeLine}</h2>
+        <h2 className="text-primary mb-4 text-2xl font-semibold">{props.contactMe}</h2>
         <ul className="space-y-4">
-          {timeline.map((part) => (
-            <motion.li key={part.title} variants={itemVariants} className="rounded-md bg-background p-4 shadow-md">
-              <h3 className="text-lg font-medium text-foreground">{part.title}</h3>
-              <p className="text-base text-muted-foreground">{part.description}</p>
-            </motion.li>
-          ))}
-        </ul>
-      </motion.section>
-
-      <motion.section variants={itemVariants}>
-        <h2 className="mb-3 text-2xl font-semibold text-primary">{props.contactMe}</h2>
-        <ul className="space-y-2 text-base text-muted-foreground">
-          <li>Email: xibaoyuxi@gmail.com</li>
-          <li>WeChat: Xibaoyuxi</li>
+          <li className="text-muted-foreground text-base">Email: xibaoyuxi@gmail.com</li>
+          <li className="text-muted-foreground text-base">WeChat: Xibaoyuxi</li>
           {contacts.map((link) => (
-            <li key={link.name}>
-              <Link className="underline transition-colors hover:text-primary" href={link.url}>
+            <li key={link.name} className="text-muted-foreground text-base">
+              <Link className="hover:text-primary underline transition-colors" href={link.url}>
                 {link.name}
               </Link>
             </li>
