@@ -10,7 +10,7 @@ import matter from 'gray-matter'
 import { execSync } from 'child_process'
 
 import { CATEGORY_PRESETS } from '../constant/category-presets'
-import { type DB } from '../lib/db'
+import { createDb, type DB } from '../lib/db'
 import * as schema from '../drizzle/schema'
 import { calculateReadingTime, extractSummary, normalizeSlug } from '../lib/posts/utils'
 
@@ -108,6 +108,22 @@ function findLocalSqliteFile(): string | null {
 }
 
 function createDatabaseContext(): DatabaseContext {
+  if (process.env.NEXT_PUBLIC_DB_PROXY) {
+    const requiredEnv = ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'DATABASE_ID'] as const
+    const missingEnv = requiredEnv.filter((key) => !process.env[key])
+
+    if (missingEnv.length > 0) {
+      throw new Error(
+        `Missing ${missingEnv.join(
+          ', '
+        )}. Provide LOCAL_DB_PATH/SQLITE_PATH or ensure a local Miniflare D1 database exists, or set Cloudflare credentials.`
+      )
+    }
+
+    console.log('Using remote Cloudflare D1 database via HTTP driver.')
+    return { db: createDb() }
+  }
+
   const localFile = findLocalSqliteFile()
 
   console.log(`Using local SQLite database: ${localFile}`)

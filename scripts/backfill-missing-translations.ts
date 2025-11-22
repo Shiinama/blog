@@ -9,9 +9,9 @@ import { drizzle as drizzleProxy } from 'drizzle-orm/sqlite-proxy'
 import type { AsyncRemoteCallback, SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
 
 import { locales } from '@/i18n/routing'
-import { d1HttpDriver } from '@/lib/db/d1-http-driver'
 import * as schema from '@/drizzle/schema'
 import { postTranslations, posts } from '@/drizzle/schema'
+import { d1HttpDriver } from '@/lib/db/d1-http-driver'
 
 type MissingTask = {
   postId: string
