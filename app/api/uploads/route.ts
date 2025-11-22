@@ -4,7 +4,6 @@ import { auth } from '@/lib/auth'
 import { getR2Bucket } from '@/lib/r2'
 
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024 // 10MB
-const HASH_PREFIX_LENGTH = 2
 
 function isAdmin(userId?: string | null) {
   if (!userId) return false
@@ -29,8 +28,7 @@ function getExtension(file: File) {
 
 function buildObjectKey(file: File, hashHex: string) {
   const ext = getExtension(file)
-  const prefix = hashHex.slice(0, HASH_PREFIX_LENGTH)
-  return `uploads/${prefix}/${hashHex}.${ext}`
+  return `uploads/${hashHex}.${ext}`
 }
 
 function buildPublicUrl(key: string) {
