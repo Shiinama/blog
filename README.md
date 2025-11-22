@@ -83,7 +83,6 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
    DATABASE_ID="<the UUID shown by Wrangler>"
    CLOUDFLARE_ACCOUNT_ID="<your account id>"
    CLOUDFLARE_API_TOKEN="<an API token with D1 access>"
-   NEXT_PUBLIC_DB_PROXY="1" # required for `next dev` and local CLI scripts
    ```
 
    The HTTP proxy automatically sends local Node.js queries (Next.js dev server, scripts, etc.) to Cloudflare's D1 API, so you no longer need a local Postgres service.
@@ -100,8 +99,6 @@ This is a modern, efficient AI chat application built with Next.js 15, showcasin
    ```bash
    pnpm content:import
    ```
-
-   > **Note:** Content import runs from Node.js, so it relies on the HTTP proxy (`NEXT_PUBLIC_DB_PROXY=1`) and the Cloudflare credentials listed above.
 
 6. Run the development server:
 

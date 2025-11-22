@@ -65,7 +65,8 @@ declare const messages: {
     "app": "App",
     "backend": "Backend",
     "commonBaseProject": "Common Base Project",
-    "nextjs": "Next.js"
+    "nextjs": "Next.js",
+    "other": "Other"
   },
   "admin": {
     "status": {
