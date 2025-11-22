@@ -4,6 +4,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TableKit } from '@tiptap/extension-table'
 import { EditorContent, type Editor, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import css from 'highlight.js/lib/languages/css'
@@ -110,6 +111,9 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       }),
       Link.configure({
         openOnClick: false
+      }),
+      TableKit.configure({
+        table: { resizable: true }
       }),
       CodeBlockLowlight.configure({
         lowlight: lowlightInstance
