@@ -1,11 +1,13 @@
 'use client'
 
+import { Check, Copy } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 
 import LoginForm from '@/components/login-form'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { Link } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 
@@ -88,6 +90,11 @@ export function AuthDialogsHost() {
   const authData = useAuthContext()
   const { loginOpen, accountOpen, closeLogin, closeAccount, openLogin, openAccount } = useAuthDialogStore()
   const email = authData.user?.email
+  const userId = authData.user?.id ?? ''
+  const { copied, copy } = useCopyToClipboard({
+    successMessage: authData.common('common.copied'),
+    errorMessage: authData.common('common.copyFailed')
+  })
 
   return (
     <>
@@ -111,7 +118,21 @@ export function AuthDialogsHost() {
           <div className="flex flex-col gap-6 pt-8 pb-4">
             <div className="gap-1.5">
               <Label htmlFor="user-id">{authData.common('common.userId')}</Label>
-              <Input id="user-id" disabled value={authData.user?.id ?? ''} />
+              <div className="flex items-center gap-2">
+                <Input id="user-id" className="flex-1" disabled value={userId} />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!userId}
+                  onClick={() => {
+                    void copy(userId)
+                  }}
+                  className="inline-flex items-center gap-1"
+                >
+                  {copied ? authData.common('common.copied') : authData.common('common.copyId')}
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
             </div>
             {email && (
               <div className="gap-1.5">
