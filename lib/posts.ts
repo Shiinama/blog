@@ -302,7 +302,6 @@ export async function getPaginatedPosts({
   }
 }
 
-export async function getAllPublishedPostSlugs() {
 export async function getPostsForFeed(limit = 40) {
   const db = createDb()
   const rows = await db
