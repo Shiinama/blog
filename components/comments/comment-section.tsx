@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-
 import { Loader2, MessageCircle, Send, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useEffect, useMemo, useState } from 'react'
 
+import { createCommentAction, loadCommentsAction } from '@/app/actions/comments'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
 
 import type { CommentView } from '@/lib/comments'
 
@@ -40,12 +39,8 @@ export function CommentSection({ postId, viewerId, initialComments }: CommentSec
     const fetchComments = async () => {
       setLoading(true)
       try {
-        const response = await fetch(`/api/comments?postId=${encodeURIComponent(postId)}`)
-        if (!response.ok) {
-          throw new Error('Failed to load comments')
-        }
-        const data = await response.json()
-        setComments(data.comments ?? [])
+        const data = await loadCommentsAction(postId)
+        setComments(data ?? [])
       } catch (error) {
         console.error(error)
         setMessage(t('loadError'))
@@ -72,25 +67,16 @@ export function CommentSection({ postId, viewerId, initialComments }: CommentSec
     setSubmitting(true)
     setMessage(null)
     try {
-      const response = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, content: trimmed })
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error ?? 'Failed to post')
-      }
-
-      const data = await response.json()
-      if (data.comment) {
-        setComments((prev) => [data.comment as CommentView, ...prev])
-      }
+      const comment = await createCommentAction({ postId, content: trimmed })
+      setComments((prev) => [comment, ...prev])
       setContent('')
     } catch (error) {
       console.error(error)
-      setMessage(t('submitError'))
+      if (error instanceof Error && error.message === 'Unauthorized') {
+        setMessage(t('signin'))
+      } else {
+        setMessage(t('submitError'))
+      }
     } finally {
       setSubmitting(false)
     }
@@ -126,13 +112,13 @@ export function CommentSection({ postId, viewerId, initialComments }: CommentSec
   }
 
   return (
-    <section className="rounded-3xl bg-card/80 px-4 py-5 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 ring-border/30 backdrop-blur-sm sm:px-6 dark:ring-white/10">
+    <section className="bg-card/80 ring-border/30 rounded-3xl px-4 py-5 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-6 dark:ring-white/10">
       <div className="flex items-center gap-3 pb-3">
-        <div className="rounded-2xl bg-primary/10 p-2 text-primary">
+        <div className="bg-primary/10 text-primary rounded-2xl p-2">
           <MessageCircle className="h-5 w-5" />
         </div>
         <div className="flex-1">
-          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-[0.25em]">{t('title')}</p>
+          <p className="text-muted-foreground text-xs font-semibold tracking-[0.25em] uppercase">{t('title')}</p>
           <p className="text-foreground text-lg font-semibold sm:text-xl">{t('subtitle')}</p>
         </div>
         <span className="text-muted-foreground text-sm font-medium">{t('count', { count: comments.length })}</span>
@@ -144,7 +130,7 @@ export function CommentSection({ postId, viewerId, initialComments }: CommentSec
           onChange={(event) => setContent(event.target.value)}
           placeholder={viewerId ? t('placeholder') : t('signin')}
           disabled={!viewerId || submitting}
-          className="min-h-[120px] rounded-2xl border-border/60 bg-muted/30 shadow-inner shadow-black/5"
+          className="border-border/60 bg-muted/30 min-h-[120px] rounded-2xl shadow-inner shadow-black/5"
         />
         <div className="flex items-center justify-between gap-3">
           <div className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -176,21 +162,19 @@ export function CommentSection({ postId, viewerId, initialComments }: CommentSec
             {t('loading')}
           </div>
         )}
-        {!loading && comments.length === 0 && (
-          <p className="text-muted-foreground text-sm">{t('empty')}</p>
-        )}
+        {!loading && comments.length === 0 && <p className="text-muted-foreground text-sm">{t('empty')}</p>}
         {!loading &&
           comments.map((comment) => (
             <article
               key={comment.id}
-              className="rounded-2xl bg-card/70 px-4 py-3 shadow-[0_10px_32px_rgba(0,0,0,0.08)] ring-1 ring-border/20 dark:ring-white/10"
+              className="bg-card/70 ring-border/20 rounded-2xl px-4 py-3 shadow-[0_10px_32px_rgba(0,0,0,0.08)] ring-1 dark:ring-white/10"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold uppercase text-primary">
+                <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold uppercase">
                   {getInitials(comment.user.name, comment.user.email)}
                 </div>
                 <div className="flex-1">
-                  <p className="text-foreground text-sm font-semibold leading-tight">
+                  <p className="text-foreground text-sm leading-tight font-semibold">
                     {comment.user.name || t('anonymous')}
                   </p>
                   <p className="text-muted-foreground text-xs">{renderTimestamp(comment.createdAt)}</p>
