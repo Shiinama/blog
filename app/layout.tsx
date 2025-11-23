@@ -1,7 +1,7 @@
 import { Inter } from 'next/font/google'
 import { SessionProvider } from 'next-auth/react'
+import { ThemeProvider } from 'next-themes'
 
-import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import NextTopLoader from '@/components/ui/top-loader'
 import { getSiteOrigin } from '@/lib/metadata'
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 5,
-  userScalable: true
+  maximumScale: 1,
+  userScalable: false
 }
 
 export default function RootLayout({
