@@ -227,6 +227,24 @@ export const subscriptions = sqliteTable('subscriptions', {
     .notNull()
 })
 
+export const comments = sqliteTable('comments', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  postId: text('post_id')
+    .notNull()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+})
+
+export type Comment = typeof comments.$inferSelect
+
 export const categoriesRelations = relations(categories, ({ many }) => ({
   posts: many(posts)
 }))
@@ -240,12 +258,24 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
     fields: [posts.authorId],
     references: [users.id]
   }),
-  translations: many(postTranslations)
+  translations: many(postTranslations),
+  comments: many(comments)
 }))
 
 export const postTranslationsRelations = relations(postTranslations, ({ one }) => ({
   post: one(posts, {
     fields: [postTranslations.postId],
     references: [posts.id]
+  })
+}))
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  post: one(posts, {
+    fields: [comments.postId],
+    references: [posts.id]
+  }),
+  author: one(users, {
+    fields: [comments.userId],
+    references: [users.id]
   })
 }))

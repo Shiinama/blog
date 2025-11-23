@@ -235,6 +235,7 @@
     }
   },
   "content": {
+    "backToList": "返回文章列表",
     "metadata": {
       "published": "发布时间",
       "readingTime": "阅读时间",
@@ -257,6 +258,20 @@
       "primaryCta": "登录 / 订阅解锁",
       "secondaryCta": "了解订阅权益"
     }
+  },
+  "comments": {
+    "title": "评论",
+    "subtitle": "加入讨论",
+    "count": "{count, plural, one {# 条评论} other {# 条评论}}",
+    "placeholder": "留下你的看法或问题...",
+    "signin": "登录后评论",
+    "emptyError": "至少写几句再提交。",
+    "submitError": "提交失败，请稍后再试。",
+    "submit": "发布",
+    "loading": "评论加载中...",
+    "empty": "还没有评论，来占个沙发吧。",
+    "loadError": "暂时无法加载评论。",
+    "anonymous": "访客"
   },
   "explorer": {
     "searchLabel": "搜索",
@@ -281,10 +296,21 @@
     "loadMore": "加载更多",
     "loadingMore": "加载中..."
   },
+  "pwa": {
+    "title": "安装应用",
+    "description": "添加到主屏，离线也能快速阅读。",
+    "cta": "安装",
+    "remindLater": "稍后提醒",
+    "close": "关闭"
+  },
   "home": {
     "brandTitle": "鱼的博客",
+    "heroKicker": "移动优先 · 随时阅读",
     "heroTitle": "工程、AI、产品的实战记录",
-    "heroDescription": "长篇文章、实战笔记都放在这里，按分类和搜索直接找到需要的内容。"
+    "heroDescription": "长篇文章、实战笔记都放在这里，按分类和搜索直接找到需要的内容。",
+    "rssCta": "订阅 RSS",
+    "rssHint": "加到你的阅读器，第一时间收到更新。",
+    "pwaHint": "添加到主屏，离线也能快速浏览。"
   },
   "seo": {
     "siteTitle": "鱼的博客",

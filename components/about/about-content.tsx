@@ -34,43 +34,63 @@ export function AboutContent(props: AboutContentProps) {
   const { contacts, sections } = props
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="container mx-auto max-w-3xl space-y-10 p-6"
-    >
-      <motion.section variants={itemVariants}>
-        <div className="mb-4 space-y-6">
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="mx-auto max-w-4xl px-4 pb-14 pt-6 sm:px-6">
+      <motion.section
+        variants={itemVariants}
+        className="rounded-3xl bg-card/85 px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 ring-border/30 backdrop-blur-sm sm:px-7 dark:ring-white/10"
+      >
+        <div className="space-y-6">
           {sections.map((section, index) => {
             const Heading = index === 0 ? 'h1' : 'h2'
             const headingClassName =
-              index === 0 ? 'text-primary text-3xl font-semibold' : 'text-primary text-2xl font-semibold'
+              index === 0
+                ? 'text-foreground text-3xl font-semibold sm:text-4xl'
+                : 'text-foreground text-2xl font-semibold'
 
             return (
               <div key={section.title} className="space-y-2">
                 <Heading className={headingClassName}>{section.title}</Heading>
-                <p className="text-muted-foreground text-base">{section.content}</p>
+                <p className="text-muted-foreground text-base leading-relaxed sm:text-lg">{section.content}</p>
               </div>
             )
           })}
         </div>
       </motion.section>
 
-      <motion.section variants={itemVariants}>
-        <h2 className="text-primary mb-4 text-2xl font-semibold">{props.contactMe}</h2>
-        <ul className="space-y-4">
-          <li className="text-muted-foreground text-base">Email: xibaoyuxi@gmail.com</li>
-          <li className="text-muted-foreground text-base">WeChat: Xibaoyuxi</li>
+      <motion.section
+        variants={itemVariants}
+        className="mt-6 rounded-3xl bg-gradient-to-br from-primary/10 via-card/90 to-card/80 px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 ring-border/30 backdrop-blur-sm sm:px-7 dark:ring-white/10"
+      >
+        <h2 className="text-foreground mb-4 text-2xl font-semibold sm:text-3xl">{props.contactMe}</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ContactCard label="Email" value="xibaoyuxi@gmail.com" />
+          <ContactCard label="WeChat" value="Xibaoyuxi" />
           {contacts.map((link) => (
-            <li key={link.name} className="text-muted-foreground text-base">
-              <Link className="hover:text-primary underline transition-colors" href={link.url}>
-                {link.name}
-              </Link>
-            </li>
+            <ContactCard key={link.name} label={link.name} href={link.url} />
           ))}
-        </ul>
+        </div>
       </motion.section>
     </motion.div>
+  )
+}
+
+function ContactCard({ label, value, href }: { label: string; value?: string; href?: string }) {
+  const content = value ? value : href
+  const isLink = Boolean(href)
+
+  return (
+    <div className="rounded-2xl bg-card/70 px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.06)] ring-1 ring-border/20 dark:ring-white/10">
+      <p className="text-muted-foreground text-xs font-semibold uppercase tracking-[0.25em]">{label}</p>
+      {isLink ? (
+        <Link
+          href={href!}
+          className="text-foreground hover:text-primary mt-1 inline-flex items-center gap-2 text-base font-medium transition-colors"
+        >
+          {content}
+        </Link>
+      ) : (
+        <p className="text-foreground mt-1 text-base font-medium">{content}</p>
+      )}
+    </div>
   )
 }

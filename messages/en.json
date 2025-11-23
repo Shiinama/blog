@@ -235,6 +235,7 @@
     }
   },
   "content": {
+    "backToList": "Back to library",
     "metadata": {
       "published": "Published",
       "readingTime": "Reading Time",
@@ -257,6 +258,20 @@
       "primaryCta": "Sign in / Subscribe",
       "secondaryCta": "See member benefits"
     }
+  },
+  "comments": {
+    "title": "Comments",
+    "subtitle": "Join the conversation",
+    "count": "{count, plural, one {# comment} other {# comments}}",
+    "placeholder": "Share your take or ask a question...",
+    "signin": "Sign in to comment",
+    "emptyError": "Write a few words before sending.",
+    "submitError": "Could not post comment. Please try again.",
+    "submit": "Post",
+    "loading": "Loading comments...",
+    "empty": "No comments yet. Be the first to add one.",
+    "loadError": "Unable to load comments right now.",
+    "anonymous": "Someone"
   },
   "explorer": {
     "searchLabel": "Search",
@@ -281,10 +296,21 @@
     "loadMore": "Load more",
     "loadingMore": "Loading..."
   },
+  "pwa": {
+    "title": "Install the app",
+    "description": "Add Fish Blog to your home screen for faster, offline-friendly reading.",
+    "cta": "Install",
+    "remindLater": "Maybe later",
+    "close": "Close"
+  },
   "home": {
     "brandTitle": "Fish Blog",
+    "heroKicker": "Mobile-first · Offline-ready",
     "heroTitle": "Practical notes on engineering, AI, and product",
-    "heroDescription": "Long form walkthroughs, playbooks, and debriefs. Filter below to jump to what you need."
+    "heroDescription": "Long form walkthroughs, playbooks, and debriefs. Filter below to jump to what you need.",
+    "rssCta": "Subscribe via RSS",
+    "rssHint": "Add to your reader to catch new drops automatically.",
+    "pwaHint": "Add Fish Blog to your home screen for quick, offline-friendly reading."
   },
   "seo": {
     "siteTitle": "Fish Blog",

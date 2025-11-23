@@ -310,3 +310,27 @@ export async function getAllPublishedPostSlugs() {
 
   return rows.map((row) => row.slug)
 }
+
+export async function getPostsForFeed(limit = 40) {
+  const db = createDb()
+  const rows = await db
+    .select({
+      id: posts.id,
+      title: posts.title,
+      summary: posts.summary,
+      content: posts.content,
+      publishedAt: posts.publishedAt,
+      createdAt: posts.createdAt,
+      language: posts.language
+    })
+    .from(posts)
+    .where(eq(posts.status, 'PUBLISHED'))
+    .orderBy(desc(posts.publishedAt))
+    .limit(limit)
+
+  return rows.map((row) => ({
+    ...row,
+    publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null
+  }))
+}
