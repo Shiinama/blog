@@ -1,7 +1,7 @@
 import { Category, Post } from '@/drizzle/schema'
 
 export type CategorySummary = Pick<Category, 'id' | 'key' | 'sortOrder' | 'isVisible'>
-export type SidebarPost = Pick<Post, 'id' | 'title' | 'slug' | 'sortOrder' | 'publishedAt' | 'createdAt' | 'status'>
+export type SidebarPost = Pick<Post, 'id' | 'title' | 'sortOrder' | 'publishedAt' | 'createdAt' | 'status'>
 export type ExplorerSortOption = 'newest' | 'oldest' | 'alphabetical'
 
 export interface ExplorerFilterInput {
@@ -20,7 +20,6 @@ export interface ExplorerPostsResponse {
 
 export interface ExplorerPostRecord {
   id: string
-  slug: string
   title: string
   summary: string | null
   coverImageUrl: string | null
@@ -46,7 +45,6 @@ export interface PostDetails extends Post {
 export interface PaginatedPostListItem {
   id: string
   title: string
-  slug: string
   status: Post['status']
   publishedAt: Post['publishedAt']
   updatedAt: Post['updatedAt']

@@ -8,7 +8,7 @@ import { postTranslations, posts, PostStatus, postStatusEnum } from '@/drizzle/s
 import { auth } from '@/lib/auth'
 import { createDb, DB } from '@/lib/db'
 import { getOrCreatePostTranslation } from '@/lib/posts/translation'
-import { calculateReadingTime, extractSummary, normalizeSlug } from '@/lib/posts/utils'
+import { calculateReadingTime, extractSummary } from '@/lib/posts/utils'
 
 type PostFormState = {
   status: 'idle' | 'success' | 'error'
@@ -31,7 +31,6 @@ const postStatusValues = [...postStatusEnum] as [PostStatus, ...PostStatus[]]
 const postFormSchema = z.object({
   postId: z.string().optional(),
   title: z.string().min(3, '标题至少 3 个字符'),
-  slug: z.string().min(1, 'Slug 不能为空'),
   summary: z.string().optional(),
   content: z.string().min(50, '内容需要至少 50 个字符'),
   coverImageUrl: z.string().url('封面链接格式不正确').optional().or(z.literal('')),
@@ -68,7 +67,6 @@ function parseTags(value?: string) {
 }
 
 async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: string) {
-  const slug = normalizeSlug(data.slug)
   const summary = data.summary?.trim() || extractSummary(data.content)
   const coverImageUrl = data.coverImageUrl?.trim() ? data.coverImageUrl.trim() : null
   const tags = parseTags(data.tags)
@@ -87,7 +85,6 @@ async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: 
 
   const baseData = {
     title: data.title.trim(),
-    slug,
     summary,
     content: data.content,
     coverImageUrl,
@@ -240,15 +237,6 @@ export async function savePostAction(_prevState: PostFormState, formData: FormDa
         status: 'error',
         errors: formatFieldErrors(error),
         message: '请检查表单信息'
-      }
-    }
-
-    if (error instanceof Error && /UNIQUE constraint failed: posts\.slug/i.test(error.message)) {
-      return {
-        status: 'error',
-        errors: {
-          slug: ['Slug 已存在，请更换一个唯一的地址']
-        }
       }
     }
 

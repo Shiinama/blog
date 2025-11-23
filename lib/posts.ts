@@ -75,7 +75,6 @@ export async function getExplorerPosts({
 
   const baseSelection = {
     id: posts.id,
-    slug: posts.slug,
     title: posts.title,
     summary: posts.summary,
     coverImageUrl: posts.coverImageUrl,
@@ -255,7 +254,6 @@ export async function getPaginatedPosts({
   const baseSelection = {
     id: posts.id,
     title: posts.title,
-    slug: posts.slug,
     status: posts.status,
     publishedAt: posts.publishedAt,
     updatedAt: posts.updatedAt,
@@ -305,12 +303,6 @@ export async function getPaginatedPosts({
 }
 
 export async function getAllPublishedPostSlugs() {
-  const db = createDb()
-  const rows = await db.select({ slug: posts.slug }).from(posts).where(eq(posts.status, 'PUBLISHED'))
-
-  return rows.map((row) => row.slug)
-}
-
 export async function getPostsForFeed(limit = 40) {
   const db = createDb()
   const rows = await db

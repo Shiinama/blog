@@ -31,7 +31,6 @@ type EditablePost = PostDetails
 
 type MetadataState = {
   title: string
-  slug: string
   coverImageUrl: string
   tags: string
   categoryId: string
@@ -71,7 +70,6 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
   ]
   const [metadata, setMetadata] = useState<MetadataState>(() => ({
     title: post?.title ?? '',
-    slug: post?.slug ?? '',
     coverImageUrl: post?.coverImageUrl ?? '',
     tags: post?.tags?.join(', ') ?? '',
     categoryId: post?.categoryId ?? '',
@@ -175,7 +173,6 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
       <input type="hidden" name="postId" value={post?.id ?? ''} />
       <input type="hidden" name="content" value={content} />
       <input type="hidden" name="title" value={metadata.title} />
-      <input type="hidden" name="slug" value={metadata.slug} />
       <input type="hidden" name="coverImageUrl" value={metadata.coverImageUrl} />
       <input type="hidden" name="tags" value={metadata.tags} />
       <input type="hidden" name="categoryId" value={metadata.categoryId} />
@@ -278,16 +275,6 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
                   onChange={(event) => updateMetadataField('sortOrder', event.target.value)}
                   placeholder="0"
                 />
-              </div>
-              <div>
-                <Label htmlFor="modal-slug">{t('form.fields.slug')}</Label>
-                <Input
-                  id="modal-slug"
-                  value={metadata.slug}
-                  onChange={(event) => updateMetadataField('slug', event.target.value)}
-                  placeholder={t('form.placeholders.slug')}
-                />
-                {fieldError('slug') && <p className="text-destructive text-sm">{fieldError('slug')}</p>}
               </div>
               <div>
                 <Label htmlFor="modal-status">{t('form.fields.status')}</Label>

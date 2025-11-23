@@ -23,13 +23,3 @@ export function extractSummary(markdown: string, fallbackLength = 160) {
   const fallback = markdown.replace(/\s+/g, ' ').trim()
   return fallback.length > fallbackLength ? `${fallback.slice(0, fallbackLength)}…` : fallback
 }
-
-export function normalizeSlug(slug: string) {
-  if (!slug) return ''
-  return slug
-    .replace(/^\/+/, '')
-    .replace(/^content\//, '')
-    .replace(/^\/?content\//, '')
-    .replace(/^\/+/, '')
-    .replace(/\/+/g, '/')
-}

@@ -205,7 +205,7 @@
       },
       "publishModal": {
         "title": "发布前确认",
-        "description": "最后确认一下 slug、封面和摘要，让文章准备好上线。",
+        "description": "最后确认一下封面和摘要，让文章准备好上线。",
         "help": "摘要会默认使用文章前 100 个字符。",
         "subscriptionHint": "开启后，未订阅用户只能看到 30% 的正文。"
       },

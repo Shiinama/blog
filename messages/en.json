@@ -205,7 +205,7 @@
       },
       "publishModal": {
         "title": "Finalize publishing",
-        "description": "Double-check the slug, metadata, and summary before going live.",
+        "description": "Double-check the metadata, cover image, and summary before going live.",
         "help": "Summary defaults to the first 100 characters of your article.",
         "subscriptionHint": "When enabled, non-members only see 30% of the article."
       },

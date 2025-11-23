@@ -19,7 +19,6 @@ import type { ExplorerPostRecord, ExplorerSortOption } from '@/lib/posts/types'
 
 export type ExplorerPost = {
   id: string
-  slug: string
   title: string
   summary: string | null
   coverImageUrl?: string | null
@@ -263,7 +262,6 @@ function mapServerPostsToDisplay(
       fallbackLabel
     return {
       id: record.id,
-      slug: record.slug,
       title: record.title,
       summary: record.summary,
       coverImageUrl: record.coverImageUrl ?? undefined,

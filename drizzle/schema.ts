@@ -106,7 +106,6 @@ export const posts = sqliteTable('posts', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  slug: text('slug').notNull().unique(),
   title: text('title').notNull(),
   summary: text('summary').notNull(),
   coverImageUrl: text('cover_image_url'),
