@@ -87,6 +87,7 @@ export function AuthInlineActions() {
 export function AuthDialogsHost() {
   const authData = useAuthContext()
   const { loginOpen, accountOpen, closeLogin, closeAccount, openLogin, openAccount } = useAuthDialogStore()
+  const email = authData.user?.email
 
   return (
     <>
@@ -109,9 +110,15 @@ export function AuthDialogsHost() {
           </DialogHeader>
           <div className="flex flex-col gap-6 pt-8 pb-4">
             <div className="gap-1.5">
-              <Label htmlFor="email">{authData.common('common.email')}</Label>
-              <Input id="email" disabled value={authData.user?.email ?? ''} />
+              <Label htmlFor="user-id">{authData.common('common.userId') ?? 'User ID'}</Label>
+              <Input id="user-id" disabled value={authData.user?.id ?? ''} />
             </div>
+            {email && (
+              <div className="gap-1.5">
+                <Label htmlFor="email">{authData.common('common.email')}</Label>
+                <Input id="email" disabled value={email} />
+              </div>
+            )}
             <div className="gap-1.5">
               <Label htmlFor="username">{authData.common('common.username')}</Label>
               <Input disabled id="username" value={authData.user?.name ?? ''} />
