@@ -10,7 +10,11 @@ import useRouter from '@/hooks/use-router'
 import { usePathname } from '@/i18n/navigation'
 import { DEFAULT_LOCALE, locales } from '@/i18n/routing'
 
-export default function LanguageSwitcher() {
+type LanguageSwitcherProps = {
+  variant?: 'icon' | 'menu'
+}
+
+export default function LanguageSwitcher({ variant = 'icon' }: LanguageSwitcherProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const pathname = usePathname()
@@ -32,6 +36,20 @@ export default function LanguageSwitcher() {
       )
     })
   }
+
+  if (variant === 'menu')
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        title={nextLocaleLabel}
+        disabled={isPending}
+        onClick={onToggleLocale}
+        className="w-full justify-start px-0 text-sm"
+      >
+        {nextLocaleLabel}
+      </Button>
+    )
 
   return (
     <Button variant="ghost" size="sm" title={nextLocaleLabel} disabled={isPending} onClick={onToggleLocale}>

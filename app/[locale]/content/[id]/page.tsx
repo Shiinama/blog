@@ -124,16 +124,16 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
         <div className="flex items-center gap-3 pb-4">
           <Link
             href="/"
-            className="text-muted-foreground inline-flex items-center gap-2 text-sm font-medium transition hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm font-medium transition"
           >
             <ArrowLeft className="h-4 w-4" />
             {contentT('backToList')}
           </Link>
         </div>
 
-        <header className="rounded-3xl bg-card/85 px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.09)] ring-1 ring-border/30 backdrop-blur-sm sm:px-7 dark:ring-white/10">
-          <div className="flex flex-wrap items-center gap-3 text-[12px] uppercase tracking-[0.22em] text-muted-foreground">
-            <span className="text-primary/90 rounded-full bg-primary/10 px-3 py-1 font-semibold">{categoryLabel}</span>
+        <header className="bg-card/85 ring-border/30 rounded-3xl px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.09)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[12px] tracking-[0.22em] uppercase">
+            <span className="text-primary/90 bg-primary/10 rounded-full px-3 py-1 font-semibold">{categoryLabel}</span>
             {formattedPublishedDate && (
               <time dateTime={publishedDateISO}>{contentT('updated', { date: formattedPublishedDate })}</time>
             )}
@@ -176,13 +176,13 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
           </figure>
         )}
 
-        <div className="space-y-6">
+        <div className="mt-6 space-y-6">
           {canViewFullContent ? (
-            <article className="prose prose-base dark:prose-invert max-w-none rounded-3xl bg-card/80 px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 ring-border/30 backdrop-blur-sm sm:px-7 sm:prose-lg dark:ring-white/10">
+            <article className="prose prose-base dark:prose-invert bg-card/80 ring-border/30 sm:prose-lg max-w-none rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
               <MarkdownRenderer content={post.content} />
             </article>
           ) : (
-            <div className="relative rounded-3xl bg-card/80 px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 ring-border/30 backdrop-blur-sm sm:px-7 dark:ring-white/10">
+            <div className="bg-card/80 ring-border/30 relative rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
               <LockedPreview
                 content={previewContent}
                 label={contentT('locked.previewTitle')}

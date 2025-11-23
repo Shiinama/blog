@@ -50,6 +50,7 @@ export default async function About() {
       contacts={[
         { name: 'Twitter', url: 'https://x.com/Xi_baoyu' },
         { name: 'Github', url: 'https://github.com/Shiinama' },
+        { name: 'Facebook', url: 'https://www.facebook.com/profile.php?id=100094312606141' },
         { name: 'Juejin', url: 'https://juejin.cn/user/400646714977431' },
         { name: 'Zhihu', url: 'https://www.zhihu.com/people/39-97-11-82' }
       ]}

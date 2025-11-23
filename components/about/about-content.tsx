@@ -34,10 +34,15 @@ export function AboutContent(props: AboutContentProps) {
   const { contacts, sections } = props
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="mx-auto max-w-4xl px-4 pb-14 pt-6 sm:px-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="mx-auto max-w-4xl px-4 pt-6 pb-14 sm:px-6"
+    >
       <motion.section
         variants={itemVariants}
-        className="rounded-3xl bg-card/85 px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 ring-border/30 backdrop-blur-sm sm:px-7 dark:ring-white/10"
+        className="bg-card/85 ring-border/30 rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10"
       >
         <div className="space-y-6">
           {sections.map((section, index) => {
@@ -59,7 +64,7 @@ export function AboutContent(props: AboutContentProps) {
 
       <motion.section
         variants={itemVariants}
-        className="mt-6 rounded-3xl bg-gradient-to-br from-primary/10 via-card/90 to-card/80 px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 ring-border/30 backdrop-blur-sm sm:px-7 dark:ring-white/10"
+        className="from-primary/10 via-card/90 to-card/80 ring-border/30 mt-6 rounded-3xl bg-linear-to-br px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10"
       >
         <h2 className="text-foreground mb-4 text-2xl font-semibold sm:text-3xl">{props.contactMe}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -79,8 +84,8 @@ function ContactCard({ label, value, href }: { label: string; value?: string; hr
   const isLink = Boolean(href)
 
   return (
-    <div className="rounded-2xl bg-card/70 px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.06)] ring-1 ring-border/20 dark:ring-white/10">
-      <p className="text-muted-foreground text-xs font-semibold uppercase tracking-[0.25em]">{label}</p>
+    <div className="bg-card/70 ring-border/20 rounded-2xl px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.06)] ring-1 dark:ring-white/10">
+      <p className="text-muted-foreground text-xs font-semibold tracking-[0.25em] uppercase">{label}</p>
       {isLink ? (
         <Link
           href={href!}

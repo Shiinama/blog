@@ -1,6 +1,6 @@
 import { Inter } from 'next/font/google'
+import { SessionProvider } from 'next-auth/react'
 
-import NextAuthProvider from '@/components/session-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import NextTopLoader from '@/components/ui/top-loader'
@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <NextAuthProvider>
+    <SessionProvider>
       <html className={cn(inter.variable)} suppressHydrationWarning>
         <body className={cn('bg-background min-h-screen font-sans antialiased')} suppressHydrationWarning>
           <NextTopLoader />
@@ -50,6 +50,6 @@ export default function RootLayout({
           </ThemeProvider>
         </body>
       </html>
-    </NextAuthProvider>
+    </SessionProvider>
   )
 }

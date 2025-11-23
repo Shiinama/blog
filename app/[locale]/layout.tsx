@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
 
+import { AuthProvider } from '@/components/auth-provider'
 import Navbar from '@/components/navbar'
 import { PwaPrompt } from '@/components/pwa/pwa-prompt'
 import { routing } from '@/i18n/routing'
@@ -26,11 +27,13 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <main>
-        <Navbar />
-        <PwaPrompt />
-        {children}
-      </main>
+      <AuthProvider>
+        <main>
+          <Navbar />
+          <PwaPrompt />
+          {children}
+        </main>
+      </AuthProvider>
     </NextIntlClientProvider>
   )
 }
