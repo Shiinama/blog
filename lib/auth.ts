@@ -25,7 +25,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth(() => {
       ResendProvider({
         from: 'no-reply@xibaoyu.xyz'
       }),
-      GitHub
+      GitHub({ clientId: process.env.GITHUB_CLIENT_ID, clientSecret: process.env.GITHUB_CLIENT_SECRET })
     ],
     adapter: DrizzleAdapter(db, {
       usersTable: users,
