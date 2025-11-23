@@ -33,6 +33,7 @@ declare const messages: {
     "home": "Home",
     "about": "About",
     "myAccount": "My Account",
+    "userId": "User ID",
     "email": "Email",
     "username": "Username",
     "currentPlan": "Current plan",
