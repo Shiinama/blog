@@ -20,7 +20,7 @@
 		{
 			"binding": "BLOG_DATABASE",
 			"database_name": "blog",
-			// "remote": true,
+			"remote": true,
 			"database_id": "ce73ae09-d75b-4701-99bd-8dda6de6816e",
 			"migrations_dir": "./drizzle/migrations"
 		}

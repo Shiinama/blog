@@ -48,10 +48,14 @@ export function MobileNav() {
           </DropdownMenuItem>
           <DropdownMenuSeparator className="my-1" />
 
-          <DropdownMenuItem>
-            {authData.isAdmin && <Link href="/admin/posts">{authData.common('common.adminPanel')}</Link>}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator className="my-1" />
+          {authData.isAdmin && (
+            <>
+              <DropdownMenuItem>
+                <Link href="/admin/posts">{authData.common('common.adminPanel')}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1" />
+            </>
+          )}
 
           <DropdownMenuItem>
             {authData.session.status === 'authenticated' ? (
