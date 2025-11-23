@@ -18,7 +18,7 @@ export default async function Navbar({ children, className }: { children?: React
       className={buttonVariants({
         variant: 'link',
         size: 'sm',
-        className: 'w-full justify-start px-0 whitespace-nowrap sm:w-auto sm:justify-center sm:px-3'
+        className: 'text-sm!'
       })}
     >
       {t('common.about')}
