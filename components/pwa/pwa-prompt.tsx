@@ -35,11 +35,6 @@ export function PwaPrompt({ className }: { className?: string }) {
   }, [])
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/sw.js').catch((error) => console.error('SW registration failed', error))
-  }, [])
-
-  useEffect(() => {
     if (isStandalone) return
 
     const dismissedUntil = Number(localStorage.getItem(DISMISS_KEY) ?? 0)
