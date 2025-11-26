@@ -22,7 +22,10 @@ export const metadata: Metadata = {
   description: 'Practical notes on engineering, applied AI, and growth.',
   alternates: {
     types: {
-      'application/rss+xml': '/rss.xml'
+      'application/rss+xml': [
+        { url: '/rss.xml', title: 'RSS (English)' },
+        { url: '/zh/rss.xml', title: 'RSS (中文)' }
+      ]
     }
   }
 }

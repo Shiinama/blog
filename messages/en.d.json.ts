@@ -149,20 +149,20 @@ declare const messages: {
     },
     "subscriptions": {
       "title": "Manual membership grant",
-      "description": "Issue a 1-year membership by email. The system will create the product, order, and subscription records for you.",
+      "description": "Issue a 1-year membership by user ID. The system will create the product, order, and subscription records for you.",
       "formTitle": "Send annual membership",
-      "helper": "Use this for gifting or offline payments. Make sure the user has already signed up with this email.",
+      "helper": "Use this for gifting or offline payments. Make sure the user has already signed up with this user ID.",
       "bullet": {
         "price": "Price: 200 cny (subscription product)",
         "interval": "Interval: 1 year, single delivery",
-        "howItWorks": "Flow: find user by email -> create order -> write subscription record"
+        "howItWorks": "Flow: find user by ID -> create order -> write subscription record"
       },
       "actions": {
         "open": "Grant membership"
       },
       "form": {
-        "emailLabel": "User email",
-        "emailPlaceholder": "user@example.com",
+        "userIdLabel": "User ID",
+        "userIdPlaceholder": "Copy from the user's profile",
         "startAtLabel": "Start time (optional)",
         "startAtPlaceholder": "Defaults to now, or pick a specific start time",
         "startAtHelper": "Leave empty to activate immediately. Future start times will schedule the 1-year period.",

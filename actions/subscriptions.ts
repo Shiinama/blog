@@ -3,7 +3,7 @@
 import { and, desc, eq, gt, lt } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { orders, products, subscriptions, users, type Currency } from '@/drizzle/schema'
+import { orders, products, subscriptions, type Currency } from '@/drizzle/schema'
 import { auth } from '@/lib/auth'
 import { createDb, type DB } from '@/lib/db'
 
@@ -147,7 +147,8 @@ export async function grantAnnualSubscriptionAction(
     const db = createDb()
     const parsed = grantSubscriptionSchema.safeParse({
       userId: formData.get('userId'),
-      note: formData.get('note')
+      note: formData.get('note'),
+      startAt: formData.get('startAt')
     })
 
     if (!parsed.success) {
@@ -162,21 +163,13 @@ export async function grantAnnualSubscriptionAction(
     const now = new Date()
     const startAt = requestedStartAt ?? now
     const expiresAt = addYear(startAt)
-    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1)
-
-    if (!targetUser?.id) {
-      return {
-        status: 'error',
-        message: '无法找到该用户 ID'
-      }
-    }
 
     const [existingSubscription] = await db
       .select({ id: subscriptions.id })
       .from(subscriptions)
       .where(
         and(
-          eq(subscriptions.userId, targetUser.id),
+          eq(subscriptions.userId, userId),
           lt(subscriptions.createdAt, expiresAt),
           gt(subscriptions.expiredAt, startAt)
         )
@@ -201,7 +194,7 @@ export async function grantAnnualSubscriptionAction(
     const [order] = await db
       .insert(orders)
       .values({
-        userId: targetUser.id,
+        userId: userId,
         productId: product.id,
         status: 'completed',
         transactionType: 'purchase',
@@ -229,7 +222,7 @@ export async function grantAnnualSubscriptionAction(
     const [subscription] = await db
       .insert(subscriptions)
       .values({
-        userId: targetUser.id,
+        userId: userId,
         productId: product.id,
         orderId: order.id,
         expiredAt: expiresAt,

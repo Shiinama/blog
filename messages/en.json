@@ -146,7 +146,7 @@
     },
     "subscriptions": {
       "title": "Manual membership grant",
-      "description": "Issue a 1-year membership by email. The system will create the product, order, and subscription records for you.",
+      "description": "Issue a 1-year membership by user ID. The system will create the product, order, and subscription records for you.",
       "formTitle": "Send annual membership",
       "helper": "Use this for gifting or offline payments. Make sure the user has already signed up with this user ID.",
       "bullet": {

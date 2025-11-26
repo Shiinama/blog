@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 
-
 export function GrantSubscriptionForm() {
   const formRef = useRef<HTMLFormElement | null>(null)
   const t = useTranslations('admin.subscriptions.form')

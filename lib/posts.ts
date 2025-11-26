@@ -302,26 +302,56 @@ export async function getPaginatedPosts({
   }
 }
 
-export async function getPostsForFeed(limit = 40) {
+export async function getPostsForFeed(limit = 40, locale?: string) {
   const db = createDb()
-  const rows = await db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      summary: posts.summary,
-      content: posts.content,
-      publishedAt: posts.publishedAt,
-      createdAt: posts.createdAt,
-      language: posts.language
-    })
-    .from(posts)
-    .where(eq(posts.status, 'PUBLISHED'))
-    .orderBy(desc(posts.publishedAt))
-    .limit(limit)
+  const targetLocale = locale?.trim().toLowerCase()
+  const baseSelection = {
+    id: posts.id,
+    title: posts.title,
+    summary: posts.summary,
+    content: posts.content,
+    publishedAt: posts.publishedAt,
+    createdAt: posts.createdAt,
+    language: posts.language
+  }
 
-  return rows.map((row) => ({
-    ...row,
-    publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
-    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null
-  }))
+  const rows =
+    targetLocale && targetLocale !== 'zh'
+      ? await db
+          .select({
+            ...baseSelection,
+            translationTitle: postTranslations.title,
+            translationSummary: postTranslations.summary,
+            translationContent: postTranslations.content
+          })
+          .from(posts)
+          .leftJoin(
+            postTranslations,
+            and(eq(postTranslations.postId, posts.id), eq(postTranslations.locale, targetLocale))
+          )
+          .where(eq(posts.status, 'PUBLISHED'))
+          .orderBy(desc(posts.publishedAt))
+          .limit(limit)
+      : await db
+          .select(baseSelection)
+          .from(posts)
+          .where(eq(posts.status, 'PUBLISHED'))
+          .orderBy(desc(posts.publishedAt))
+          .limit(limit)
+
+  return rows.map((row) => {
+    const translated = Boolean(
+      targetLocale && targetLocale !== 'zh' && 'translationTitle' in row && (row as any).translationTitle
+    )
+
+    return {
+      ...row,
+      title: translated ? ((row as any).translationTitle ?? row.title) : row.title,
+      summary: translated ? ((row as any).translationSummary ?? row.summary) : row.summary,
+      content: translated ? ((row as any).translationContent ?? row.content) : row.content,
+      language: translated && targetLocale ? targetLocale : row.language,
+      publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
+      createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null
+    }
+  })
 }
