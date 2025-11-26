@@ -141,20 +141,20 @@
     },
     "subscriptions": {
       "title": "会员订阅发放",
-      "description": "输入邮箱即可下发一年期会员，系统会自动创建商品、订单和订阅记录。",
+      "description": "输入用户 ID 即可下发一年期会员，系统会自动创建商品、订单和订阅记录。",
       "formTitle": "发放一年会员",
-      "helper": "用于线下收款或赠送场景，请先确认该邮箱已经注册。",
+      "helper": "用于线下收款或赠送场景，请先确认该用户 ID 已经注册。",
       "bullet": {
         "price": "价格：200 cny（订阅商品）",
         "interval": "周期：1 年，一次性发放",
-        "howItWorks": "流程：通过邮箱匹配用户 → 创建订单 → 写入订阅记录"
+        "howItWorks": "流程：通过用户 ID 匹配用户 → 创建订单 → 写入订阅记录"
       },
       "actions": {
         "open": "下发会员订阅"
       },
       "form": {
-        "emailLabel": "用户邮箱",
-        "emailPlaceholder": "user@example.com",
+        "userIdLabel": "用户 ID",
+        "userIdPlaceholder": "复制自用户个人页的 ID",
         "startAtLabel": "开始时间（可选）",
         "startAtPlaceholder": "默认立即生效，也可以指定起始时间",
         "startAtHelper": "不填则立刻生效，选择未来时间会在该时间点开始计算一年期",

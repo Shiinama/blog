@@ -14,7 +14,7 @@ const PRODUCT_PRICE = 200
 const PRODUCT_CURRENCY: Currency = 'CNY'
 
 const grantSubscriptionSchema = z.object({
-  email: z.string().email({ message: '请输入有效的邮箱地址' }),
+  userId: z.string().min(1, { message: '请输入用户 ID' }),
   note: z.string().max(200, { message: '备注请少于 200 个字符' }).optional().or(z.literal('')),
   startAt: z.preprocess(
     (value) => {
@@ -146,7 +146,7 @@ export async function grantAnnualSubscriptionAction(
     const admin = await assertAdmin()
     const db = createDb()
     const parsed = grantSubscriptionSchema.safeParse({
-      email: formData.get('email'),
+      userId: formData.get('userId'),
       note: formData.get('note')
     })
 
@@ -158,16 +158,16 @@ export async function grantAnnualSubscriptionAction(
       }
     }
 
-    const { email, note, startAt: requestedStartAt } = parsed.data
+    const { userId, note, startAt: requestedStartAt } = parsed.data
     const now = new Date()
     const startAt = requestedStartAt ?? now
     const expiresAt = addYear(startAt)
-    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
+    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1)
 
     if (!targetUser?.id) {
       return {
         status: 'error',
-        message: '无法找到该邮箱对应的用户'
+        message: '无法找到该用户 ID'
       }
     }
 
@@ -248,7 +248,7 @@ export async function grantAnnualSubscriptionAction(
 
     return {
       status: 'success',
-      message: `已为 ${email} 下发一年会员`
+      message: `已为 ${userId} 下发一年会员`
     }
   } catch (error) {
     console.error('Failed to grant subscription', error)

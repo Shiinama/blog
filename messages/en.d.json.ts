@@ -44,6 +44,8 @@ declare const messages: {
     "planFree": "Not subscribed",
     "planLoading": "Loading...",
     "expiredTag": "expired",
+    "scheduledTag": "scheduled",
+    "startsAt": "Starts at",
     "notAvailable": "N/A",
     "loginIn": "Login",
     "signout": "Sign Out",
@@ -161,6 +163,9 @@ declare const messages: {
       "form": {
         "emailLabel": "User email",
         "emailPlaceholder": "user@example.com",
+        "startAtLabel": "Start time (optional)",
+        "startAtPlaceholder": "Defaults to now, or pick a specific start time",
+        "startAtHelper": "Leave empty to activate immediately. Future start times will schedule the 1-year period.",
         "noteLabel": "Note (optional)",
         "notePlaceholder": "Reason, offline payment info, etc.",
         "submit": "Send subscription",

@@ -39,9 +39,9 @@ export function GrantSubscriptionForm() {
   return (
     <form ref={formRef} action={formAction} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">{t('emailLabel')}</Label>
-        <Input id="email" name="email" type="email" inputMode="email" placeholder={t('emailPlaceholder')} required />
-        {fieldError('email') && <p className="text-destructive text-sm">{fieldError('email')}</p>}
+        <Label htmlFor="userId">{t('userIdLabel')}</Label>
+        <Input id="userId" name="userId" type="text" placeholder={t('userIdPlaceholder')} required />
+        {fieldError('userId') && <p className="text-destructive text-sm">{fieldError('userId')}</p>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="startAt">{t('startAtLabel')}</Label>
