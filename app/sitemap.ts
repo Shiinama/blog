@@ -8,21 +8,20 @@ import { getPublishedPostsForSitemap } from '@/lib/posts'
 const origin = getSiteOrigin()
 
 function localePath(pathname: string, locale: string) {
+  if (pathname === '') {
+    return locale === DEFAULT_LOCALE ? '' : `/${locale}`
+  }
+
   const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`
   return locale === DEFAULT_LOCALE ? normalized : `/${locale}${normalized}`
 }
 
 function buildEntry(pathname: string): MetadataRoute.Sitemap[number] {
   const defaultUrl = `${origin}${localePath(pathname, DEFAULT_LOCALE)}`
-  const alternates = routing.locales.reduce<Record<string, string>>(
-    (acc, locale) => {
-      acc[locale] = `${origin}${localePath(pathname, locale)}`
-      return acc
-    },
-    {
-      'x-default': defaultUrl
-    }
-  )
+  const alternates = routing.locales.reduce<Record<string, string>>((acc, locale) => {
+    acc[locale] = `${origin}${localePath(pathname, locale)}`
+    return acc
+  }, {})
 
   return {
     url: defaultUrl,
@@ -36,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection()
   const posts = await getPublishedPostsForSitemap()
 
-  const staticPaths = ['/', '/about']
+  const staticPaths = ['', '/about']
   const staticEntries = staticPaths.map((path) => buildEntry(path))
 
   const postEntries = posts.map((post) => {
