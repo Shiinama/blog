@@ -1,6 +1,6 @@
 'use server'
 
-import { and, desc, eq, gte } from 'drizzle-orm'
+import { and, desc, eq, gt, lt } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { orders, products, subscriptions, users, type Currency } from '@/drizzle/schema'
@@ -15,7 +15,16 @@ const PRODUCT_CURRENCY: Currency = 'CNY'
 
 const grantSubscriptionSchema = z.object({
   email: z.string().email({ message: '请输入有效的邮箱地址' }),
-  note: z.string().max(200, { message: '备注请少于 200 个字符' }).optional().or(z.literal(''))
+  note: z.string().max(200, { message: '备注请少于 200 个字符' }).optional().or(z.literal('')),
+  startAt: z.preprocess(
+    (value) => {
+      if (typeof value !== 'string') return undefined
+      const trimmed = value.trim()
+      if (!trimmed) return undefined
+      return new Date(trimmed)
+    },
+    z.date({ message: '请选择有效的开始时间' }).optional()
+  )
 })
 
 async function assertAdmin() {
@@ -50,7 +59,7 @@ const addYear = (date: Date) => {
 
 export type CurrentSubscriptionInfo =
   | { status: 'none' }
-  | { status: 'active' | 'expired'; planName: string; expiredAt: string }
+  | { status: 'active' | 'expired' | 'scheduled'; planName: string; startAt: string; expiredAt: string }
 
 export async function getCurrentSubscription(): Promise<CurrentSubscriptionInfo> {
   const session = await auth()
@@ -63,6 +72,7 @@ export async function getCurrentSubscription(): Promise<CurrentSubscriptionInfo>
   const [record] = await db
     .select({
       expiredAt: subscriptions.expiredAt,
+      startAt: subscriptions.createdAt,
       productName: products.name
     })
     .from(subscriptions)
@@ -75,12 +85,24 @@ export async function getCurrentSubscription(): Promise<CurrentSubscriptionInfo>
     return { status: 'none' }
   }
 
+  const now = new Date()
   const expiredAt = new Date(record.expiredAt)
-  const isActive = expiredAt > new Date()
+  const startAt = new Date(record.startAt)
+  const isActive = startAt <= now && expiredAt > now
+
+  if (startAt > now) {
+    return {
+      status: 'scheduled',
+      planName: record.productName ?? PRODUCT_NAME,
+      startAt: startAt.toISOString(),
+      expiredAt: expiredAt.toISOString()
+    }
+  }
 
   return {
     status: isActive ? 'active' : 'expired',
     planName: record.productName ?? PRODUCT_NAME,
+    startAt: startAt.toISOString(),
     expiredAt: expiredAt.toISOString()
   }
 }
@@ -136,8 +158,10 @@ export async function grantAnnualSubscriptionAction(
       }
     }
 
-    const { email, note } = parsed.data
+    const { email, note, startAt: requestedStartAt } = parsed.data
     const now = new Date()
+    const startAt = requestedStartAt ?? now
+    const expiresAt = addYear(startAt)
     const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
 
     if (!targetUser?.id) {
@@ -150,13 +174,19 @@ export async function grantAnnualSubscriptionAction(
     const [existingSubscription] = await db
       .select({ id: subscriptions.id })
       .from(subscriptions)
-      .where(and(eq(subscriptions.userId, targetUser.id), gte(subscriptions.expiredAt, now)))
+      .where(
+        and(
+          eq(subscriptions.userId, targetUser.id),
+          lt(subscriptions.createdAt, expiresAt),
+          gt(subscriptions.expiredAt, startAt)
+        )
+      )
       .limit(1)
 
     if (existingSubscription?.id) {
       return {
         status: 'error',
-        message: '该用户已有有效会员，无需重复发放'
+        message: '该用户在所选时间范围内已有会员，无需重复发放'
       }
     }
 
@@ -167,8 +197,6 @@ export async function grantAnnualSubscriptionAction(
         message: '无法准备订阅商品'
       }
     }
-
-    const expiresAt = addYear(now)
 
     const [order] = await db
       .insert(orders)
@@ -183,6 +211,7 @@ export async function grantAnnualSubscriptionAction(
           note: note?.trim() || undefined,
           issuedBy: admin.id,
           issuedAt: now.toISOString(),
+          startAt: startAt.toISOString(),
           type: 'manual_subscription_grant'
         }),
         createdAt: now,
@@ -205,8 +234,8 @@ export async function grantAnnualSubscriptionAction(
         orderId: order.id,
         expiredAt: expiresAt,
         cancelAt: false,
-        createdAt: now,
-        updatedAt: now
+        createdAt: startAt,
+        updatedAt: startAt
       })
       .returning({ id: subscriptions.id })
 

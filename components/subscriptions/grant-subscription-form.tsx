@@ -44,6 +44,12 @@ export function GrantSubscriptionForm() {
         {fieldError('email') && <p className="text-destructive text-sm">{fieldError('email')}</p>}
       </div>
       <div className="space-y-2">
+        <Label htmlFor="startAt">{t('startAtLabel')}</Label>
+        <Input id="startAt" name="startAt" type="datetime-local" placeholder={t('startAtPlaceholder')} />
+        <p className="text-muted-foreground text-sm">{t('startAtHelper')}</p>
+        {fieldError('startAt') && <p className="text-destructive text-sm">{fieldError('startAt')}</p>}
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="note">{t('noteLabel')}</Label>
         <Textarea id="note" name="note" placeholder={t('notePlaceholder')} rows={3} />
         {fieldError('note') && <p className="text-destructive text-sm">{fieldError('note')}</p>}

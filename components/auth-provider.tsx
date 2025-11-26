@@ -50,8 +50,19 @@ export function useAuthData(): AuthData {
       return { planLabel: common('common.planFree'), expiredAtLabel: common('common.notAvailable') }
     }
 
-    const expiredAt = new Date(subscription.expiredAt)
-    const formatted = expiredAt.toLocaleString()
+    const formatDate = (value: string) => new Date(value).toLocaleString()
+
+    if (subscription.status === 'scheduled') {
+      const formattedStart = formatDate(subscription.startAt)
+      const formattedEnd = formatDate(subscription.expiredAt)
+
+      return {
+        planLabel: `${subscription.planName} (${common('common.scheduledTag')})`,
+        expiredAtLabel: `${common('common.startsAt')} ${formattedStart} · ${common('common.expiresAt')} ${formattedEnd}`
+      }
+    }
+
+    const formatted = formatDate(subscription.expiredAt)
 
     return {
       planLabel: subscription.planName,

@@ -41,6 +41,8 @@
     "planFree": "未订阅",
     "planLoading": "加载中...",
     "expiredTag": "已过期",
+    "scheduledTag": "未生效",
+    "startsAt": "开始于",
     "notAvailable": "暂无",
     "signout": "退出",
     "loginIn": "登录",
@@ -153,6 +155,9 @@
       "form": {
         "emailLabel": "用户邮箱",
         "emailPlaceholder": "user@example.com",
+        "startAtLabel": "开始时间（可选）",
+        "startAtPlaceholder": "默认立即生效，也可以指定起始时间",
+        "startAtHelper": "不填则立刻生效，选择未来时间会在该时间点开始计算一年期",
         "noteLabel": "备注（可选）",
         "notePlaceholder": "记录发放原因或线下支付信息",
         "submit": "发送一年会员",
