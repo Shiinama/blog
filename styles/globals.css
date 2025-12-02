@@ -211,3 +211,17 @@
     font-weight: 700;
   }
 }
+
+@layer base {
+  /* Remove typography plugin's automatic quotes/backticks */
+  .prose blockquote p:first-of-type::before,
+  .prose blockquote p:last-of-type::after,
+  .prose code::before,
+  .prose code::after,
+  .prose-invert blockquote p:first-of-type::before,
+  .prose-invert blockquote p:last-of-type::after,
+  .prose-invert code::before,
+  .prose-invert code::after {
+    content: none !important;
+  }
+}
