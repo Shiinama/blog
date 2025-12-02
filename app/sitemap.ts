@@ -18,10 +18,12 @@ function localePath(pathname: string, locale: string) {
 
 function buildEntry(pathname: string): MetadataRoute.Sitemap[number] {
   const defaultUrl = `${origin}${localePath(pathname, DEFAULT_LOCALE)}`
-  const alternates = routing.locales.reduce<Record<string, string>>((acc, locale) => {
-    acc[locale] = `${origin}${localePath(pathname, locale)}`
-    return acc
-  }, {})
+  const alternates = routing.locales
+    .filter((i) => i !== 'en')
+    .reduce<Record<string, string>>((acc, locale) => {
+      acc[locale] = `${origin}${localePath(pathname, locale)}`
+      return acc
+    }, {})
 
   return {
     url: defaultUrl,
