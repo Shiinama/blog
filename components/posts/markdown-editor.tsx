@@ -22,6 +22,7 @@ import { createLowlight } from 'lowlight'
 import MarkdownIt from 'markdown-it'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import TurndownService from 'turndown'
+import { gfm } from 'turndown-plugin-gfm'
 
 import { Spinner } from '@/components/ui/spinner'
 import { useToast } from '@/components/ui/use-toast'
@@ -47,7 +48,11 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
     []
   )
 
-  const turndownService = useMemo(() => new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' }), [])
+  const turndownService = useMemo(() => {
+    const service = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' })
+    service.use(gfm)
+    return service
+  }, [])
 
   const htmlValue = useMemo(() => mdParser.render(value), [mdParser, value])
   const lastSyncRef = useRef(value)
