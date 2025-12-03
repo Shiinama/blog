@@ -32,6 +32,28 @@ export function AboutContent(props: AboutContentProps) {
   }
 
   const { contacts, sections } = props
+  const buildContentBlocks = (content: string) => {
+    const lines = content.split('\n').map((line) => line.trim())
+    const blocks: Array<{ type: 'paragraph'; text: string } | { type: 'list'; items: string[] }> = []
+
+    lines.forEach((line) => {
+      if (!line) return
+
+      if (line.startsWith('- ')) {
+        const item = line.slice(2).trim()
+        const lastBlock = blocks[blocks.length - 1]
+        if (lastBlock && lastBlock.type === 'list') {
+          lastBlock.items.push(item)
+        } else {
+          blocks.push({ type: 'list', items: [item] })
+        }
+      } else {
+        blocks.push({ type: 'paragraph', text: line })
+      }
+    })
+
+    return blocks
+  }
 
   return (
     <motion.div
@@ -51,11 +73,32 @@ export function AboutContent(props: AboutContentProps) {
               index === 0
                 ? 'text-foreground text-3xl font-semibold sm:text-4xl'
                 : 'text-foreground text-2xl font-semibold'
+            const contentBlocks = buildContentBlocks(section.content)
 
             return (
-              <div key={section.title} className="space-y-2">
+              <div key={section.title} className="space-y-3">
                 <Heading className={headingClassName}>{section.title}</Heading>
-                <p className="text-muted-foreground text-base leading-relaxed sm:text-lg">{section.content}</p>
+                <div className="space-y-2">
+                  {contentBlocks.map((block, blockIndex) =>
+                    block.type === 'paragraph' ? (
+                      <p
+                        key={`${section.title}-paragraph-${blockIndex}`}
+                        className="text-muted-foreground text-base leading-relaxed sm:text-lg"
+                      >
+                        {block.text}
+                      </p>
+                    ) : (
+                      <ul
+                        key={`${section.title}-list-${blockIndex}`}
+                        className="text-muted-foreground list-disc space-y-1 pl-5 text-base leading-relaxed sm:text-lg"
+                      >
+                        {block.items.map((item, itemIndex) => (
+                          <li key={`${section.title}-list-${blockIndex}-item-${itemIndex}`}>{item}</li>
+                        ))}
+                      </ul>
+                    )
+                  )}
+                </div>
               </div>
             )
           })}

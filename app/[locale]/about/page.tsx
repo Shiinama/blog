@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function About() {
   const t = await getTranslations('about')
-  const sectionKeys = ['who', 'what', 'whyBlog', 'whyMembership', 'dreams'] as const
+  const sectionKeys = ['whyNow', 'community', 'expectations'] as const
   const sections = sectionKeys.map((key) => ({
     title: t(`sections.${key}.title`),
     content: t(`sections.${key}.content`)
@@ -48,6 +48,7 @@ export default async function About() {
       contactMe={t('contactMe')}
       sections={sections}
       contacts={[
+        { name: 'Substack', url: 'https://xibaoyuxi.substack.com' },
         { name: 'Twitter', url: 'https://x.com/Xi_baoyu' },
         { name: 'Github', url: 'https://github.com/Shiinama' },
         { name: 'Facebook', url: 'https://www.facebook.com/profile.php?id=100094312606141' },

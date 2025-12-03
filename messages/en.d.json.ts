@@ -3,28 +3,20 @@
 
 declare const messages: {
   "about": {
-    "title": "About Me",
-    "intro": "Quick answers about me, this blog, and membership.",
+    "title": "About this publication",
+    "intro": "Three quick notes on why I am writing, who this is for, and what you can expect.",
     "sections": {
-      "who": {
-        "title": "Who am I",
-        "content": "A full-stack engineer who keeps tinkering and pushing myself."
+      "whyNow": {
+        "title": "Why this, why now",
+        "content": "I keep running the same loop:\n- Building products with AI at the core\n- Wrestling with TypeScript, Python, and Go\n- Trying to make the products actually grow instead of just looking flashy\n\nI keep thinking these attempts should not stay locked in my head.\n\nSo this blog is how I express it:\n- Force myself to write down what I learn about AI, business, and indie products\n- Share concrete cases instead of vague motivation\n- Build a small corner for people who care about this stuff\n\nI am not starting because I have figured it out—I am starting because I have not, and I want to document while I go."
       },
-      "what": {
-        "title": "What is this",
-        "content": "A treasure vault that showcases the wins I've earned on my growth journey."
+      "community": {
+        "title": "Who I hope gathers here",
+        "content": "- You build things (or want to): apps, tools, scripts, services\n- You are curious whether AI is useful in the real world, not just in hype or papers\n- You care about software and business together: pricing, funnels, retention—not just clean code\n- You like peeking behind the curtain: failed launches, messy dashboards, real trade-offs\n\nThe vibe I want:\n- Less “thought leader,” more fellow builder leaving you long voice notes\n- Less polished essays, more honest breakdowns, experiments, and failures\n- Normal to talk about what worked, what was wasted effort, and what we will change next\n\nI hope it becomes a small, nerdy, high-signal community of people who ship, share, and help each other avoid obvious cliffs."
       },
-      "whyBlog": {
-        "title": "Why a dedicated blog?",
-        "content": "It gives me more freedom when I write."
-      },
-      "whyMembership": {
-        "title": "Why members-only articles?",
-        "content": "I run a paid community; many folks there have supported me, so I protect their perks. Ping me if you need access."
-      },
-      "dreams": {
-        "title": "What's the dream",
-        "content": "Engineers build: next up I want to help lead a truly profitable project with tens of millions of users that people genuinely value (we're already at millions)."
+      "expectations": {
+        "title": "What you can expect",
+        "content": "Topics\n- AI and product: how I use LLMs in real products—prompts, architectures, failure cases, bright spots\n- Indie dev and entrepreneurship: validating ideas, shipping fast, moving through uncertainty, small bets vs big bets\n- Engineering notes: React/Next.js production patterns; Python/Go for backends, automation, and glue; deployment and monitoring\n\nCadence\n- Target one post per week, depth-dependent\n- Shorter field notes when I find something useful\n- Longer stories when there is a full arc from idea -> launch -> results\n- Prioritizing signal and sustainability over volume\n\nFree vs paid\n- Subscribe on Substack to read everything and get new drops: https://xibaoyuxi.substack.com\n- If I ever add a paid tier, it would focus on deep case studies, build logs, or small-group AMAs, and I will keep it straightforward."
       }
     },
     "contactMe": "Contact Me"
@@ -329,8 +321,8 @@ declare const messages: {
     "siteDescription": "Practical notes on engineering, applied AI, and growth, written to be used.",
     "homeTitle": "Content Library | Fish Blog",
     "homeDescription": "Browse articles on engineering, SEO, growth, and indie building in English and Chinese.",
-    "aboutTitle": "About River Fish",
-    "aboutDescription": "Quick Q&A about River Fish (Felix), this blog, membership, and how to reach me."
+    "aboutTitle": "About this publication",
+    "aboutDescription": "Why I am writing about AI, product, and indie building now, what to expect, and how to join in."
   }
 };
 export default messages;
