@@ -41,7 +41,7 @@ export default async function ContentPage({ params }: { params: Promise<{ locale
   const [articleT, homeT] = await Promise.all([getTranslations('article'), getTranslations('home')])
   const [{ posts: explorerPosts, total }, categories] = await Promise.all([
     getExplorerPosts({ locale, page: 1, pageSize: 20 }),
-    getVisibleCategoriesWithCounts()
+    getVisibleCategoriesWithCounts(locale)
   ])
 
   const explorerCategories = categories.map((category) => {

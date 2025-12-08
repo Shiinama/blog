@@ -16,12 +16,17 @@ function localePath(pathname: string, locale: string) {
   return locale === DEFAULT_LOCALE ? normalized : `/${locale}${normalized}`
 }
 
-function buildEntry(pathname: string): MetadataRoute.Sitemap[number] {
-  const defaultUrl = `${origin}${localePath(pathname, DEFAULT_LOCALE)}`
-  const alternates = routing.locales
-    .filter((i) => i !== 'en')
-    .reduce<Record<string, string>>((acc, locale) => {
-      acc[locale] = `${origin}${localePath(pathname, locale)}`
+function buildEntry(
+  pathname: string,
+  locale: string,
+  availableLocales: string[]
+): MetadataRoute.Sitemap[number] {
+  const supportedAlternates = availableLocales.filter((code) => routing.locales.includes(code))
+  const defaultUrl = `${origin}${localePath(pathname, locale)}`
+  const alternates = supportedAlternates
+    .filter((code) => code !== locale)
+    .reduce<Record<string, string>>((acc, code) => {
+      acc[code] = `${origin}${localePath(pathname, code)}`
       return acc
     }, {})
 
@@ -38,10 +43,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await getPublishedPostsForSitemap()
 
   const staticPaths = ['', '/about']
-  const staticEntries = staticPaths.map((path) => buildEntry(path))
+  const staticEntries = staticPaths.flatMap((path) =>
+    routing.locales.map((locale) => buildEntry(path, locale, routing.locales))
+  )
 
-  const postEntries = posts.map((post) => {
-    return buildEntry(`/content/${post.id}`)
+  const postEntries = posts.flatMap((post) => {
+    const locales = (post.locales || []).filter((locale) => routing.locales.includes(locale))
+    return locales.map((locale) => buildEntry(`/content/${post.id}`, locale, locales))
   })
 
   const uniqueByUrl = new Map<string, MetadataRoute.Sitemap[number]>()

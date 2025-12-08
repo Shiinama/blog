@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<DocPageProp
     description: summary,
     alternates: {
       canonical,
-      languages: buildLanguageAlternates(`/content/${post.id}`)
+      languages: buildLanguageAlternates(`/content/${post.id}`, post.availableLocales)
     },
     openGraph: {
       title: post.title,

@@ -9,10 +9,13 @@ function normalizePathname(pathname: string) {
   return prefixed.endsWith('/') ? prefixed.slice(0, -1) : prefixed
 }
 
-export function buildLanguageAlternates(pathname: string) {
+export function buildLanguageAlternates(pathname: string, availableLocales?: string[]) {
   const normalized = normalizePathname(pathname)
+  const localeList = (availableLocales?.length ? availableLocales : routing.locales).filter(
+    (locale, index, arr) => routing.locales.includes(locale) && arr.indexOf(locale) === index
+  )
 
-  return routing.locales.reduce<Record<string, string>>(
+  return localeList.reduce<Record<string, string>>(
     (acc, locale) => {
       const href = locale === DEFAULT_LOCALE ? normalized : `/${locale}${normalized}`
       acc[locale] = href

@@ -40,6 +40,7 @@ export type PostAuthorSummary = {
 export interface PostDetails extends Post {
   category: CategorySummary | null
   author: PostAuthorSummary | null
+  availableLocales?: string[]
 }
 
 export interface PaginatedPostListItem {
