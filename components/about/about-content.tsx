@@ -15,6 +15,8 @@ type AboutSection = {
 }
 
 type AboutContentProps = {
+  title: string
+  intro: string
   sections: AboutSection[]
   contactMe: string
   contacts: ContactLink[]
@@ -31,7 +33,7 @@ export function AboutContent(props: AboutContentProps) {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   }
 
-  const { contacts, sections } = props
+  const { contacts, intro, sections, title } = props
   const buildContentBlocks = (content: string) => {
     const lines = content.split('\n').map((line) => line.trim())
     const blocks: Array<{ type: 'paragraph'; text: string } | { type: 'list'; items: string[] }> = []
@@ -67,17 +69,17 @@ export function AboutContent(props: AboutContentProps) {
         className="bg-card/85 ring-border/30 rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10"
       >
         <div className="space-y-6">
-          {sections.map((section, index) => {
-            const Heading = index === 0 ? 'h1' : 'h2'
-            const headingClassName =
-              index === 0
-                ? 'text-foreground text-3xl font-semibold sm:text-4xl'
-                : 'text-foreground text-2xl font-semibold'
+          <div className="space-y-3">
+            <h1 className="text-foreground text-3xl font-semibold sm:text-4xl">{title}</h1>
+            <p className="text-muted-foreground whitespace-pre-line text-base leading-relaxed sm:text-lg">{intro}</p>
+          </div>
+
+          {sections.map((section) => {
             const contentBlocks = buildContentBlocks(section.content)
 
             return (
               <div key={section.title} className="space-y-3">
-                <Heading className={headingClassName}>{section.title}</Heading>
+                <h2 className="text-foreground text-2xl font-semibold">{section.title}</h2>
                 <div className="space-y-2">
                   {contentBlocks.map((block, blockIndex) =>
                     block.type === 'paragraph' ? (

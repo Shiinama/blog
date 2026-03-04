@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function About() {
   const t = await getTranslations('about')
-  const sectionKeys = ['whyNow', 'community', 'expectations'] as const
+  const sectionKeys = ['experiences', 'connect'] as const
   const sections = sectionKeys.map((key) => ({
     title: t(`sections.${key}.title`),
     content: t(`sections.${key}.content`)
@@ -45,6 +45,8 @@ export default async function About() {
 
   return (
     <AboutContent
+      title={t('title')}
+      intro={t('intro')}
       contactMe={t('contactMe')}
       sections={sections}
       contacts={[

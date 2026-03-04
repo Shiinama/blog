@@ -1,19 +1,15 @@
 {
   "about": {
-    "title": "About this publication",
-    "intro": "Three quick notes on why I am writing, who this is for, and what you can expect.",
+    "title": "Felix",
+    "intro": "Software Engineer\nEnjoy the present, do interesting things.",
     "sections": {
-      "whyNow": {
-        "title": "Why this, why now",
-        "content": "I keep running the same loop:\n- Building products with AI at the core\n- Wrestling with TypeScript, Python, and Go\n- Trying to make the products actually grow instead of just looking flashy\n\nI keep thinking these attempts should not stay locked in my head.\n\nSo this blog is how I express it:\n- Force myself to write down what I learn about AI, business, and indie products\n- Share concrete cases instead of vague motivation\n- Build a small corner for people who care about this stuff\n\nI am not starting because I have figured it out—I am starting because I have not, and I want to document while I go."
+      "experiences": {
+        "title": "Experiences",
+        "content": "- Craveu Co-founder & CTO: Built a network of hundreds of thousands of independent agentic personas, developed an in-house high-concurrency contextual memory engine, and led SEO growth to more than one million organic users within six months.\n- MyShell App Lead: Led the mobile product from 0 to 1 for MyShell App, positioned against Character.ai, worked deeply on core in-house multimodal audio technology, and helped the team secure $8 million in early funding.\n- Core Member of Midjourney's Founding Team: One of the earliest AIGC developers, involved in the early build-out of a global AI super app from 0 to 1."
       },
-      "community": {
-        "title": "Who I hope gathers here",
-        "content": "- You build things (or want to): apps, tools, scripts, services\n- You are curious whether AI is useful in the real world, not just in hype or papers\n- You care about software and business together: pricing, funnels, retention—not just clean code\n- You like peeking behind the curtain: failed launches, messy dashboards, real trade-offs\n\nThe vibe I want:\n- Less “thought leader,” more fellow builder leaving you long voice notes\n- Less polished essays, more honest breakdowns, experiments, and failures\n- Normal to talk about what worked, what was wasted effort, and what we will change next\n\nI hope it becomes a small, nerdy, high-signal community of people who ship, share, and help each other avoid obvious cliffs."
-      },
-      "expectations": {
-        "title": "What you can expect",
-        "content": "Topics\n- AI and product: how I use LLMs in real products—prompts, architectures, failure cases, bright spots\n- Indie dev and entrepreneurship: validating ideas, shipping fast, moving through uncertainty, small bets vs big bets\n- Engineering notes: React/Next.js production patterns; Python/Go for backends, automation, and glue; deployment and monitoring\n\nCadence\n- Target one post per week, depth-dependent\n- Shorter field notes when I find something useful\n- Longer stories when there is a full arc from idea -> launch -> results\n- Prioritizing signal and sustainability over volume\n\nFree vs paid\n- Subscribe on Substack to read everything and get new drops: https://xibaoyuxi.substack.com\n- If I ever add a paid tier, it would focus on deep case studies, build logs, or small-group AMAs, and I will keep it straightforward."
+      "connect": {
+        "title": "Open to Connect",
+        "content": "If you're working on products, startups, growth, monetization, or making money, feel free to reach out."
       }
     },
     "contactMe": "Contact Me"
@@ -320,7 +316,7 @@
     "siteDescription": "Practical notes on engineering, applied AI, and growth, written to be used.",
     "homeTitle": "Content Library | Fish Blog",
     "homeDescription": "Browse articles on engineering, SEO, growth, and indie building in English and Chinese.",
-    "aboutTitle": "About this publication",
-    "aboutDescription": "Why I am writing about AI, product, and indie building now, what to expect, and how to join in."
+    "aboutTitle": "Felix",
+    "aboutDescription": "Software Engineer focused on AI products, growth, and monetization."
   }
 }

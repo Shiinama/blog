@@ -1,7 +1,7 @@
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
 import createNextIntlPlugin from 'next-intl/plugin'
 
-initOpenNextCloudflareForDev()
+await initOpenNextCloudflareForDev()
 
 const withNextIntl = createNextIntlPlugin({
   experimental: {
