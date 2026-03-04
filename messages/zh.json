@@ -61,7 +61,8 @@
     "backend": "后端",
     "commonBaseProject": "通用基础项目",
     "nextjs": "Next.js",
-    "other": "其他"
+    "other": "其他",
+    "ai": "AI"
   },
   "admin": {
     "status": {
@@ -98,7 +99,8 @@
         },
         "categoryLabel": "分类",
         "categoryOptions": {
-          "all": "全部"
+          "all": "全部",
+          "ai": "AI"
         },
         "apply": "应用筛选"
       },

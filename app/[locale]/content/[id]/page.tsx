@@ -178,7 +178,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
 
         <div className="mt-6 space-y-6">
           {canViewFullContent ? (
-            <article className="prose prose-base dark:prose-invert bg-card/80 ring-border/30 sm:prose-lg max-w-none rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
+            <article className="bg-card/80 ring-border/30 sm:prose-lg max-w-none rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
               <MarkdownRenderer content={post.content} />
             </article>
           ) : (

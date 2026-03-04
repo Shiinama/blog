@@ -61,7 +61,8 @@
     "backend": "Backend",
     "commonBaseProject": "Common Base Project",
     "nextjs": "Next.js",
-    "other": "Other"
+    "other": "Other",
+    "ai": "AI"
   },
   "admin": {
     "status": {
@@ -98,7 +99,8 @@
         },
         "categoryLabel": "Category",
         "categoryOptions": {
-          "all": "All"
+          "all": "All",
+          "ai": "AI"
         },
         "apply": "Apply filters"
       },

@@ -15,13 +15,13 @@ import {
 
 import { createDb } from './db'
 
-function resolveLocale(locale?: string) {
+function resolveLocale(locale?: string): string {
   const normalized = locale?.trim().toLowerCase()
-  return normalized && normalized.length > 0 ? normalized : DEFAULT_LOCALE
+  return normalized?.length ? normalized : DEFAULT_LOCALE
 }
 
-function buildLocaleAvailabilityCondition(targetLocale: string) {
-  return or(eq(posts.language, targetLocale), isNotNull(postTranslations.id))!
+function buildLocaleAvailabilityCondition(targetLocale: string): SQL<unknown> {
+  return or(eq(posts.language, targetLocale), isNotNull(postTranslations.id)) as SQL<unknown>
 }
 
 export async function getPublishedPostsForSitemap() {
@@ -43,20 +43,12 @@ export async function getPublishedPostsForSitemap() {
   })
 
   return rows.map(({ translations, ...post }) => {
-    const localeSet = new Set<string>()
-    localeSet.add(resolveLocale(post.language))
-
-    translations?.forEach((translation) => {
-      const locale = translation?.locale?.trim().toLowerCase()
-      if (locale) {
-        localeSet.add(locale)
-      }
+    const localeSet = new Set([resolveLocale(post.language)])
+    translations?.forEach((t) => {
+      const locale = t?.locale?.trim().toLowerCase()
+      if (locale) localeSet.add(locale)
     })
-
-    return {
-      id: post.id,
-      locales: Array.from(localeSet)
-    }
+    return { id: post.id, locales: Array.from(localeSet) }
   })
 }
 
@@ -104,7 +96,7 @@ export async function getExplorerPosts({
   }
   if (search) {
     const likeSearch = `%${search}%`
-    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)) as any)
+    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)) as SQL<unknown>)
   }
 
   const offset = Math.max(0, (page - 1) * pageSize)
@@ -146,17 +138,14 @@ export async function getExplorerPosts({
     .where(and(...conditions))
 
   const normalized = rows.map((row) => {
-    const label = formatCategoryLabel(row.categoryKey ?? undefined) || 'Uncategorized'
-    const sortTimestamp = new Date(row.publishedAt ?? new Date()).getTime()
-    const hasTranslation =
-      targetLocale !== (row.language ?? DEFAULT_LOCALE) && 'translationTitle' in row && row.translationTitle
+    const hasTranslation = targetLocale !== (row.language ?? DEFAULT_LOCALE) && row.translationTitle
     return {
       ...row,
-      title: hasTranslation ? ((row as any).translationTitle ?? row.title) : row.title,
-      summary: hasTranslation ? ((row as any).translationSummary ?? row.summary) : row.summary,
-      coverImageUrl: hasTranslation ? ((row as any).translationCover ?? row.coverImageUrl) : row.coverImageUrl,
-      categoryLabel: label,
-      sortTimestamp,
+      title: hasTranslation ? (row.translationTitle ?? row.title) : row.title,
+      summary: hasTranslation ? (row.translationSummary ?? row.summary) : row.summary,
+      coverImageUrl: hasTranslation ? (row.translationCover ?? row.coverImageUrl) : row.coverImageUrl,
+      categoryLabel: formatCategoryLabel(row.categoryKey ?? undefined) || 'Uncategorized',
+      sortTimestamp: new Date(row.publishedAt ?? new Date()).getTime(),
       publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
       createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null
     }
@@ -222,13 +211,10 @@ export async function getPostById(
     return null
   }
 
-  const localeSet = new Set<string>()
-  localeSet.add(resolveLocale(basePost.language))
-  translations?.forEach((translation) => {
-    const locale = translation?.locale?.trim().toLowerCase()
-    if (locale) {
-      localeSet.add(locale)
-    }
+  const localeSet = new Set([resolveLocale(basePost.language)])
+  translations?.forEach((t) => {
+    const locale = t?.locale?.trim().toLowerCase()
+    if (locale) localeSet.add(locale)
   })
   const availableLocales = Array.from(localeSet)
 
@@ -236,25 +222,19 @@ export async function getPostById(
   const sourceLocale = resolveLocale(basePost.language ?? 'zh')
 
   if (targetLocale && targetLocale !== sourceLocale) {
-    const existingTranslation = translations.find(
-      (translation) => translation?.locale?.trim().toLowerCase() === targetLocale
-    )
-
-    if (existingTranslation) {
+    const translation = translations.find((t) => t?.locale?.trim().toLowerCase() === targetLocale)
+    if (translation) {
       return {
         ...basePost,
-        title: existingTranslation.title,
-        summary: existingTranslation.summary,
-        content: existingTranslation.content,
-        coverImageUrl: existingTranslation.coverImageUrl ?? basePost.coverImageUrl ?? null,
+        title: translation.title,
+        summary: translation.summary,
+        content: translation.content,
+        coverImageUrl: translation.coverImageUrl ?? basePost.coverImageUrl ?? null,
         language: targetLocale,
         availableLocales
       }
     }
-
-    if (!options?.includeDrafts) {
-      return null
-    }
+    if (!options?.includeDrafts) return null
   }
 
   return {
@@ -304,9 +284,8 @@ export async function getPaginatedPosts({
   }
   if (search) {
     const likeSearch = `%${search}%`
-    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)) as any)
+    conditions.push(or(like(posts.title, likeSearch), like(posts.summary, likeSearch)) as SQL<unknown>)
   }
-  const whereClause = conditions.length ? and(...conditions) : undefined
 
   const baseSelection = {
     id: posts.id,
@@ -319,39 +298,37 @@ export async function getPaginatedPosts({
     categoryId: posts.categoryId
   }
 
-  const postQuery =
-    targetLocale && targetLocale !== 'zh'
-      ? db
-          .select({
-            ...baseSelection,
-            translationTitle: postTranslations.title
-          })
-          .from(posts)
-          .leftJoin(
-            postTranslations,
-            and(eq(postTranslations.postId, posts.id), eq(postTranslations.locale, targetLocale))
-          )
-          .orderBy(desc(posts.publishedAt))
-          .limit(pageSize)
-          .offset((page - 1) * pageSize)
-      : db
-          .select(baseSelection)
-          .from(posts)
-          .orderBy(desc(posts.publishedAt))
-          .limit(pageSize)
-          .offset((page - 1) * pageSize)
+  const needsLocaleTranslation = Boolean(targetLocale && targetLocale !== 'zh')
+  if (needsLocaleTranslation && targetLocale) {
+    conditions.push(buildLocaleAvailabilityCondition(targetLocale))
+  }
 
-  const totalQuery = db.select({ value: count(posts.id) }).from(posts)
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  const translationJoin =
+    needsLocaleTranslation && targetLocale
+      ? and(eq(postTranslations.postId, posts.id), eq(postTranslations.locale, targetLocale))
+      : undefined
 
-  const filteredPostQuery = whereClause ? postQuery.where(whereClause) : postQuery
-  const filteredTotalQuery = whereClause ? totalQuery.where(whereClause) : totalQuery
+  const selection = translationJoin ? { ...baseSelection, translationTitle: postTranslations.title } : baseSelection
 
-  const [rows, totalResult] = await Promise.all([filteredPostQuery, filteredTotalQuery])
+  const basePostQuery = db.select(selection).from(posts)
+  const postQuery = translationJoin ? basePostQuery.leftJoin(postTranslations, translationJoin) : basePostQuery
+
+  const baseTotalQuery = db.select({ value: count(posts.id) }).from(posts)
+  const totalQuery = translationJoin ? baseTotalQuery.leftJoin(postTranslations, translationJoin) : baseTotalQuery
+
+  const [rows, totalResult] = await Promise.all([
+    (whereClause ? postQuery.where(whereClause) : postQuery)
+      .orderBy(desc(posts.publishedAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    whereClause ? totalQuery.where(whereClause) : totalQuery
+  ])
 
   return {
     posts: rows.map((row) => ({
       ...row,
-      title: 'translationTitle' in row && row.translationTitle ? (row as any).translationTitle : row.title
+      title: 'translationTitle' in row && row.translationTitle ? row.translationTitle : String(row.title)
     })),
     total: totalResult[0]?.value ?? 0,
     page,
@@ -388,16 +365,13 @@ export async function getPostsForFeed(limit = 40, locale?: string) {
     .limit(limit)
 
   return rows.map((row) => {
-    const translated = Boolean(
-      targetLocale !== (row.language ?? DEFAULT_LOCALE) && 'translationTitle' in row && (row as any).translationTitle
-    )
-
+    const translated = targetLocale !== (row.language ?? DEFAULT_LOCALE) && row.translationTitle
     return {
       ...row,
-      title: translated ? ((row as any).translationTitle ?? row.title) : row.title,
-      summary: translated ? ((row as any).translationSummary ?? row.summary) : row.summary,
-      content: translated ? ((row as any).translationContent ?? row.content) : row.content,
-      language: translated && targetLocale ? targetLocale : row.language,
+      title: translated ? (row.translationTitle ?? row.title) : row.title,
+      summary: translated ? (row.translationSummary ?? row.summary) : row.summary,
+      content: translated ? (row.translationContent ?? row.content) : row.content,
+      language: translated ? targetLocale : row.language,
       publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
       createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null
     }
