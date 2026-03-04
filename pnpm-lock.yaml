@@ -186,9 +186,6 @@ importers:
       autoprefixer:
         specifier: ^10.4.22
         version: 10.4.22(postcss@8.5.6)
-      baseline-browser-mapping:
-        specifier: ^2.10.0
-        version: 2.10.0
       better-sqlite3:
         specifier: ^12.5.0
         version: 12.5.0
