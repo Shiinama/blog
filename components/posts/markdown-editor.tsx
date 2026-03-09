@@ -19,13 +19,11 @@ import typescript from 'highlight.js/lib/languages/typescript'
 import html from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 import { createLowlight } from 'lowlight'
-import MarkdownIt from 'markdown-it'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import TurndownService from 'turndown'
-import { gfm } from 'turndown-plugin-gfm'
 
 import { Spinner } from '@/components/ui/spinner'
 import { useToast } from '@/components/ui/use-toast'
+import { createEditorMarkdownParser, createEditorMarkdownSerializer } from '@/lib/markdown/editor-serialization'
 
 const lowlightInstance = createLowlight()
 lowlightInstance.register({ javascript, typescript, css, bash, shell, json, markdown, html, yaml, xml: html })
@@ -38,21 +36,8 @@ interface MarkdownEditorProps {
 }
 
 export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorProps) {
-  const mdParser = useMemo(
-    () =>
-      new MarkdownIt({
-        html: true,
-        linkify: true,
-        typographer: true
-      }),
-    []
-  )
-
-  const turndownService = useMemo(() => {
-    const service = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' })
-    service.use(gfm)
-    return service
-  }, [])
+  const mdParser = useMemo(() => createEditorMarkdownParser(), [])
+  const turndownService = useMemo(() => createEditorMarkdownSerializer(), [])
 
   const htmlValue = useMemo(() => mdParser.render(value), [mdParser, value])
   const lastSyncRef = useRef(value)

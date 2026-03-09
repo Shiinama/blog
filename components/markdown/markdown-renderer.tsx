@@ -90,29 +90,15 @@ function cleanMarkdownAsterisks(content: string): string {
  * 只移除明显是错误的情况，避免破坏正常的 markdown 格式
  */
 function cleanAsterisksInText(text: string): string {
-  let cleaned = text
+  const trimmed = text.trimStart()
 
-  // 1. 移除被空格包围的单个星号（明显是多余的）
-  // 例如: "text * text" -> "text  text"
-  cleaned = cleaned.replace(/(\s+)\*(\s+)/g, '$1$2')
+  // Preserve valid Markdown structures that legitimately start with `*`.
+  if (/^(?:\* |- |\+ |>\s|#{1,6}\s|\|)/.test(trimmed)) {
+    return text
+  }
 
-  // 2. 移除行首的单个星号（如果后面跟着空格或标点，说明不是 markdown 格式）
-  // 例如: "* text" -> " text"（但 "*text*" 保持不变）
-  cleaned = cleaned.replace(/^(\s*)\*(\s+)/g, '$1$2')
-
-  // 3. 移除行尾的单个星号（如果前面是空格或标点，说明不是 markdown 格式）
-  // 例如: "text *" -> "text "（但 "*text*" 保持不变）
-  cleaned = cleaned.replace(/(\s+)\*(\s*)$/g, '$1$2')
-
-  // 4. 移除标点符号后的单个星号（明显是多余的）
-  // 例如: "text.* text" -> "text. text"
-  cleaned = cleaned.replace(/([.,;:!?])\*(\s)/g, '$1$2')
-
-  // 5. 移除标点符号前的单个星号（明显是多余的）
-  // 例如: "text *." -> "text ."
-  cleaned = cleaned.replace(/(\s)\*([.,;:!?])/g, '$1$2')
-
-  return cleaned
+  // Only drop isolated stray `*` tokens surrounded by whitespace.
+  return text.replace(/(\s+)\*(\s+)/g, '$1$2')
 }
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
