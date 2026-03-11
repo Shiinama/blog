@@ -23,15 +23,11 @@ import { Download } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
 import { useToast } from '@/components/ui/use-toast'
-import { createEditorMarkdownParser, createEditorMarkdownSerializer } from '@/lib/markdown/editor-serialization'
+import { createEditorMarkdownSerializer } from '@/lib/markdown/editor-serialization'
+import { renderMarkdownToHtml } from '@/lib/markdown/pipeline'
 
 const lowlightInstance = createLowlight()
 lowlightInstance.register({ javascript, typescript, css, bash, shell, json, markdown, html, yaml, xml: html })
@@ -39,24 +35,21 @@ lowlightInstance.register({ javascript, typescript, css, bash, shell, json, mark
 interface MarkdownEditorProps {
   value: string
   onChange: (value: string) => void
-  name?: string
   placeholder?: string
 }
 
 export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorProps) {
-  const mdParser = useMemo(() => createEditorMarkdownParser(), [])
   const turndownService = useMemo(() => createEditorMarkdownSerializer(), [])
 
-  const htmlValue = useMemo(() => mdParser.render(value), [mdParser, value])
+  const htmlValue = useMemo(() => renderMarkdownToHtml(value), [value])
   const lastSyncRef = useRef(value)
-  const editorScrollRef = useRef<HTMLDivElement | null>(null)
   const editorRef = useRef<Editor | null>(null)
   const { toast } = useToast()
   const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   const exportDocument = useCallback(
     (format: 'md' | 'html' | 'txt' | 'json') => {
-      const htmlContent = mdParser.render(value)
+      const htmlContent = renderMarkdownToHtml(value)
       const baseName = 'post-content'
       let mimeType = 'text/plain;charset=utf-8'
       let fileName = `${baseName}.md`
@@ -69,7 +62,10 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       } else if (format === 'txt') {
         mimeType = 'text/plain;charset=utf-8'
         fileName = `${baseName}.txt`
-        const plainText = typeof window === 'undefined' ? value : new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent
+        const plainText =
+          typeof window === 'undefined'
+            ? value
+            : new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent
         fileContent = plainText?.trim() || ''
       } else if (format === 'json') {
         mimeType = 'application/json;charset=utf-8'
@@ -98,7 +94,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
         description: `已导出 ${fileName}`
       })
     },
-    [mdParser, toast, value]
+    [toast, value]
   )
 
   const uploadImage = useCallback(async (file: File) => {
@@ -181,7 +177,29 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       handlePaste: (_view, event) => {
         const items = Array.from(event.clipboardData?.items || []).filter((item) => item.type.startsWith('image/'))
         if (!items.length) {
-          return false
+          const markdown = event.clipboardData?.getData('text/markdown')
+          const html = event.clipboardData?.getData('text/html')
+          const plainText = event.clipboardData?.getData('text/plain')
+
+          if (markdown?.trim()) {
+            event.preventDefault()
+            editorRef.current?.chain().focus().insertContent(renderMarkdownToHtml(markdown)).run()
+            return true
+          }
+
+          if (html?.trim()) {
+            event.preventDefault()
+            editorRef.current?.chain().focus().insertContent(html).run()
+            return true
+          }
+
+          if (!plainText?.trim()) {
+            return false
+          }
+
+          event.preventDefault()
+          editorRef.current?.chain().focus().insertContent(renderMarkdownToHtml(plainText)).run()
+          return true
         }
 
         const files = items
@@ -194,7 +212,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
         }
 
         event.preventDefault()
-        void handleImagePaste(files)
+        handleImagePaste(files)
         return true
       }
     },
@@ -230,10 +248,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   }, [editor, htmlValue, value])
 
   return (
-    <div
-      ref={editorScrollRef}
-      className="prose dark:prose-invert relative max-w-none rounded-2xl border px-4 shadow-inner shadow-slate-900/5"
-    >
+    <div className="prose dark:prose-invert relative max-w-none rounded-2xl border px-4 shadow-inner shadow-slate-900/5">
       <div className="absolute top-3 right-4 z-10 flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

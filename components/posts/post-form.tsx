@@ -209,12 +209,7 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
         </div>
       </div>
       <div className="space-y-2">
-        <MarkdownEditor
-          name="content"
-          value={content}
-          onChange={setContent}
-          placeholder={t('form.placeholders.content')}
-        />
+        <MarkdownEditor value={content} onChange={setContent} placeholder={t('form.placeholders.content')} />
         {fieldError('content') && <p className="text-destructive text-sm">{fieldError('content')}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-4 md:hidden">

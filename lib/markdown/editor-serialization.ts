@@ -1,15 +1,5 @@
-import MarkdownIt from 'markdown-it'
 import TurndownService from 'turndown'
 import { gfm } from 'turndown-plugin-gfm'
-
-export function createEditorMarkdownParser() {
-  return new MarkdownIt({
-    html: true,
-    linkify: true,
-    // Avoid mutating ASCII quotes/dashes into typographic punctuation on every save.
-    typographer: false
-  })
-}
 
 export function createEditorMarkdownSerializer() {
   const service = new TurndownService({
