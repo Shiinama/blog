@@ -13,6 +13,7 @@ import { routing } from '@/i18n/routing'
 import { auth } from '@/lib/auth'
 import { formatCategoryLabel } from '@/lib/categories'
 import { getCommentsForPost } from '@/lib/comments'
+import { buildSafePreviewContent } from '@/lib/markdown/preview'
 import { buildLanguageAlternates } from '@/lib/metadata'
 import { getPostById } from '@/lib/posts'
 import { hasActiveSubscription } from '@/lib/subscriptions'
@@ -76,7 +77,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   const isSubscriber = viewerId ? await hasActiveSubscription(viewerId) : false
   const canViewFullContent = !post.isSubscriptionOnly || isSubscriber
 
-  const previewContent = canViewFullContent ? post.content : buildPreviewContent(post.content)
+  const previewContent = canViewFullContent ? post.content : buildSafePreviewContent(post.content)
 
   const readingTime = Math.max(1, post.readingTime || 0)
   const fallbackCategoryLabel = formatCategoryLabel(post.category?.key) || 'Uncategorized'
@@ -204,33 +205,4 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
       </div>
     </div>
   )
-}
-
-function buildPreviewContent(content: string, ratio = 0.3) {
-  const trimmed = content.trim()
-  const words = trimmed.split(/\s+/)
-  const visibleCount = Math.max(1, Math.floor(words.length * ratio))
-
-  const tokens = trimmed.match(/\S+|\s+/g) ?? []
-  const previewTokens: string[] = []
-  let seenWords = 0
-
-  for (const token of tokens) {
-    if (token.trim().length > 0) {
-      seenWords += 1
-    }
-    previewTokens.push(token)
-    if (seenWords >= visibleCount) {
-      break
-    }
-  }
-
-  let preview = previewTokens.join('')
-  const fenceCount = (preview.match(/```/g) || []).length
-
-  if (fenceCount % 2 !== 0) {
-    preview += '\n```'
-  }
-
-  return preview
 }

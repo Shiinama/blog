@@ -19,8 +19,16 @@ import typescript from 'highlight.js/lib/languages/typescript'
 import html from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 import { createLowlight } from 'lowlight'
+import { Download } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
 import { useToast } from '@/components/ui/use-toast'
 import { createEditorMarkdownParser, createEditorMarkdownSerializer } from '@/lib/markdown/editor-serialization'
@@ -45,6 +53,53 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   const editorRef = useRef<Editor | null>(null)
   const { toast } = useToast()
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+
+  const exportDocument = useCallback(
+    (format: 'md' | 'html' | 'txt' | 'json') => {
+      const htmlContent = mdParser.render(value)
+      const baseName = 'post-content'
+      let mimeType = 'text/plain;charset=utf-8'
+      let fileName = `${baseName}.md`
+      let fileContent = value
+
+      if (format === 'html') {
+        mimeType = 'text/html;charset=utf-8'
+        fileName = `${baseName}.html`
+        fileContent = htmlContent
+      } else if (format === 'txt') {
+        mimeType = 'text/plain;charset=utf-8'
+        fileName = `${baseName}.txt`
+        const plainText = typeof window === 'undefined' ? value : new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent
+        fileContent = plainText?.trim() || ''
+      } else if (format === 'json') {
+        mimeType = 'application/json;charset=utf-8'
+        fileName = `${baseName}.json`
+        fileContent = JSON.stringify(
+          {
+            format: 'markdown',
+            exportedAt: new Date().toISOString(),
+            content: value
+          },
+          null,
+          2
+        )
+      }
+
+      const blob = new Blob([fileContent], { type: mimeType })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = fileName
+      anchor.click()
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: '导出成功',
+        description: `已导出 ${fileName}`
+      })
+    },
+    [mdParser, toast, value]
+  )
 
   const uploadImage = useCallback(async (file: File) => {
     const formData = new FormData()
@@ -179,8 +234,24 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       ref={editorScrollRef}
       className="prose dark:prose-invert relative max-w-none rounded-2xl border px-4 shadow-inner shadow-slate-900/5"
     >
+      <div className="absolute top-3 right-4 z-10 flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="secondary" size="sm" className="not-prose">
+              <Download className="h-4 w-4" />
+              导出
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportDocument('md')}>Markdown (.md)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportDocument('html')}>HTML (.html)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportDocument('txt')}>Plain Text (.txt)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportDocument('json')}>JSON (.json)</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       {isUploadingImage ? (
-        <div className="bg-background/95 pointer-events-none absolute top-3 right-4 z-10 flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium shadow-sm ring-1 ring-slate-200/70">
+        <div className="bg-background/95 pointer-events-none absolute top-14 right-4 z-10 flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium shadow-sm ring-1 ring-slate-200/70">
           <Spinner className="h-3.5 w-3.5" />
           <span>图片上传中...</span>
         </div>

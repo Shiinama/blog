@@ -229,6 +229,11 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
             {isDeleting ? t('form.actions.deleting') : t('form.actions.delete')}
           </Button>
         )}
+        {post && (
+          <Button type="button" variant="secondary" onClick={handleTranslate} disabled={isTranslating}>
+            {isTranslating ? t('form.translation.translating') : t('form.translation.translate')}
+          </Button>
+        )}
       </div>
       <Dialog open={isPublishModalOpen} onOpenChange={setPublishModalOpen}>
         <DialogContent className="max-h-[80vh] max-w-2xl overflow-hidden">
