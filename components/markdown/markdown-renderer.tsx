@@ -1,3 +1,4 @@
+import React from 'react'
 import ReactMarkdown from 'react-markdown'
 
 import { markdownRehypePlugins, markdownRemarkPlugins, normalizeMarkdown } from '@/lib/markdown/pipeline'
@@ -22,7 +23,16 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
     h4: ({ children }: { children: React.ReactNode }) => <Heading level={4}>{children}</Heading>,
     h5: ({ children }: { children: React.ReactNode }) => <Heading level={5}>{children}</Heading>,
     h6: ({ children }: { children: React.ReactNode }) => <Heading level={6}>{children}</Heading>,
-    pre: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    pre: ({ children }: { children: React.ReactNode }) => {
+      if (React.isValidElement(children)) {
+        const child = children as React.ReactElement<{ className?: string }>
+        return React.cloneElement(child, {
+          className: child.props.className || 'language-plaintext'
+        })
+      }
+
+      return <>{children}</>
+    },
     code: ({ children, className }: { children: React.ReactNode; className?: string }) => (
       <CodeBlock className={className}>{children}</CodeBlock>
     ),

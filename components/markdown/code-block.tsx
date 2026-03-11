@@ -42,14 +42,41 @@ function isBlockCode(className?: string | null) {
 function extractLanguage(className?: string | null) {
   if (!className) return null
   const match = className.match(/(?:language|lang)-([\w-]+)/)
-  return match?.[1] ?? null
+  if (!match?.[1]) return null
+  return normalizeLanguage(match[1])
+}
+
+function normalizeLanguage(language: string) {
+  const normalized = language.toLowerCase()
+
+  if (['plain', 'plaintext', 'text', 'txt'].includes(normalized)) {
+    return 'plaintext'
+  }
+
+  if (['js', 'mjs', 'cjs'].includes(normalized)) {
+    return 'javascript'
+  }
+
+  if (['ts', 'mts', 'cts'].includes(normalized)) {
+    return 'typescript'
+  }
+
+  if (['sh', 'zsh'].includes(normalized)) {
+    return 'shell'
+  }
+
+  if (['yml'].includes(normalized)) {
+    return 'yaml'
+  }
+
+  return normalized
 }
 
 export function CodeBlock({ children, className }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
 
   const isBlock = isBlockCode(className)
-  const language = isBlock ? extractLanguage(className) : null
+  const language = isBlock ? extractLanguage(className) ?? 'plaintext' : null
   const code = isBlock ? getCodeString(children) : null
   const highlighted = useMemo(() => {
     if (!code) return ''
