@@ -5,30 +5,6 @@ import { resolve } from 'node:path'
 
 const PROJECT_NAME = process.env.PROJECT_NAME || 'next-template'
 
-const environments = [
-  'AUTH_SECRET',
-  'AUTH_GOOGLE_ID',
-  'AUTH_GOOGLE_SECRET',
-  'AUTH_RESEND_KEY',
-  'AUTH_TRUST_HOST',
-  'NEXT_PUBLIC_BASE_URL',
-  'NEXT_PUBLIC_ADMIN_ID',
-  'NEXT_PUBLIC_R2_DOMAIN',
-  'GITHUB_CLIENT_ID',
-  'GITHUB_CLIENT_SECRET'
-]
-
-/**
- * Validate required environment variables
- */
-const validateEnvironment = () => {
-  const missing = environments.filter((varName) => !process.env[varName])
-
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
-  }
-}
-
 /**
  * Run database migrations
  */
@@ -52,36 +28,8 @@ const pushWorkerSecret = () => {
       setupEnvFile()
     }
 
-    // Create a temp file with runtime-only env vars
-    const envContent = readFileSync(resolve('.env'), 'utf-8')
-    const runtimeEnvFile = resolve('.env.runtime')
-
-    // Extract runtime variables from .env
-    const runtimeEnvContent = envContent
-      .split('\n')
-      .filter((line) => {
-        const trimmedLine = line.trim()
-        // Skip comments and empty lines
-        if (!trimmedLine || trimmedLine.startsWith('#')) return false
-
-        // Keep only the runtime env variables
-        for (const varName of environments) {
-          if (line.startsWith(`${varName} =`) || line.startsWith(`${varName}=`)) {
-            return true
-          }
-        }
-        return false
-      })
-      .join('\n')
-
-    // Write the temporary file
-    writeFileSync(runtimeEnvFile, runtimeEnvContent)
-
-    // Push secrets using the temp file
-    execSync(`pnpm dlx wrangler secret bulk ${runtimeEnvFile} --name ${PROJECT_NAME}`, { stdio: 'inherit' })
-
-    // Clean up the temp file
-    execSync(`rm ${runtimeEnvFile}`, { stdio: 'inherit' })
+    // Push all variables from the local .env file.
+    execSync(`pnpm dlx wrangler secret bulk ${resolve('.env')} --name ${PROJECT_NAME}`, { stdio: 'inherit' })
 
     console.log('✅ Secrets pushed successfully')
   } catch (error) {
@@ -148,7 +96,6 @@ const main = async () => {
   try {
     console.log('🚀 Starting deployment process...')
 
-    validateEnvironment()
     setupEnvFile()
     migrateDatabase()
     await pushWorkerSecret()
