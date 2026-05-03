@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server'
 
 import { getContentSignals } from '@/lib/content-signals'
 
-export const runtime = 'edge'
-
 function parsePositiveInt(value: string | null) {
   if (!value) return undefined
   const parsed = Number.parseInt(value, 10)
