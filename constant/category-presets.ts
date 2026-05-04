@@ -25,6 +25,7 @@ export const CATEGORY_PRESETS: CategoryPreset[] = [
   { folder: 'discord-development', i18nKey: 'discordDevelopment', sortOrder: 17, isVisible: false },
   { folder: 'issue', i18nKey: 'issue', sortOrder: 18, isVisible: false },
   { folder: 'nextjs', i18nKey: 'nextjs', sortOrder: 19, isVisible: false },
-  { folder: 'other', i18nKey: 'other', sortOrder: 20, isVisible: true },
+  { folder: 'fragments', i18nKey: 'fragments', sortOrder: 20, isVisible: true },
+  { folder: 'other', i18nKey: 'other', sortOrder: 21, isVisible: true },
   { folder: 'ai', i18nKey: 'ai', sortOrder: 0, isVisible: true }
 ]

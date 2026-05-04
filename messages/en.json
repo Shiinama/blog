@@ -57,6 +57,7 @@
     "backend": "Backend",
     "commonBaseProject": "Common Base Project",
     "nextjs": "Next.js",
+    "fragments": "Fragments",
     "other": "Other",
     "ai": "AI"
   },
