@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { getContentSignals } from '@/lib/content-signals'
+import { claimNextContentSignal } from '@/lib/content-signals'
 
 function parsePositiveInt(value: string | null) {
   if (!value) return undefined
@@ -11,6 +11,16 @@ function parsePositiveInt(value: string | null) {
 function parseBoolean(value: string | null) {
   if (!value) return undefined
   return ['1', 'true', 'yes'].includes(value.trim().toLowerCase())
+}
+
+function parseContentSignalReferencedAt(value: string | null) {
+  if (!value) return false
+
+  const normalized = value.trim().toLowerCase()
+  if (['1', 'true', 'yes'].includes(normalized)) return true
+  if (['0', 'false', 'no'].includes(normalized)) return false
+
+  return undefined
 }
 
 function isAuthorized(request: Request) {
@@ -32,18 +42,27 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
 
   try {
-    const result = await getContentSignals({
-      limit: parsePositiveInt(searchParams.get('limit')),
+    const contentSignalReferencedAt = parseContentSignalReferencedAt(searchParams.get('contentSignalReferencedAt'))
+
+    if (contentSignalReferencedAt === undefined) {
+      return NextResponse.json({ error: 'contentSignalReferencedAt must be true or false' }, { status: 400 })
+    }
+
+    const result = await claimNextContentSignal({
       days: parsePositiveInt(searchParams.get('days')),
       locale: searchParams.get('locale') ?? undefined,
       category: searchParams.get('category') ?? undefined,
-      tag: searchParams.get('tag') ?? undefined,
+      contentSignalReferencedAt,
       includeContent: parseBoolean(searchParams.get('includeContent'))
     })
 
+    if (!result) {
+      return NextResponse.json({ error: 'No available content signal' }, { status: 404 })
+    }
+
     return NextResponse.json(result, {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=900'
+        'Cache-Control': 'no-store'
       }
     })
   } catch (error) {

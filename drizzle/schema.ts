@@ -124,6 +124,7 @@ export const posts = sqliteTable('posts', {
     .default(sql`'[]'`),
   language: text('language').notNull().default('zh'),
   readingTime: integer('reading_time').notNull().default(1),
+  contentSignalReferencedAt: integer('content_signal_referenced_at', { mode: 'timestamp_ms' }),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),

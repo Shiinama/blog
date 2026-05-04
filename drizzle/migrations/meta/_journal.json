@@ -43,6 +43,13 @@
       "when": 1763908699452,
       "tag": "0005_nasty_rhodey",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1777909207343,
+      "tag": "0006_nice_mister_sinister",
+      "breakpoints": true
     }
   ]
 }

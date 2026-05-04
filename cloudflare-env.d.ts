@@ -16,6 +16,12 @@ declare namespace Cloudflare {
 		PROJECT_NAME: string;
 		DATABASE_NAME: string;
 		DATABASE_ID: string;
+		OPENAI_API_KEY: string;
+		OPENAI_BASE_URL: string;
+		AI_DAILY_MODEL: string;
+		CONTENT_SIGNALS_API_KEY: string;
+		SOCHEAP_BASE_URL: string;
+		SOCHEAP_OPENAI_KEY: string;
 		NEXT_PUBLIC_BASE_URL: string;
 		NEXT_PUBLIC_ADMIN_ID: string;
 		NEXT_PUBLIC_R2_DOMAIN: string;
@@ -32,7 +38,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "AUTH_SECRET" | "AUTH_GOOGLE_ID" | "AUTH_GOOGLE_SECRET" | "AUTH_RESEND_KEY" | "AUTH_TRUST_HOST" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_API_TOKEN" | "PROJECT_NAME" | "DATABASE_NAME" | "DATABASE_ID" | "NEXT_PUBLIC_BASE_URL" | "NEXT_PUBLIC_ADMIN_ID" | "NEXT_PUBLIC_R2_DOMAIN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "AUTH_SECRET" | "AUTH_GOOGLE_ID" | "AUTH_GOOGLE_SECRET" | "AUTH_RESEND_KEY" | "AUTH_TRUST_HOST" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_API_TOKEN" | "PROJECT_NAME" | "DATABASE_NAME" | "DATABASE_ID" | "OPENAI_API_KEY" | "OPENAI_BASE_URL" | "AI_DAILY_MODEL" | "CONTENT_SIGNALS_API_KEY" | "SOCHEAP_BASE_URL" | "SOCHEAP_OPENAI_KEY" | "NEXT_PUBLIC_BASE_URL" | "NEXT_PUBLIC_ADMIN_ID" | "NEXT_PUBLIC_R2_DOMAIN">> {}
 }
 
 // Begin runtime types
