@@ -151,26 +151,5 @@ export async function claimNextContentSignal({
     return serializeContentSignalPost(candidate, targetLocale, includeContent)
   }
 
-  const updated = await db
-    .update(posts)
-    .set({
-      contentSignalReferencedAt: new Date()
-    })
-    .where(and(eq(posts.id, candidate.id), isNull(posts.contentSignalReferencedAt)))
-    .returning({
-      id: posts.id,
-      contentSignalReferencedAt: posts.contentSignalReferencedAt
-    })
-
-  const record = updated[0]
-  if (!record) return null
-
-  return serializeContentSignalPost(
-    {
-      ...candidate,
-      contentSignalReferencedAt: record.contentSignalReferencedAt
-    },
-    targetLocale,
-    includeContent
-  )
+  return serializeContentSignalPost(candidate, targetLocale, includeContent)
 }
