@@ -11,7 +11,7 @@ import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { auth } from '@/lib/auth'
-import { formatCategoryLabel } from '@/lib/categories'
+import { formatCategoryLabel, getCategoryTranslationKey } from '@/lib/categories'
 import { getCommentsForPost } from '@/lib/comments'
 import { buildSafePreviewContent } from '@/lib/markdown/preview'
 import { buildLanguageAlternates } from '@/lib/metadata'
@@ -84,7 +84,7 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   let categoryLabel = fallbackCategoryLabel
   if (post.category?.key) {
     try {
-      categoryLabel = articleT(post.category.key)
+      categoryLabel = articleT(getCategoryTranslationKey(post.category.key) as any)
     } catch {
       categoryLabel = fallbackCategoryLabel
     }

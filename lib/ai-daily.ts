@@ -9,6 +9,30 @@ import { calculateReadingTime } from '@/lib/posts/utils'
 const AI_DAILY_CATEGORY_KEY = 'ai-daily'
 const DEFAULT_MODEL = 'gpt-5.5'
 const TAGS = ['ai-daily', 'ai', 'news']
+const HOT_SIGNAL_SOURCES = [
+  'official AI company blogs and changelogs',
+  'major AI lab announcements',
+  'research paper pages and conference proceedings',
+  'GitHub trending repositories and release notes',
+  'Hacker News, Product Hunt, and developer community discussions',
+  'reputable developer-focused tech media with original reporting',
+  'AI product directories, benchmark pages, SDK docs, and release feeds'
+]
+
+const EVENT_PRIORITY_RULES = [
+  'new model, benchmark, API, SDK, product, or platform release',
+  'model capability improvements in coding, agents, multimodal, voice, video, inference, memory, or reasoning',
+  'fast-growing open-source model, framework, agent system, developer tool, or infrastructure project',
+  'major research result with released paper, code, dataset, demo, benchmark, or reproducible method',
+  'notable product workflow update from AI-native apps, IDEs, browsers, search, productivity tools, or creative tools',
+  'pricing, latency, context window, deployment, hardware, cloud, or inference improvements that change builder economics'
+]
+
+const LOWER_PRIORITY_RULES = [
+  'regulation, lawsuits, copyright disputes, government procurement, national security, defense, election, surveillance, and geopolitical stories',
+  'AI safety or security incidents without a clear developer-facing technical lesson',
+  'funding and executive stories without a released product, model, dataset, paper, or platform change'
+]
 
 type Citation = {
   title: string
@@ -169,11 +193,26 @@ function parseDraft(outputText: string, fallbackTitle: string): DailyDraft {
 
 function englishPrompt(day: string) {
   return [
-    `Search the web for the most important global AI events around ${day}, focusing on the last 24-48 hours.`,
-    'Cover model releases, product launches, open-source projects, company and funding news, regulation, major research, infrastructure, and AI safety/security incidents.',
-    'Prioritize primary sources, official company or institution announcements, papers, official blogs, and reputable media. Do not fabricate facts.',
+    `Search the web for the most important and currently hot global AI events around ${day}.`,
+    'Use the last 24 hours as the main window. Only use a 48-hour window for stories that are still gaining momentum today or need a primary-source confirmation.',
+    '',
+    'Search strategy:',
+    `- Scan these high-signal source types first: ${HOT_SIGNAL_SOURCES.join('; ')}.`,
+    '- Prefer specific entity and product queries over generic "AI news" queries.',
+    '- Cross-check each candidate with a primary source, release note, paper, repository, benchmark, demo, docs page, or reputable original report before including it.',
+    '- Treat social/community buzz as a discovery signal only; do not cite low-authority social posts unless they are the original announcement.',
+    '',
+    'Selection rules:',
+    `- Prioritize events matching these hot-signal categories: ${EVENT_PRIORITY_RULES.join('; ')}.`,
+    `- Deprioritize these unless they are the biggest AI story of the day and have a direct builder impact: ${LOWER_PRIORITY_RULES.join('; ')}.`,
+    '- Aim for at least 75% of selected events to be technical progress, product updates, model releases, open-source projects, papers, benchmarks, developer tools, or infrastructure improvements.',
+    '- Include at most one regulation, national security, defense, lawsuit, copyright, or policy-heavy item, and only when it clearly changes how AI builders or product teams will work this week.',
+    '- Rank events by practical impact, freshness, source authority, and visible momentum among builders, founders, researchers, or operators.',
+    '- Exclude evergreen explainers, generic opinion pieces, SEO roundups, undated pages, job posts, listicles, minor feature updates, and policy/security stories that are not immediately useful to technical readers.',
+    '- Avoid duplicate angles about the same announcement. Merge related coverage into one event and cite the strongest sources.',
+    '- Include at least one China/Asia signal when it is genuinely among the strongest stories; otherwise keep the list global by impact.',
     'Write one complete publish-ready English post for technical founders, AI builders, and operators.',
-    'Keep the analysis dense, practical, and appropriately cautious. Each event must include at least one accessible source URL.'
+    'Keep the analysis dense, practical, and appropriately cautious. Each event must include at least one accessible source URL, and details should explain why this item is hot now.'
   ].join('\n')
 }
 

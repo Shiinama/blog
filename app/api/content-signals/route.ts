@@ -13,6 +13,14 @@ function parseBoolean(value: string | null) {
   return ['1', 'true', 'yes'].includes(value.trim().toLowerCase())
 }
 
+function parseCategoryList(searchParams: URLSearchParams, key: string) {
+  return searchParams
+    .getAll(key)
+    .flatMap((value) => value.split(','))
+    .map((value) => value.trim())
+    .filter(Boolean)
+}
+
 function parseContentSignalReferencedAt(value: string | null) {
   if (!value) return false
 
@@ -52,6 +60,7 @@ export async function GET(request: Request) {
       days: parsePositiveInt(searchParams.get('days')),
       locale: searchParams.get('locale') ?? undefined,
       category: searchParams.get('category') ?? undefined,
+      excludeCategories: parseCategoryList(searchParams, 'excludeCategory'),
       contentSignalReferencedAt,
       includeContent: parseBoolean(searchParams.get('includeContent'))
     })

@@ -1,3 +1,15 @@
+import { CATEGORY_PRESETS } from '@/constant/category-presets'
+
+const CATEGORY_TRANSLATION_KEYS = new Map(CATEGORY_PRESETS.map((category) => [category.folder, category.i18nKey]))
+
+export function getCategoryTranslationKey(key?: string | null) {
+  if (!key) {
+    return ''
+  }
+
+  return CATEGORY_TRANSLATION_KEYS.get(key) ?? key
+}
+
 export function formatCategoryLabel(key?: string | null) {
   if (!key) {
     return ''

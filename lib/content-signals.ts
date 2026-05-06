@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNotNull, isNull, or, type SQL } from 'drizzle-orm'
+import { and, desc, eq, gte, isNotNull, isNull, ne, notInArray, or, type SQL } from 'drizzle-orm'
 
 import { categories, postTranslations, posts } from '@/drizzle/schema'
 import { DEFAULT_LOCALE } from '@/i18n/routing'
@@ -20,6 +20,7 @@ export type ContentSignalsOptions = {
   locale?: string
   days?: number
   category?: string
+  excludeCategories?: string[]
   contentSignalReferencedAt?: boolean
   includeContent?: boolean
 }
@@ -36,6 +37,11 @@ function buildLocaleAvailabilityCondition(targetLocale: string): SQL<unknown> {
 function normalizeDays(days?: number) {
   if (!Number.isFinite(days) || !days || days <= 0) return undefined
   return Math.min(Math.trunc(days), 3650)
+}
+
+function normalizeCategoryKeys(keys?: string[]) {
+  if (!keys?.length) return []
+  return Array.from(new Set(keys.map((key) => key.trim()).filter(Boolean)))
 }
 
 function buildPostPath(locale: string, postId: string) {
@@ -85,12 +91,15 @@ export async function claimNextContentSignal({
   locale,
   days,
   category,
+  excludeCategories,
   contentSignalReferencedAt,
   includeContent = true
 }: ContentSignalsOptions) {
   const db = createDb()
   const targetLocale = resolveLocale(locale)
   const maxAgeDays = normalizeDays(days)
+  const categoryKey = category?.trim()
+  const excludedCategoryKeys = normalizeCategoryKeys(excludeCategories)
   const translationJoin = and(eq(postTranslations.postId, posts.id), eq(postTranslations.locale, targetLocale))
   const conditions: SQL<unknown>[] = [
     eq(posts.status, 'PUBLISHED'),
@@ -107,8 +116,14 @@ export async function claimNextContentSignal({
     conditions.push(gte(posts.updatedAt, new Date(Date.now() - maxAgeDays * 86_400_000)))
   }
 
-  if (category) {
-    conditions.push(eq(categories.key, category))
+  if (categoryKey) {
+    conditions.push(eq(categories.key, categoryKey))
+  }
+
+  if (excludedCategoryKeys.length === 1) {
+    conditions.push(ne(categories.key, excludedCategoryKeys[0]))
+  } else if (excludedCategoryKeys.length > 1) {
+    conditions.push(notInArray(categories.key, excludedCategoryKeys))
   }
 
   const candidate = await db

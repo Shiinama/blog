@@ -4,7 +4,7 @@ import { and, count, desc, eq, isNotNull, like, or, sql, type SQL } from 'drizzl
 
 import { categories, postTranslations, posts, type PostStatus } from '@/drizzle/schema'
 import { DEFAULT_LOCALE } from '@/i18n/routing'
-import { formatCategoryLabel } from '@/lib/categories'
+import { formatCategoryLabel, getCategoryTranslationKey } from '@/lib/categories'
 import {
   type CategorySummary,
   type ExplorerFilterInput,
@@ -144,7 +144,7 @@ export async function getExplorerPosts({
       title: hasTranslation ? (row.translationTitle ?? row.title) : row.title,
       summary: hasTranslation ? (row.translationSummary ?? row.summary) : row.summary,
       coverImageUrl: hasTranslation ? (row.translationCover ?? row.coverImageUrl) : row.coverImageUrl,
-      categoryLabel: formatCategoryLabel(row.categoryKey ?? undefined) || 'Uncategorized',
+      categoryLabel: getCategoryTranslationKey(row.categoryKey) || formatCategoryLabel(row.categoryKey) || 'Uncategorized',
       sortTimestamp: new Date(row.publishedAt ?? new Date()).getTime(),
       publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
       createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null

@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { PostExplorer } from '@/components/posts/post-explorer'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
+import { formatCategoryLabel, getCategoryTranslationKey } from '@/lib/categories'
 import { buildAbsoluteUrl, buildLanguageAlternates } from '@/lib/metadata'
 import { getExplorerPosts, getVisibleCategoriesWithCounts } from '@/lib/posts'
 
@@ -44,14 +45,23 @@ export default async function ContentPage({ params }: { params: Promise<{ locale
     getVisibleCategoriesWithCounts(locale)
   ])
 
+  const categoryLabels = new Map<string, string>()
   const explorerCategories = categories.map((category) => {
-    const fallbackLabel = category.key ? (articleT(category.key as any) ?? category.key) : 'Uncategorized'
+    const translationKey = getCategoryTranslationKey(category.key)
+    const fallbackLabel = category.key
+      ? (articleT(translationKey as any) ?? formatCategoryLabel(category.key))
+      : 'Uncategorized'
+    categoryLabels.set(category.id, fallbackLabel)
     return {
       id: category.id,
       label: fallbackLabel,
       count: category.postCount ?? 0
     }
   })
+  const localizedExplorerPosts = explorerPosts.map((post) => ({
+    ...post,
+    categoryLabel: post.categoryId ? (categoryLabels.get(post.categoryId) ?? post.categoryLabel) : post.categoryLabel
+  }))
 
   return (
     <div className="relative isolate overflow-hidden">
@@ -81,7 +91,7 @@ export default async function ContentPage({ params }: { params: Promise<{ locale
         </header>
 
         <PostExplorer
-          initialPosts={explorerPosts}
+          initialPosts={localizedExplorerPosts}
           initialTotal={total}
           categories={explorerCategories}
           locale={locale}
