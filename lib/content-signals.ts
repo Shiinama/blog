@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNotNull, isNull, ne, notInArray, or, type SQL } from 'drizzle-orm'
+import { and, asc, eq, gte, isNotNull, isNull, ne, notInArray, or, type SQL } from 'drizzle-orm'
 
 import { categories, postTranslations, posts } from '@/drizzle/schema'
 import { DEFAULT_LOCALE } from '@/i18n/routing'
@@ -101,10 +101,7 @@ export async function claimNextContentSignal({
   const categoryKey = category?.trim()
   const excludedCategoryKeys = normalizeCategoryKeys(excludeCategories)
   const translationJoin = and(eq(postTranslations.postId, posts.id), eq(postTranslations.locale, targetLocale))
-  const conditions: SQL<unknown>[] = [
-    eq(posts.status, 'PUBLISHED'),
-    buildLocaleAvailabilityCondition(targetLocale)
-  ]
+  const conditions: SQL<unknown>[] = [eq(posts.status, 'PUBLISHED'), buildLocaleAvailabilityCondition(targetLocale)]
 
   if (contentSignalReferencedAt === true) {
     conditions.push(isNotNull(posts.contentSignalReferencedAt))
@@ -144,7 +141,7 @@ export async function claimNextContentSignal({
     .leftJoin(categories, eq(posts.categoryId, categories.id))
     .leftJoin(postTranslations, translationJoin)
     .where(and(...conditions))
-    .orderBy(desc(posts.updatedAt))
+    .orderBy(asc(posts.updatedAt))
     .limit(1)
     .then((rows) => rows[0])
 
