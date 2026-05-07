@@ -9,6 +9,8 @@ import { calculateReadingTime } from '@/lib/posts/utils'
 const AI_DAILY_CATEGORY_KEY = 'ai-daily'
 const DEFAULT_MODEL = 'gpt-5.5'
 const TAGS = ['ai-daily', 'ai', 'news']
+const AI_DAILY_TIME_ZONE = 'Asia/Shanghai'
+const AI_DAILY_TIME_ZONE_OFFSET_MS = 8 * 3_600_000
 const HOT_SIGNAL_SOURCES = [
   'official AI company blogs and changelogs',
   'major AI lab announcements',
@@ -125,13 +127,31 @@ function model(env?: CloudflareEnv) {
   return envValue('AI_DAILY_MODEL', env) || DEFAULT_MODEL
 }
 
-function utcDayRange(now: Date) {
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+function localDayRange(now: Date) {
+  const shifted = new Date(now.getTime() + AI_DAILY_TIME_ZONE_OFFSET_MS)
+  const shiftedDayStart = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate())
+  const start = new Date(shiftedDayStart - AI_DAILY_TIME_ZONE_OFFSET_MS)
+
   return { start, end: new Date(start.getTime() + 86_400_000) }
 }
 
+function localHalfDaySlot(now: Date) {
+  const { start: dayStart } = localDayRange(now)
+  const shifted = new Date(now.getTime() + AI_DAILY_TIME_ZONE_OFFSET_MS)
+  const slotStartHour = shifted.getUTCHours() < 12 ? 0 : 12
+  const start = new Date(dayStart.getTime() + slotStartHour * 3_600_000)
+  const end = new Date(start.getTime() + 12 * 3_600_000)
+
+  return {
+    start,
+    end,
+    label: `${String(slotStartHour).padStart(2, '0')}:00 ${AI_DAILY_TIME_ZONE}`,
+    window: `${String(slotStartHour).padStart(2, '0')}:00-${String(slotStartHour + 12).padStart(2, '0')}:00 ${AI_DAILY_TIME_ZONE}`
+  }
+}
+
 function dateLabel(date: Date) {
-  return date.toISOString().slice(0, 10)
+  return new Date(date.getTime() + AI_DAILY_TIME_ZONE_OFFSET_MS).toISOString().slice(0, 10)
 }
 
 function parseDraft(outputText: string, fallbackTitle: string): DailyDraft {
@@ -191,10 +211,10 @@ function parseDraft(outputText: string, fallbackTitle: string): DailyDraft {
   }
 }
 
-function englishPrompt(day: string) {
+function englishPrompt(day: string, slotWindow: string) {
   return [
-    `Search the web for the most important and currently hot global AI events around ${day}.`,
-    'Use the last 24 hours as the main window. Only use a 48-hour window for stories that are still gaining momentum today or need a primary-source confirmation.',
+    `Search the web for the most important and currently hot global AI events around ${day}, ${slotWindow}.`,
+    'Use the last 12 hours as the main window. Only use a 24-hour window for stories that are still gaining momentum now or need a primary-source confirmation.',
     '',
     'Search strategy:',
     `- Scan these high-signal source types first: ${HOT_SIGNAL_SOURCES.join('; ')}.`,
@@ -226,10 +246,10 @@ function translationPrompt(draft: DailyDraft) {
   ].join('\n\n')
 }
 
-async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, day: string) {
+async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, day: string, slotWindow: string) {
   const english = await client.responses.create({
     model: model(env),
-    input: englishPrompt(day),
+    input: englishPrompt(day, slotWindow),
     tools: [{ type: 'web_search', search_context_size: 'high' }],
     text: {
       format: {
@@ -261,11 +281,11 @@ async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, da
   }
 }
 
-function renderMarkdown(draft: DailyDraft, day: string, language: 'en' | 'zh') {
+function renderMarkdown(draft: DailyDraft, day: string, slotLabel: string, language: 'en' | 'zh') {
   const text =
     language === 'en'
       ? {
-          intro: `Today is ${day}. Here are the global AI events from the last 24-48 hours worth tracking, organized by impact and actionability.`,
+          intro: `Today is ${day}, ${slotLabel}. Here are the global AI events from the last 12-24 hours worth tracking, organized by impact and actionability.`,
           takeaways: 'Quick Takeaways',
           details: 'Key Details',
           sources: 'Sources',
@@ -274,7 +294,7 @@ function renderMarkdown(draft: DailyDraft, day: string, language: 'en' | 'zh') {
           date: (value: string) => ` (${value})`
         }
       : {
-          intro: `今天是 ${day}。下面是过去 24-48 小时里值得关注的全球 AI 大事件，按影响力和可行动性整理。`,
+          intro: `今天是 ${day}，${slotLabel}。下面是过去 12-24 小时里值得关注的全球 AI 大事件，按影响力和可行动性整理。`,
           takeaways: '快速结论',
           details: '关键信息',
           sources: '来源',
@@ -334,8 +354,8 @@ async function getOrCreateCategory(db: DB) {
   return created[0]!
 }
 
-async function existingPostForDay(db: DB, categoryId: string, now: Date) {
-  const { start, end } = utcDayRange(now)
+async function existingPostForSlot(db: DB, categoryId: string, now: Date) {
+  const { start, end } = localHalfDaySlot(now)
   return db.query.posts.findFirst({
     where: (post, { and, eq, gte, lt }) =>
       and(eq(post.categoryId, categoryId), gte(post.publishedAt, start), lt(post.publishedAt, end)),
@@ -349,20 +369,21 @@ async function existingPostForDay(db: DB, categoryId: string, now: Date) {
 export async function publishAiDailyPost({ env, now = new Date() }: AiDailyRunOptions = {}) {
   const db = runtimeDb(env)
   const category = await getOrCreateCategory(db)
-  const existing = await existingPostForDay(db, category.id, now)
+  const existing = await existingPostForSlot(db, category.id, now)
 
   if (existing) {
     return {
       status: 'skipped' as const,
-      reason: 'already_published',
+      reason: 'already_published_in_slot',
       post: existing
     }
   }
 
   const day = dateLabel(now)
-  const drafts = await generateDrafts(openaiClient(env), env, day)
-  const englishContent = renderMarkdown(drafts.en, day, 'en')
-  const chineseContent = renderMarkdown(drafts.zh, day, 'zh')
+  const slot = localHalfDaySlot(now)
+  const drafts = await generateDrafts(openaiClient(env), env, day, slot.window)
+  const englishContent = renderMarkdown(drafts.en, day, slot.label, 'en')
+  const chineseContent = renderMarkdown(drafts.zh, day, slot.label, 'zh')
 
   const [post] = await db
     .insert(posts)
