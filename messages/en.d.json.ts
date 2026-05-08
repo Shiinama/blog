@@ -89,6 +89,15 @@ declare const messages: {
         "updateFailed": "Failed to update access",
         "updateFailedDescription": "Please try again later."
       },
+      "contentSignal": {
+        "referenced": "Referenced",
+        "unreferenced": "Unreferenced",
+        "empty": "Unreferenced",
+        "switchLabel": "Reference switch",
+        "updateSuccess": "Content Signal updated to {label}",
+        "updateFailed": "Failed to update Content Signal",
+        "updateFailedDescription": "Please try again later."
+      },
       "filters": {
         "searchLabel": "Search",
         "searchPlaceholder": "Title or summary keywords",
@@ -122,6 +131,7 @@ declare const messages: {
         "headers": {
           "title": "Title",
           "access": "Access",
+          "contentSignalReferencedAt": "Content Signal referenced at",
           "status": "Status",
           "updated": "Updated at",
           "publishedAt": "Published at",
