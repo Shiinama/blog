@@ -86,6 +86,15 @@
         "updateFailed": "更新访问控制失败",
         "updateFailedDescription": "请稍后再试。"
       },
+      "contentSignal": {
+        "referenced": "已引用",
+        "unreferenced": "未引用",
+        "empty": "未引用",
+        "switchLabel": "引用开关",
+        "updateSuccess": "Content Signal 已更新为 {label}",
+        "updateFailed": "更新 Content Signal 失败",
+        "updateFailedDescription": "请稍后再试。"
+      },
       "filters": {
         "searchLabel": "搜索",
         "searchPlaceholder": "标题或摘要关键字",
@@ -119,6 +128,7 @@
         "headers": {
           "title": "标题",
           "access": "订阅限制",
+          "contentSignalReferencedAt": "Content Signal 引用时间",
           "status": "状态",
           "updated": "更新时间",
           "publishedAt": "发布时间",
@@ -129,6 +139,11 @@
       "new": {
         "description": "创建新文章",
         "title": "撰写内容"
+      },
+      "publishTime": {
+        "invalid": "请选择有效的发布时间",
+        "updateSuccess": "发布时间已更新",
+        "updateFailed": "发布时间更新失败"
       }
     },
     "subscriptions": {

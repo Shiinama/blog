@@ -355,6 +355,31 @@ export async function updatePostSubscriptionAction(postId: string, isSubscriptio
   return { status: 'success', value: record.isSubscriptionOnly }
 }
 
+export async function updatePostContentSignalReferenceAction(postId: string, isReferenced: boolean) {
+  await assertAdmin()
+  const db = createDb()
+  const updated = await db
+    .update(posts)
+    .set({
+      contentSignalReferencedAt: isReferenced ? new Date() : null,
+      updatedAt: new Date()
+    })
+    .where(eq(posts.id, postId))
+    .returning({
+      id: posts.id,
+      contentSignalReferencedAt: posts.contentSignalReferencedAt
+    })
+
+  const record = updated[0]
+  if (!record) {
+    return { status: 'error', message: '文章不存在' }
+  }
+
+  revalidatePostRoutes(record.id)
+
+  return { status: 'success', value: record.contentSignalReferencedAt }
+}
+
 export async function translatePostAction(postId: string, targetLocale: string) {
   await assertAdmin()
   const db = createDb()

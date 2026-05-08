@@ -6,6 +6,7 @@ import { useRef, useState, useTransition } from 'react'
 import {
   deletePostAction,
   togglePostStatusAction,
+  updatePostContentSignalReferenceAction,
   updatePostPublishedAtAction,
   updatePostSubscriptionAction
 } from '@/actions/posts'
@@ -22,7 +23,7 @@ import type { PostStatus } from '@/drizzle/schema'
 import type { PaginatedPostListItem } from '@/lib/posts/types'
 
 type PostListItem = PaginatedPostListItem
-type PostActionType = 'delete' | 'toggle' | 'publishTime' | 'access'
+type PostActionType = 'delete' | 'toggle' | 'publishTime' | 'access' | 'contentSignal'
 type PostActionTarget = { type: PostActionType; id: string }
 
 function formatDateTimeForInput(value?: string | Date | null) {
@@ -178,6 +179,34 @@ export function PostTable({ posts }: PostTableProps) {
     })
   }
 
+  const handleContentSignalToggle = (post: PostListItem, isReferenced: boolean) => {
+    setActionTarget({ type: 'contentSignal', id: post.id })
+    startTransition(async () => {
+      try {
+        const result = await updatePostContentSignalReferenceAction(post.id, isReferenced)
+        if (result.status === 'success') {
+          const label = isReferenced ? t('posts.contentSignal.referenced') : t('posts.contentSignal.unreferenced')
+          toast({ title: t('posts.contentSignal.updateSuccess', { label }) })
+          router.refresh()
+        } else {
+          toast({
+            title: t('posts.contentSignal.updateFailed'),
+            description: result.message ?? t('posts.contentSignal.updateFailedDescription'),
+            variant: 'destructive'
+          })
+        }
+      } catch (error) {
+        toast({
+          title: t('posts.contentSignal.updateFailed'),
+          description: error instanceof Error ? error.message : t('posts.contentSignal.updateFailedDescription'),
+          variant: 'destructive'
+        })
+      } finally {
+        setActionTarget(null)
+      }
+    })
+  }
+
   if (posts.length === 0) {
     return <p className="text-muted-foreground text-sm">{t('posts.empty')}</p>
   }
@@ -189,6 +218,7 @@ export function PostTable({ posts }: PostTableProps) {
           <TableRow className="[&_th]:px-4 [&_th]:py-3">
             <TableHead>{t('posts.table.headers.title')}</TableHead>
             <TableHead className="w-[180px]">{t('posts.table.headers.access')}</TableHead>
+            <TableHead className="w-[220px]">{t('posts.table.headers.contentSignalReferencedAt')}</TableHead>
             <TableHead className="w-[200px]">{t('posts.table.headers.publishedAt')}</TableHead>
             <TableHead className="w-[150px]">{t('posts.table.headers.status')}</TableHead>
             <TableHead className="text-right">{t('posts.table.headers.actions')}</TableHead>
@@ -200,6 +230,8 @@ export function PostTable({ posts }: PostTableProps) {
             const pendingToggle = actionTarget?.type === 'toggle' && actionTarget.id === post.id && isPending
             const pendingPublishTime = actionTarget?.type === 'publishTime' && actionTarget.id === post.id && isPending
             const pendingAccess = actionTarget?.type === 'access' && actionTarget.id === post.id && isPending
+            const pendingContentSignal =
+              actionTarget?.type === 'contentSignal' && actionTarget.id === post.id && isPending
             return (
               <TableRow key={post.id}>
                 <TableCell className="align-top">
@@ -236,6 +268,23 @@ export function PostTable({ posts }: PostTableProps) {
                         disabled={pendingAccess}
                       />
                       <span>{t('posts.access.switchLabel')}</span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-muted-foreground text-xs">
+                      {post.contentSignalReferencedAt
+                        ? formatLocaleDate(post.contentSignalReferencedAt)
+                        : t('posts.contentSignal.empty')}
+                    </span>
+                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                      <Switch
+                        checked={Boolean(post.contentSignalReferencedAt)}
+                        onCheckedChange={(checked) => handleContentSignalToggle(post, checked)}
+                        disabled={pendingContentSignal}
+                      />
+                      <span>{t('posts.contentSignal.switchLabel')}</span>
                     </div>
                   </div>
                 </TableCell>

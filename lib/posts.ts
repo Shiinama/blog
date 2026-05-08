@@ -295,6 +295,7 @@ export async function getPaginatedPosts({
     updatedAt: posts.updatedAt,
     createdAt: posts.createdAt,
     isSubscriptionOnly: posts.isSubscriptionOnly,
+    contentSignalReferencedAt: posts.contentSignalReferencedAt,
     categoryId: posts.categoryId
   }
 

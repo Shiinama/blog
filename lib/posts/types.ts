@@ -51,6 +51,7 @@ export interface PaginatedPostListItem {
   updatedAt: Post['updatedAt']
   createdAt: Post['createdAt']
   isSubscriptionOnly: Post['isSubscriptionOnly']
+  contentSignalReferencedAt: Post['contentSignalReferencedAt']
   categoryId: Post['categoryId']
 }
 
