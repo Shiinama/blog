@@ -14,7 +14,7 @@
 	},
 	"triggers": {
 		"crons": [
-			"0 4,16 * * *"
+			"0 * * * *"
 		]
 	},
 	"assets": {
@@ -33,6 +33,25 @@
 	"ai": {
 		"remote": true,
 		"binding": "AI"
+	},
+	"queues": {
+		"producers": [
+			{
+				"binding": "AI_DAILY_QUEUE",
+				"queue": "blog-ai-daily"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "blog-ai-daily",
+				"max_batch_size": 1,
+				"max_batch_timeout": 5,
+				"max_retries": 3,
+				"retry_delay": 300,
+				"max_concurrency": 1,
+				"dead_letter_queue": "blog-ai-daily-dlq"
+			}
+		]
 	},
 	"services": [
 		{

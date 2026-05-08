@@ -9,8 +9,8 @@ import { calculateReadingTime } from '@/lib/posts/utils'
 const AI_DAILY_CATEGORY_KEY = 'ai-daily'
 const DEFAULT_MODEL = 'gpt-5.5'
 const TAGS = ['ai-daily', 'ai', 'news']
-const AI_DAILY_TIME_ZONE = 'Asia/Shanghai'
-const AI_DAILY_TIME_ZONE_OFFSET_MS = 8 * 3_600_000
+export const AI_DAILY_TIME_ZONE = 'America/Los_Angeles'
+const SEARCH_CONTEXT_SIZE = 'high'
 const HOT_SIGNAL_SOURCES = [
   'official AI company blogs and changelogs',
   'major AI lab announcements',
@@ -127,35 +127,96 @@ function model(env?: CloudflareEnv) {
   return envValue('AI_DAILY_MODEL', env) || DEFAULT_MODEL
 }
 
-function localDayRange(now: Date) {
-  const shifted = new Date(now.getTime() + AI_DAILY_TIME_ZONE_OFFSET_MS)
-  const shiftedDayStart = Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate())
-  const start = new Date(shiftedDayStart - AI_DAILY_TIME_ZONE_OFFSET_MS)
+function zonedDateParts(date: Date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: AI_DAILY_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date)
 
-  return { start, end: new Date(start.getTime() + 86_400_000) }
+  return Object.fromEntries(parts.map((part) => [part.type, part.value])) as {
+    year: string
+    month: string
+    day: string
+    hour: string
+  }
+}
+
+function zonedDateLabel(date: Date) {
+  const parts = zonedDateParts(date)
+  return `${parts.year}-${parts.month}-${parts.day}`
+}
+
+function dateInZone(day: string, hour: number) {
+  const guess = new Date(`${day}T${String(hour).padStart(2, '0')}:00:00.000Z`)
+
+  for (let offset = -12; offset <= 14; offset += 1) {
+    const candidate = new Date(guess.getTime() + offset * 3_600_000)
+    const parts = zonedDateParts(candidate)
+
+    if (
+      `${parts.year}-${parts.month}-${parts.day}` === day &&
+      Number.parseInt(parts.hour, 10) === hour
+    ) {
+      return candidate
+    }
+  }
+
+  throw new Error(`Unable to resolve ${day} ${hour}:00 in ${AI_DAILY_TIME_ZONE}.`)
+}
+
+function localDayRange(now: Date) {
+  const day = zonedDateLabel(now)
+  const start = dateInZone(day, 0)
+  const end = dateInZone(
+    zonedDateLabel(new Date(start.getTime() + 36 * 3_600_000)),
+    0
+  )
+
+  return { start, end }
 }
 
 function localHalfDaySlot(now: Date) {
   const { start: dayStart } = localDayRange(now)
-  const shifted = new Date(now.getTime() + AI_DAILY_TIME_ZONE_OFFSET_MS)
-  const slotStartHour = shifted.getUTCHours() < 12 ? 0 : 12
-  const start = new Date(dayStart.getTime() + slotStartHour * 3_600_000)
-  const end = new Date(start.getTime() + 12 * 3_600_000)
+  const slotStartHour = Number.parseInt(zonedDateParts(now).hour, 10) < 12 ? 0 : 12
+  const start = slotStartHour === 0 ? dayStart : dateInZone(zonedDateLabel(now), 12)
+  const end = slotStartHour === 0 ? dateInZone(zonedDateLabel(now), 12) : localDayRange(new Date(start.getTime() + 18 * 3_600_000)).start
 
   return {
     start,
     end,
-    label: `${String(slotStartHour).padStart(2, '0')}:00 ${AI_DAILY_TIME_ZONE}`,
-    window: `${String(slotStartHour).padStart(2, '0')}:00-${String(slotStartHour + 12).padStart(2, '0')}:00 ${AI_DAILY_TIME_ZONE}`
+    label: `${String(slotStartHour).padStart(2, '0')}:00 Los Angeles time`,
+    window: `${String(slotStartHour).padStart(2, '0')}:00-${String(slotStartHour + 12).padStart(2, '0')}:00 Los Angeles time`
   }
 }
 
 function dateLabel(date: Date) {
-  return new Date(date.getTime() + AI_DAILY_TIME_ZONE_OFFSET_MS).toISOString().slice(0, 10)
+  return zonedDateLabel(date)
 }
 
-function parseDraft(outputText: string, fallbackTitle: string): DailyDraft {
-  const value = JSON.parse(outputText) as Partial<DailyDraft>
+function cleanDraftTitle(title: string) {
+  return title
+    .replace(/\b(?:Asia\/Shanghai|America\/Los_Angeles)\b/gi, '')
+    .replace(/\b(?:Shanghai|Los Angeles)\s+time\b/gi, '')
+    .replace(/\s+([:：,，;；])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([—-])\s*$/g, '')
+    .trim()
+}
+
+function parseDraft(outputText: string, fallbackTitle: string, stage: string): DailyDraft {
+  let value: Partial<DailyDraft>
+
+  try {
+    value = JSON.parse(outputText) as Partial<DailyDraft>
+  } catch (error) {
+    const preview = outputText.trim().replace(/\s+/g, ' ').slice(0, 240)
+    throw new Error(`${stage} response was not valid JSON: ${preview}`, { cause: error })
+  }
+
   const events = Array.isArray(value.events)
     ? value.events
         .map((event) => {
@@ -194,7 +255,7 @@ function parseDraft(outputText: string, fallbackTitle: string): DailyDraft {
   }
 
   return {
-    title: value.title?.trim() || fallbackTitle,
+    title: cleanDraftTitle(value.title?.trim() || fallbackTitle),
     summary:
       value.summary?.trim() ||
       events
@@ -215,6 +276,7 @@ function englishPrompt(day: string, slotWindow: string) {
   return [
     `Search the web for the most important and currently hot global AI events around ${day}, ${slotWindow}.`,
     'Use the last 12 hours as the main window. Only use a 24-hour window for stories that are still gaining momentum now or need a primary-source confirmation.',
+    'The post title must not include any timezone name, timezone identifier, city time label, or slot window.',
     '',
     'Search strategy:',
     `- Scan these high-signal source types first: ${HOT_SIGNAL_SOURCES.join('; ')}.`,
@@ -240,6 +302,7 @@ function translationPrompt(draft: DailyDraft) {
   return [
     'Translate this English AI daily post into natural Simplified Chinese.',
     'Preserve the exact same event set, ordering, factual claims, source URLs, publishers, and published dates.',
+    'The translated title must not include any timezone name, timezone identifier, city time label, or slot window.',
     'Do not search the web. Do not add new events or remove existing events.',
     'Translate analytical prose naturally for Chinese technical founders, AI builders, and operators.',
     JSON.stringify(draft)
@@ -250,7 +313,7 @@ async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, da
   const english = await client.responses.create({
     model: model(env),
     input: englishPrompt(day, slotWindow),
-    tools: [{ type: 'web_search', search_context_size: 'high' }],
+    tools: [{ type: 'web_search', search_context_size: SEARCH_CONTEXT_SIZE }],
     text: {
       format: {
         type: 'json_schema',
@@ -260,7 +323,7 @@ async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, da
       }
     }
   })
-  const en = parseDraft(english.output_text, 'Today in AI')
+  const en = parseDraft(english.output_text, 'Today in AI', 'English AI daily')
 
   const chinese = await client.responses.create({
     model: model(env),
@@ -277,7 +340,7 @@ async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, da
 
   return {
     en,
-    zh: parseDraft(chinese.output_text, '今日 AI 大事件')
+    zh: parseDraft(chinese.output_text, '今日 AI 大事件', 'Chinese AI daily translation')
   }
 }
 
