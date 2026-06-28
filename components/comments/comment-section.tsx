@@ -2,7 +2,7 @@
 
 import { Loader2, MessageCircle, Send, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { createCommentAction, loadCommentsAction } from '@/app/actions/comments'
 import { Button } from '@/components/ui/button'
@@ -24,14 +24,16 @@ export function CommentSection({ postId, viewerId, initialComments }: CommentSec
   const [message, setMessage] = useState<string | null>(null)
   const [content, setContent] = useState('')
 
-  const initialsCache = useMemo(() => new Map<string, string>(), [])
-
-  useEffect(() => {
+  // Adjust state during render when the server-provided prop changes, rather
+  // than syncing inside an effect (which triggers an extra cascading render).
+  const [prevInitialComments, setPrevInitialComments] = useState(initialComments)
+  if (initialComments !== prevInitialComments) {
+    setPrevInitialComments(initialComments)
     if (initialComments) {
       setComments(initialComments)
       setLoading(false)
     }
-  }, [initialComments, postId])
+  }
 
   useEffect(() => {
     if (initialComments?.length) return
@@ -84,18 +86,13 @@ export function CommentSection({ postId, viewerId, initialComments }: CommentSec
 
   const getInitials = (name?: string | null, fallback?: string | null) => {
     const source = name?.trim() || fallback?.trim() || t('anonymous')
-    const cached = initialsCache.get(source)
-    if (cached) return cached
 
-    const initials = source
+    return source
       .split(/\s+/)
       .slice(0, 2)
       .map((part) => part.charAt(0).toUpperCase())
       .join('')
       .slice(0, 2)
-
-    initialsCache.set(source, initials)
-    return initials
   }
 
   const renderTimestamp = (timestamp: string) => {
