@@ -1,7 +1,7 @@
 'use client'
 
 import { useDebounce, useUpdateEffect } from 'ahooks'
-import { Loader2, RotateCcw } from 'lucide-react'
+import { Loader2, RotateCcw, Search } from 'lucide-react'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { useMemo, useState, useTransition } from 'react'
@@ -84,48 +84,31 @@ export function PostExplorer({ initialPosts, initialTotal, categories, className
   const hasActiveFilters = selectedCategoryId !== 'all' || Boolean(searchInput.trim()) || sortBy !== 'newest'
 
   return (
-    <section className={cn('mt-6 space-y-6 pb-12 sm:space-y-8', className)}>
-      <div className="bg-card/80 ring-border/40 rounded-3xl px-4 py-5 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-6 dark:ring-white/10">
-        <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs font-semibold tracking-[0.28em] uppercase">
-          <span className="bg-primary/10 text-primary rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.2em]">
-            {t('stats', { count: total })}
-          </span>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-2 rounded-full px-3 text-[12px]"
-              onClick={() => {
-                setSearchInput('')
-                setSelectedCategoryId('all')
-                setSortBy('newest')
-              }}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              {t('reset')}
-            </Button>
-          )}
-          {isPending && (
-            <span className="text-muted-foreground inline-flex items-center gap-2 text-[0.65rem] font-semibold tracking-[0.25em] uppercase">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {t('updating')}
-            </span>
-          )}
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1.1fr_1fr] sm:items-end sm:gap-4">
-          <Input
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={t('searchPlaceholder')}
-            aria-label={t('searchLabel')}
-            className="border-border/70 bg-muted/40 min-h-11 rounded-2xl px-4 text-base shadow-inner shadow-black/5 focus-visible:ring-2"
-          />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <section className={cn('space-y-8 pb-12', className)}>
+      <div className="border-border/50 space-y-4 border-b pb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="relative flex-1">
+            <Search
+              className="text-muted-foreground/50 pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+              aria-hidden
+            />
+            <Input
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder={t('searchPlaceholder')}
+              aria-label={t('searchLabel')}
+              className="bg-muted/40 focus-visible:bg-muted/60 placeholder:text-muted-foreground/70 h-11 w-full rounded-lg border-0 pr-4 pl-10 text-base shadow-none transition-colors focus-visible:ring-0"
+            />
+          </div>
+          <div className="flex items-center gap-1">
             <Select value={selectedCategoryId} onValueChange={(value) => setSelectedCategoryId(value)}>
-              <SelectTrigger aria-label={t('categoryLabel')} className="rounded-2xl px-4 shadow-sm">
+              <SelectTrigger
+                aria-label={t('categoryLabel')}
+                className="text-foreground/80 hover:text-foreground hover:bg-muted/50 data-[state=open]:bg-muted/50 h-9 w-auto gap-1.5 rounded-md border-0 bg-transparent px-2.5 text-[13px] font-medium shadow-none transition-colors focus:ring-0 focus:ring-offset-0 focus-visible:ring-0"
+              >
                 <SelectValue className="truncate text-left" placeholder={t('categoryAll')} />
               </SelectTrigger>
-              <SelectContent align="start">
+              <SelectContent align="end">
                 <SelectItem value="all">{t('categoryAll')}</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
@@ -134,11 +117,15 @@ export function PostExplorer({ initialPosts, initialTotal, categories, className
                 ))}
               </SelectContent>
             </Select>
+            <span className="bg-border/60 h-4 w-px" aria-hidden />
             <Select value={sortBy} onValueChange={(value: ExplorerSortOption) => setSortBy(value)}>
-              <SelectTrigger aria-label={t('sortLabel')} className="rounded-2xl px-4 shadow-sm">
+              <SelectTrigger
+                aria-label={t('sortLabel')}
+                className="text-foreground/80 hover:text-foreground hover:bg-muted/50 data-[state=open]:bg-muted/50 h-9 w-auto gap-1.5 rounded-md border-0 bg-transparent px-2.5 text-[13px] font-medium shadow-none transition-colors focus:ring-0 focus:ring-offset-0 focus-visible:ring-0"
+              >
                 <SelectValue className="truncate text-left" placeholder={t('sortPlaceholder')} />
               </SelectTrigger>
-              <SelectContent align="start">
+              <SelectContent align="end">
                 <SelectItem value="newest">{t('sortOptions.newest')}</SelectItem>
                 <SelectItem value="oldest">{t('sortOptions.oldest')}</SelectItem>
                 <SelectItem value="alphabetical">{t('sortOptions.alphabetical')}</SelectItem>
@@ -146,15 +133,38 @@ export function PostExplorer({ initialPosts, initialTotal, categories, className
             </Select>
           </div>
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground/70 text-[13px]">{t('stats', { count: total })}</span>
+          <div className="flex items-center gap-3">
+            {isPending && (
+              <span className="text-muted-foreground/70 inline-flex items-center gap-2 text-[0.65rem] font-semibold tracking-[0.25em] uppercase">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t('updating')}
+              </span>
+            )}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-[12px]"
+                onClick={() => {
+                  setSearchInput('')
+                  setSelectedCategoryId('all')
+                  setSortBy('newest')
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                {t('reset')}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:gap-5">
+      <div className="divide-border/40 flex flex-col divide-y">
         {posts.map((post) => (
-          <article
-            key={post.id}
-            className="bg-card/85 ring-border/30 hover:ring-border/50 rounded-3xl p-4 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm transition hover:-translate-y-0.5 sm:p-5 dark:ring-white/10"
-          >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+          <article key={post.id} className="group py-6 first:pt-0 sm:py-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
               {post.coverImageUrl && (
                 <div className="from-primary/10 via-primary/5 relative aspect-4/3 w-full overflow-hidden rounded-2xl bg-linear-to-br to-transparent sm:w-52">
                   <Image
@@ -162,19 +172,20 @@ export function PostExplorer({ initialPosts, initialTotal, categories, className
                     alt={post.title}
                     fill
                     sizes="(max-width: 640px) 100vw, 220px"
-                    className="object-cover transition duration-500 hover:scale-[1.03]"
+                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
                   />
                 </div>
               )}
               <div className="flex flex-1 flex-col gap-3">
-                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-[12px]">
-                  <span className="text-primary/90 bg-primary/10 rounded-full px-3 py-1 font-semibold tracking-[0.15em] uppercase">
-                    {post.categoryLabel}
-                  </span>
+                <div className="flex flex-wrap items-center gap-2.5 text-[13px]">
+                  <span className="text-primary font-medium">{post.categoryLabel}</span>
                   {post.publishedAt && (
-                    <time dateTime={post.publishedAt} className="text-muted-foreground/80">
-                      {formatDate(post.publishedAt, locale)}
-                    </time>
+                    <>
+                      <span className="bg-border/70 size-1 rounded-full" aria-hidden />
+                      <time dateTime={post.publishedAt} className="text-muted-foreground/60 tabular-nums">
+                        {formatDate(post.publishedAt, locale)}
+                      </time>
+                    </>
                   )}
                 </div>
                 <header className="space-y-2">
@@ -193,7 +204,7 @@ export function PostExplorer({ initialPosts, initialTotal, categories, className
           </article>
         ))}
         {posts.length === 0 && (
-          <div className="text-muted-foreground bg-card/70 rounded-3xl px-6 py-12 text-center text-sm shadow-[0_10px_40px_rgba(0,0,0,0.08)]">
+          <div className="text-muted-foreground px-6 py-12 text-center text-sm">
             <p className="text-foreground text-base font-medium">{t('empty.title')}</p>
             <p className="mt-2 leading-relaxed">{t('empty.description')}</p>
           </div>

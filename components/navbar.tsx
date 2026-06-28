@@ -1,3 +1,4 @@
+import { Rss } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 
 import { Link } from '@/i18n/navigation'
@@ -25,10 +26,22 @@ export default async function Navbar({ children, className }: { children?: React
     </Link>
   )
 
+  const rssLink = (
+    <Link
+      href={'/rss.xml'}
+      aria-label="RSS"
+      title="RSS"
+      className={buttonVariants({ variant: 'ghost', size: 'icon' })}
+    >
+      <Rss className="h-4 w-4" />
+    </Link>
+  )
+
   const menuContentDesktop = (
     <div className="flex items-center gap-1.5">
       {aboutLinkDesktop}
       <AuthInlineActions />
+      {rssLink}
       <LanguageSwitcher />
       <ToggleTheme className="flex md:flex" />
     </div>

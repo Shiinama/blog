@@ -11,7 +11,6 @@ import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { auth } from '@/lib/auth'
-import { formatCategoryLabel, getCategoryTranslationKey } from '@/lib/categories'
 import { getCommentsForPost } from '@/lib/comments'
 import { buildSafePreviewContent } from '@/lib/markdown/preview'
 import { buildLanguageAlternates } from '@/lib/metadata'
@@ -60,9 +59,8 @@ export async function generateMetadata({ params }: { params: Promise<DocPageProp
 
 export default async function DocPage({ params }: { params: Promise<DocPageProps> }) {
   const parameters = await params
-  const [post, articleT, contentT, initialComments] = await Promise.all([
+  const [post, contentT, initialComments] = await Promise.all([
     getPostById(parameters.id, { locale: parameters.locale }),
-    getTranslations('article'),
     getTranslations('content'),
     getCommentsForPost(parameters.id)
   ])
@@ -78,51 +76,12 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
   const canViewFullContent = !post.isSubscriptionOnly || isSubscriber
 
   const previewContent = canViewFullContent ? post.content : buildSafePreviewContent(post.content)
-
-  const readingTime = Math.max(1, post.readingTime || 0)
-  const fallbackCategoryLabel = formatCategoryLabel(post.category?.key) || 'Uncategorized'
-  let categoryLabel = fallbackCategoryLabel
-  if (post.category?.key) {
-    try {
-      categoryLabel = articleT(getCategoryTranslationKey(post.category.key) as any)
-    } catch {
-      categoryLabel = fallbackCategoryLabel
-    }
-  }
-
-  const publishedDate = post.publishedAt ? new Date(post.publishedAt) : null
-  const formattedPublishedDate = publishedDate
-    ? publishedDate.toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
-    : null
-  const publishedDateISO = publishedDate?.toISOString()
   const authorName = post.author?.name
-  const metadataHighlights = [
-    {
-      label: contentT('metadata.published'),
-      value: formattedPublishedDate ?? '—'
-    },
-    {
-      label: contentT('metadata.readingTime'),
-      value: `${readingTime} min read`
-    },
-    {
-      label: contentT('metadata.author'),
-      value: authorName
-    },
-    {
-      label: contentT('metadata.access'),
-      value: post.isSubscriptionOnly ? contentT('metadata.subscriptionOnly') : contentT('metadata.free')
-    }
-  ]
 
   return (
-    <div className="bg-background">
-      <div className="mx-auto min-h-screen w-full max-w-4xl px-4 pt-6 pb-14 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 pb-4">
+    <div className="bg-background px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto min-h-screen w-full max-w-5xl px-4 m:px-6 lg:px-8 pt-6 lg:pt-12 pb-14">
+        <div className="flex items-center gap-3 pb-6">
           <Link
             href="/"
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm font-medium transition"
@@ -132,36 +91,13 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
           </Link>
         </div>
 
-        <header className="bg-card/85 ring-border/30 rounded-3xl px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.09)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
-          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[12px] tracking-[0.22em] uppercase">
-            <span className="text-primary/90 bg-primary/10 rounded-full px-3 py-1 font-semibold">{categoryLabel}</span>
-            {formattedPublishedDate && (
-              <time dateTime={publishedDateISO}>{contentT('updated', { date: formattedPublishedDate })}</time>
-            )}
-          </div>
-          <div className="space-y-3 pt-4">
-            <h1 className="text-foreground text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
-              {post.title}
-            </h1>
-            {post.isSubscriptionOnly && (
-              <p className="text-muted-foreground text-sm sm:text-base">
-                {contentT('metadata.subscriptionOnly')} · {contentT('locked.previewDescription')}
-              </p>
-            )}
-          </div>
-          <dl className="text-muted-foreground mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-            {metadataHighlights.map((item) => (
-              <div key={item.label} className="space-y-1">
-                <dt className="text-[11px] font-semibold tracking-[0.25em] uppercase">{item.label}</dt>
-                <dd className="text-foreground text-base font-semibold">{item.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </header>
+        <h1 className="text-foreground text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
+          {post.title}
+        </h1>
 
         {post.coverImageUrl && (
-          <figure className="my-8">
-            <div className="relative h-56 w-full overflow-hidden rounded-3xl shadow-[0_22px_70px_rgba(0,0,0,0.14)] sm:h-80">
+          <figure className="mt-8">
+            <div className="relative h-56 w-full overflow-hidden rounded-2xl sm:h-80">
               <Image
                 src={post.coverImageUrl}
                 alt={post.title}
@@ -171,19 +107,16 @@ export default async function DocPage({ params }: { params: Promise<DocPageProps
                 priority
               />
             </div>
-            <figcaption className="text-muted-foreground mt-3 text-xs tracking-[0.3em] uppercase">
-              {contentT('coverImage')}
-            </figcaption>
           </figure>
         )}
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-8 space-y-10">
           {canViewFullContent ? (
-            <article className="bg-card/80 ring-border/30 max-w-none rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
+            <article className="max-w-none">
               <MarkdownRenderer content={post.content} />
             </article>
           ) : (
-            <div className="bg-card/80 ring-border/30 relative rounded-3xl px-5 py-6 shadow-[0_16px_50px_rgba(0,0,0,0.08)] ring-1 backdrop-blur-sm sm:px-7 dark:ring-white/10">
+            <div className="relative">
               <LockedPreview
                 content={previewContent}
                 label={contentT('locked.previewTitle')}

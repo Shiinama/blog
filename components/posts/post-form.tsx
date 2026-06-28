@@ -322,7 +322,7 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
             value={metadata.title}
             onChange={(event) => updateMetadataField('title', event.target.value)}
             placeholder={t('form.placeholders.title')}
-            className="placeholder:text-muted-foreground/50 w-full border-0 bg-transparent text-4xl font-bold tracking-tight outline-none focus:ring-0"
+            className="placeholder:text-muted-foreground/50 w-full border-0 bg-transparent text-3xl leading-tight font-semibold tracking-tight outline-none focus:ring-0 sm:text-4xl"
             aria-label={t('form.fields.title')}
           />
           {fieldError('title') && <p className="text-destructive text-sm">{fieldError('title')}</p>}
