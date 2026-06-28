@@ -53,6 +53,9 @@ export function MobileNav() {
               <DropdownMenuItem>
                 <Link href="/admin/posts">{authData.common('common.adminPanel')}</Link>
               </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/admin/tools">{authData.common('common.tools')}</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1" />
             </>
           )}

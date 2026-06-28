@@ -43,6 +43,26 @@ export function AuthAdminLink({ variant }: { variant?: Variant }) {
   )
 }
 
+export function AuthToolsLink({ variant }: { variant?: Variant }) {
+  const authData = useAuthContext()
+  const props = buttonProps(variant ?? 'inline')
+
+  if (!authData.isAdmin) return null
+
+  return (
+    <Link
+      href="/admin/tools"
+      className={buttonVariants({
+        variant: props.variant,
+        size: 'sm',
+        className: props.className
+      })}
+    >
+      {authData.common('common.tools')}
+    </Link>
+  )
+}
+
 export function AuthLoginDialog({ variant }: { variant?: Variant }) {
   const authData = useAuthContext()
   const props = buttonProps(variant ?? 'inline')
@@ -77,6 +97,7 @@ export function AuthInlineActions() {
   return (
     <div className="flex items-center gap-2">
       <AuthAdminLink variant="inline" />
+      <AuthToolsLink variant="inline" />
       {authData.session.status === 'authenticated' ? (
         <AuthAccountDialog variant="inline" />
       ) : (

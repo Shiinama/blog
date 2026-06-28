@@ -36,7 +36,8 @@
     "loginIn": "登录",
     "toggleTheme": "切换主题",
     "uncategorized": "未分类",
-    "adminPanel": "管理后台"
+    "adminPanel": "管理后台",
+    "tools": "工具箱"
   },
   "article": {
     "seo": "搜索引擎优化",
@@ -234,6 +235,45 @@
       },
       "sticky": {
         "title": "快速操作"
+      }
+    },
+    "tools": {
+      "title": "工具箱",
+      "description": "我自己用的各种小工具。",
+      "actions": {
+        "open": "工具箱",
+        "back": "返回工具箱",
+        "openTool": "打开"
+      },
+      "douyinSubtitle": {
+        "name": "抖音字幕提取",
+        "summary": "输入抖音视频链接，提取语音字幕文本（含 .srt）。",
+        "title": "抖音字幕提取",
+        "description": "粘贴抖音视频链接或分享链接，提取其语音字幕与文本。",
+        "urlLabel": "视频链接",
+        "urlPlaceholder": "https://www.douyin.com/video/...  或分享链接 / 视频ID",
+        "langLabel": "输出语言",
+        "lang": {
+          "zh": "中文（原文）",
+          "en": "英文",
+          "ja": "日文",
+          "ko": "韩文"
+        },
+        "submit": "提取字幕",
+        "extracting": "提取中...",
+        "pending": "正在转写——长视频可能需要几分钟，请保持页面打开。",
+        "resultTitle": "字幕文本",
+        "metaDuration": "时长",
+        "metaLanguage": "语言",
+        "metaSegments": "字幕条数",
+        "truncated": "已达免费额度音频上限——字幕为部分内容。",
+        "copy": "复制文本",
+        "copied": "已复制到剪贴板",
+        "copyFailed": "复制失败，请重试。",
+        "downloadSrt": "下载 .srt",
+        "downloadTxt": "下载 .txt",
+        "emptyUrl": "请输入抖音视频链接。",
+        "errorTitle": "提取失败"
       }
     }
   },

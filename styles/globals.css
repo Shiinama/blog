@@ -147,6 +147,85 @@
   }
 }
 
+/* Tighten the Tailwind Typography defaults: smaller body text and a clearer
+   vertical rhythm where spacing differs per element type. */
+:is(.prose, .prose-invert) {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+/* Paragraphs: comfortable, even spacing */
+:is(.prose, .prose-invert) :where(p):not(:where([class~='not-prose'] *)) {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+/* Headings: large gap BEFORE (section break), small gap AFTER */
+:is(.prose, .prose-invert) :where(h1, h2, h3, h4, h5, h6):not(:where([class~='not-prose'] *)) {
+  line-height: 1.3;
+}
+
+:is(.prose, .prose-invert) :where(h1):not(:where([class~='not-prose'] *)) {
+  font-size: 1.7em;
+  margin-top: 0;
+  margin-bottom: 0.7em;
+}
+
+:is(.prose, .prose-invert) :where(h2):not(:where([class~='not-prose'] *)) {
+  font-size: 1.35em;
+  margin-top: 2.4em;
+  margin-bottom: 0.7em;
+}
+
+:is(.prose, .prose-invert) :where(h3):not(:where([class~='not-prose'] *)) {
+  font-size: 1.15em;
+  margin-top: 1.9em;
+  margin-bottom: 0.5em;
+}
+
+:is(.prose, .prose-invert) :where(h4, h5, h6):not(:where([class~='not-prose'] *)) {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+/* A heading immediately after another heading shouldn't keep the big gap */
+:is(.prose, .prose-invert) :where(h1 + h2, h2 + h3, h3 + h4):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.6em;
+}
+
+/* Lists: separated from surrounding text, but items packed tight */
+:is(.prose, .prose-invert) :where(ul, ol):not(:where([class~='not-prose'] *)) {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+:is(.prose, .prose-invert) :where(li):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+}
+
+:is(.prose, .prose-invert) :where(li > p):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+}
+
+/* Nested lists hug their parent item */
+:is(.prose, .prose-invert) :where(li > ul, li > ol):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+}
+
+/* Block elements get a bit more breathing room */
+:is(.prose, .prose-invert) :where(blockquote):not(:where([class~='not-prose'] *)) {
+  margin-top: 1.2em;
+  margin-bottom: 1.2em;
+}
+
+:is(.prose, .prose-invert) :where(pre, table, hr):not(:where([class~='not-prose'] *)) {
+  margin-top: 1.4em;
+  margin-bottom: 1.4em;
+}
+
 :is(.tiptap, .prose) pre {
   border-radius: 0.5rem;
   font-family: 'JetBrainsMono', monospace;

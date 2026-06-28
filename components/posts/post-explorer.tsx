@@ -173,7 +173,7 @@ export function PostExplorer({ initialPosts, initialTotal, categories, className
                   </span>
                   {post.publishedAt && (
                     <time dateTime={post.publishedAt} className="text-muted-foreground/80">
-                      {formatDate(post.publishedAt)}
+                      {formatDate(post.publishedAt, locale)}
                     </time>
                   )}
                 </div>
@@ -234,13 +234,13 @@ export function PostExplorer({ initialPosts, initialTotal, categories, className
   )
 }
 
-function formatDate(date?: string | null) {
+function formatDate(date?: string | null, locale?: string) {
   if (!date) {
     return ''
   }
 
   try {
-    return new Date(date).toLocaleDateString(undefined, {
+    return new Date(date).toLocaleDateString(locale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric'

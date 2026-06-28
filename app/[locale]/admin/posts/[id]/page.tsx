@@ -21,10 +21,5 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
     notFound()
   }
 
-  return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold">{post.title}</h2>
-      <PostForm post={post} categories={categories} locale={locale} />
-    </div>
-  )
+  return <PostForm post={post} categories={categories} locale={locale} />
 }

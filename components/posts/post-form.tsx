@@ -1,11 +1,13 @@
 'use client'
 
+import { ArrowLeft, Download, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useActionState, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react'
+import { useActionState, useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from 'react'
 
 import { deletePostAction, savePostAction, translatePostAction } from '@/actions/posts'
 import { initialPostFormState } from '@/actions/posts/form-state'
 import { MarkdownEditor } from '@/components/posts/markdown-editor'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,13 +18,19 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import useRouter from '@/hooks/use-router'
 import { formatCategoryLabel } from '@/lib/categories'
+import { renderMarkdownToHtml } from '@/lib/markdown/pipeline'
 
 import type { PostStatus } from '@/drizzle/schema'
 import type { CategorySummary, PostDetails } from '@/lib/posts/types'
@@ -131,6 +139,49 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
 
   const fieldError = (field: string) => state.errors?.[field]?.join(', ')
 
+  const exportDocument = useCallback(
+    (format: 'md' | 'html' | 'txt' | 'json') => {
+      const htmlContent = renderMarkdownToHtml(content)
+      const baseName = metadata.title.trim() ? metadata.title.trim().replace(/\s+/g, '-') : 'post-content'
+      let mimeType = 'text/plain;charset=utf-8'
+      let fileName = `${baseName}.md`
+      let fileContent = content
+
+      if (format === 'html') {
+        mimeType = 'text/html;charset=utf-8'
+        fileName = `${baseName}.html`
+        fileContent = htmlContent
+      } else if (format === 'txt') {
+        mimeType = 'text/plain;charset=utf-8'
+        fileName = `${baseName}.txt`
+        const plainText =
+          typeof window === 'undefined'
+            ? content
+            : new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent
+        fileContent = plainText?.trim() || ''
+      } else if (format === 'json') {
+        mimeType = 'application/json;charset=utf-8'
+        fileName = `${baseName}.json`
+        fileContent = JSON.stringify(
+          { format: 'markdown', exportedAt: new Date().toISOString(), content },
+          null,
+          2
+        )
+      }
+
+      const blob = new Blob([fileContent], { type: mimeType })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = fileName
+      anchor.click()
+      URL.revokeObjectURL(url)
+
+      toast({ title: '导出成功', description: `已导出 ${fileName}` })
+    },
+    [content, metadata.title, toast]
+  )
+
   const handlePublishConfirm = () => {
     setMetadata((prev) => ({ ...prev, status: 'PUBLISHED' }))
     setPublishModalOpen(false)
@@ -168,8 +219,10 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
     })
   }
 
+  const isPublished = metadata.status === 'PUBLISHED'
+
   return (
-    <form ref={formRef} id={formId} action={formAction} className="relative space-y-8">
+    <form ref={formRef} id={formId} action={formAction} className="relative pb-16">
       <input type="hidden" name="postId" value={post?.id ?? ''} />
       <input type="hidden" name="content" value={content} />
       <input type="hidden" name="title" value={metadata.title} />
@@ -183,53 +236,110 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
       <input type="hidden" name="sortOrder" value={metadata.sortOrder} />
       <input type="hidden" name="status" value={metadata.status} />
       <input type="hidden" name="isSubscriptionOnly" value={metadata.isSubscriptionOnly ? 'true' : 'false'} />
-      <div className="pointer-events-none fixed top-24 right-4 z-40 hidden max-w-xs flex-col gap-3 md:flex lg:right-10">
-        <div className="bg-background/90 pointer-events-auto rounded-2xl border border-slate-200 px-4 py-3 shadow-xl shadow-slate-900/10 backdrop-blur">
-          <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.22em] uppercase">
-            {t('form.sticky.title')}
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button type="submit" form={formId} disabled={state.status === 'success'} onClick={handleSaveDraft}>
-              {t('form.actions.saveDraft')}
+
+      {/* Sticky action bar */}
+      <div className="bg-background/80 supports-backdrop-filter:bg-background/60 sticky top-0 z-30 -mx-6 -mt-8 mb-6 border-b px-6 py-3 backdrop-blur lg:-mx-10 lg:px-10">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => router.back()}
+              aria-label={t('form.actions.cancel')}
+            >
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-            <Button type="button" onClick={() => setPublishModalOpen(true)}>
-              {t('form.actions.publish')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant={isPublished ? 'default' : 'secondary'}>
+                {isPublished ? t('status.published') : t('status.draft')}
+              </Badge>
+              <span className="text-muted-foreground hidden text-sm sm:inline">{t('posts.new.title')}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {post && (
-              <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-                {isDeleting ? t('form.actions.deleting') : t('form.actions.delete')}
-              </Button>
-            )}
-            {post && (
-              <Button type="button" variant="secondary" onClick={handleTranslate} disabled={isTranslating}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleTranslate}
+                disabled={isTranslating}
+              >
                 {isTranslating ? t('form.translation.translating') : t('form.translation.translate')}
               </Button>
             )}
+            {post && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {isDeleting ? t('form.actions.deleting') : t('form.actions.delete')}
+                </span>
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" size="sm" className="text-muted-foreground">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">导出</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportDocument('md')}>Markdown (.md)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportDocument('html')}>HTML (.html)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportDocument('txt')}>Plain Text (.txt)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportDocument('json')}>JSON (.json)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              type="submit"
+              form={formId}
+              variant="outline"
+              size="sm"
+              disabled={state.status === 'success'}
+              onClick={handleSaveDraft}
+            >
+              {t('form.actions.saveDraft')}
+            </Button>
+            <Button type="button" size="sm" onClick={() => setPublishModalOpen(true)}>
+              {t('form.actions.publish')}
+            </Button>
           </div>
         </div>
       </div>
-      <div className="space-y-2">
-        <MarkdownEditor value={content} onChange={setContent} placeholder={t('form.placeholders.content')} />
-        {fieldError('content') && <p className="text-destructive text-sm">{fieldError('content')}</p>}
+
+      {/* Writing surface */}
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="space-y-3">
+          <input
+            value={metadata.title}
+            onChange={(event) => updateMetadataField('title', event.target.value)}
+            placeholder={t('form.placeholders.title')}
+            className="placeholder:text-muted-foreground/50 w-full border-0 bg-transparent text-4xl font-bold tracking-tight outline-none focus:ring-0"
+            aria-label={t('form.fields.title')}
+          />
+          {fieldError('title') && <p className="text-destructive text-sm">{fieldError('title')}</p>}
+          <input
+            value={metadata.summary}
+            onChange={(event) => updateMetadataField('summary', event.target.value)}
+            placeholder={t('form.placeholders.summary')}
+            className="text-muted-foreground placeholder:text-muted-foreground/50 w-full border-0 bg-transparent text-lg outline-none focus:ring-0"
+            aria-label={t('form.fields.summary')}
+          />
+        </div>
+        <div className="space-y-2">
+          <MarkdownEditor value={content} onChange={setContent} placeholder={t('form.placeholders.content')} />
+          {fieldError('content') && <p className="text-destructive text-sm">{fieldError('content')}</p>}
+        </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4 md:hidden">
-        <Button type="submit" disabled={state.status === 'success'} onClick={handleSaveDraft}>
-          {t('form.actions.saveDraft')}
-        </Button>
-        <Button type="button" onClick={() => setPublishModalOpen(true)}>
-          {t('form.actions.publish')}
-        </Button>
-        {post && (
-          <Button type="button" variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? t('form.actions.deleting') : t('form.actions.delete')}
-          </Button>
-        )}
-        {post && (
-          <Button type="button" variant="secondary" onClick={handleTranslate} disabled={isTranslating}>
-            {isTranslating ? t('form.translation.translating') : t('form.translation.translate')}
-          </Button>
-        )}
-      </div>
+
       <Dialog open={isPublishModalOpen} onOpenChange={setPublishModalOpen}>
         <DialogContent className="max-h-[80vh] max-w-2xl overflow-hidden">
           <DialogHeader>
@@ -238,17 +348,6 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto pr-2">
             <div className="grid gap-6">
-              <div>
-                <Label htmlFor="modal-title">{t('form.fields.title')}</Label>
-                <Input
-                  id="modal-title"
-                  onChange={(event) => updateMetadataField('title', event.target.value)}
-                  value={metadata.title}
-                  placeholder={t('form.placeholders.title')}
-                  required
-                />
-                {fieldError('title') && <p className="text-destructive text-sm">{fieldError('title')}</p>}
-              </div>
               <div>
                 <Label htmlFor="modal-category">{t('form.fields.category')}</Label>
                 <select
@@ -341,19 +440,6 @@ export function PostForm({ post, categories, locale }: PostFormProps) {
                   value={metadata.publishedAt}
                   onChange={(event) => updateMetadataField('publishedAt', event.target.value)}
                 />
-              </div>
-              <div>
-                <Label htmlFor="modal-summary">{t('form.fields.summary')}</Label>
-                <Textarea
-                  id="modal-summary"
-                  value={metadata.summary}
-                  onChange={(event) => {
-                    updateMetadataField('summary', event.target.value)
-                  }}
-                  rows={4}
-                  placeholder={t('form.placeholders.summary')}
-                />
-                <p className="text-muted-foreground text-xs">{t('form.publishModal.help')}</p>
               </div>
             </div>
           </div>

@@ -16,7 +16,7 @@ export function LockedPreview({ content, label, description }: LockedPreviewProp
         </Badge>
         {description && <p className="text-muted-foreground text-sm sm:text-base">{description}</p>}
         <div
-          className="prose prose-lg dark:prose-invert max-w-none text-slate-800/90 dark:text-slate-100/85"
+          className="prose dark:prose-invert max-w-none text-slate-800/90 dark:text-slate-100/85"
           style={{
             WebkitMaskImage:
               'linear-gradient(180deg, #fff 0%, #fff 52%, rgba(255,255,255,0.85) 72%, rgba(255,255,255,0) 100%)',

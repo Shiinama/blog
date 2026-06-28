@@ -39,7 +39,8 @@ declare const messages: {
     "signout": "Sign Out",
     "toggleTheme": "Toggle theme",
     "uncategorized": "Uncategorized",
-    "adminPanel": "Admin Dashboard"
+    "adminPanel": "Admin Dashboard",
+    "tools": "Tools"
   },
   "article": {
     "life": "Life",
@@ -232,6 +233,45 @@ declare const messages: {
       },
       "sticky": {
         "title": "Quick actions"
+      }
+    },
+    "tools": {
+      "title": "Tools",
+      "description": "My personal collection of small utilities.",
+      "actions": {
+        "open": "Tools",
+        "back": "Back to tools",
+        "openTool": "Open"
+      },
+      "douyinSubtitle": {
+        "name": "Douyin Subtitle Extractor",
+        "summary": "Pull the spoken-word transcript (and .srt) out of any Douyin video by URL.",
+        "title": "Douyin Subtitle Extractor",
+        "description": "Paste a Douyin video URL or share link to get its transcript and subtitles.",
+        "urlLabel": "Video URL",
+        "urlPlaceholder": "https://www.douyin.com/video/...  or share link / video id",
+        "langLabel": "Output language",
+        "lang": {
+          "zh": "Chinese (original)",
+          "en": "English",
+          "ja": "Japanese",
+          "ko": "Korean"
+        },
+        "submit": "Extract subtitle",
+        "extracting": "Extracting...",
+        "pending": "Transcribing — long videos can take a few minutes. Keep this tab open.",
+        "resultTitle": "Transcript",
+        "metaDuration": "Duration",
+        "metaLanguage": "Language",
+        "metaSegments": "Segments",
+        "truncated": "Free-tier audio limit reached — transcript is partial.",
+        "copy": "Copy text",
+        "copied": "Copied to clipboard",
+        "copyFailed": "Copy failed, please try again.",
+        "downloadSrt": "Download .srt",
+        "downloadTxt": "Download .txt",
+        "emptyUrl": "Please enter a Douyin video URL.",
+        "errorTitle": "Extraction failed"
       }
     }
   },

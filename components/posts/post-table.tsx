@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useRef, useState, useTransition } from 'react'
 
 import {
@@ -33,11 +33,11 @@ function formatDateTimeForInput(value?: string | Date | null) {
   return date.toISOString().slice(0, 16)
 }
 
-function formatLocaleDate(value?: string | Date | null) {
+function formatLocaleDate(value?: string | Date | null, locale?: string) {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString()
+  return date.toLocaleString(locale, { timeZone: 'UTC' })
 }
 
 interface PostTableProps {
@@ -50,6 +50,7 @@ export function PostTable({ posts }: PostTableProps) {
   const [actionTarget, setActionTarget] = useState<PostActionTarget | null>(null)
   const [isPending, startTransition] = useTransition()
   const t = useTranslations('admin')
+  const locale = useLocale()
   const statusLabel: Record<PostStatus, string> = {
     DRAFT: t('status.draft'),
     PUBLISHED: t('status.published')
@@ -244,7 +245,7 @@ export function PostTable({ posts }: PostTableProps) {
                     </Link>
                     <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                       <span className="text-slate-500">
-                        {t('posts.table.headers.updated')}: {formatLocaleDate(post.updatedAt ?? post.createdAt)}
+                        {t('posts.table.headers.updated')}: {formatLocaleDate(post.updatedAt ?? post.createdAt, locale)}
                       </span>
                     </div>
                   </div>
@@ -275,7 +276,7 @@ export function PostTable({ posts }: PostTableProps) {
                   <div className="flex flex-col gap-2">
                     <span className="text-muted-foreground text-xs">
                       {post.contentSignalReferencedAt
-                        ? formatLocaleDate(post.contentSignalReferencedAt)
+                        ? formatLocaleDate(post.contentSignalReferencedAt, locale)
                         : t('posts.contentSignal.empty')}
                     </span>
                     <div className="text-muted-foreground flex items-center gap-2 text-xs">

@@ -18,5 +18,5 @@ export default async function AdminLayout({
       locale
     })
   }
-  return <div className="px-20 py-8">{children}</div>
+  return <div className="px-6 py-8 lg:px-10">{children}</div>
 }
