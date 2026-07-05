@@ -212,6 +212,22 @@ Certainly! I'll update the Project Structure section of the README based on the 
 - `scripts/import-content.ts` normalizes the legacy MDX tree, keeps existing slugs, and hydrates the new Drizzle tables.
 - `constant/category-presets.ts` is the single source of truth for category metadata (slug, translation key, visibility, order).
 
+## Blog CLI
+
+`pnpm blog <command>` manages posts from the terminal — useful for scripted publishing and for agents that use this blog as a content data source. It talks to the local miniflare D1 database by default (run `pnpm dev` or `pnpm db:migrate-local` once to create it); add `--remote` to target the production D1 via the Cloudflare HTTP API (requires `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `DATABASE_ID` in `.env`).
+
+```bash
+pnpm blog list [--status DRAFT|PUBLISHED] [--category <key>] [--search <q>] [--json]
+pnpm blog get <id>              # id prefix is enough
+pnpm blog export <id> [-o file] # markdown with frontmatter
+pnpm blog create --file post.md # frontmatter: title/summary/category/tags/status/language/coverImageUrl
+pnpm blog update <id> --file post.md   # or field flags: --title/--tags/--category/...
+pnpm blog publish <id>          # prints the live URL
+pnpm blog unpublish <id>
+pnpm blog delete <id> --yes
+pnpm blog categories [--add <key>]
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

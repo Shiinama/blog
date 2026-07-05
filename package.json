@@ -49,6 +49,7 @@
     "db:studio:local": "tsx scripts/db-studio-local.ts",
     "db:studio:remote": "drizzle-kit studio",
     "category:add": "tsx scripts/add-category.ts",
+    "blog": "tsx scripts/blog/cli.ts",
     "i18n:translate": "tsx scripts/18n/cli.ts --mode=missing",
     "i18n:delete": "tsx scripts/18n/cli.ts --d",
     "i18n:keys": "tsx scripts/18n/cli.ts --mode=keys --keys",
