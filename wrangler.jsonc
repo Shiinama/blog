@@ -12,11 +12,6 @@
 			"enabled": true
 		}
 	},
-	"triggers": {
-		"crons": [
-			"0 * * * *"
-		]
-	},
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
