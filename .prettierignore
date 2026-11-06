@@ -1,3 +1,8 @@
-.next/*
-wrangler.jsonc
+.next
+.open-next
+.wrangler
+.backups
 pnpm-lock.yaml
+cloudflare-env.d.ts
+drizzle/migrations/meta
+wrangler.jsonc

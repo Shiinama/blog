@@ -2,51 +2,36 @@
 
 import { Download, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
 const DISMISS_KEY = 'fish_blog_pwa_dismissed_until'
 const DISMISS_MS = 1000 * 60 * 60 * 24 * 3 // 3 days
+
+const standaloneQuery = '(display-mode: standalone)'
+const isStandaloneDisplay = () => window.matchMedia(standaloneQuery).matches || navigator.standalone === true
+function subscribeDisplayMode(onChange: () => void) {
+  const media = window.matchMedia(standaloneQuery)
+  media.addEventListener('change', onChange)
+  return () => media.removeEventListener('change', onChange)
+}
 
 export function PwaPrompt({ className }: { className?: string }) {
   const t = useTranslations('pwa')
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
-  const [isStandalone, setIsStandalone] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const media = window.matchMedia('(display-mode: standalone)')
-    const handleDisplayModeChange = () => {
-      const isIosStandalone = typeof window !== 'undefined' && (window.navigator as any).standalone === true
-      setIsStandalone(media.matches || isIosStandalone)
-    }
-    handleDisplayModeChange()
-    media.addEventListener('change', handleDisplayModeChange)
-    return () => media.removeEventListener('change', handleDisplayModeChange)
-  }, [])
+  const isStandalone = useSyncExternalStore(subscribeDisplayMode, isStandaloneDisplay, () => false)
 
   useEffect(() => {
     if (isStandalone) return
+    if (Date.now() < Number(localStorage.getItem(DISMISS_KEY) ?? 0)) return
 
-    const dismissedUntil = Number(localStorage.getItem(DISMISS_KEY) ?? 0)
-    if (dismissedUntil && Date.now() < dismissedUntil) {
-      return
-    }
-
-    const handleBeforeInstall = (event: Event) => {
-      const isSmallScreen = window.matchMedia('(max-width: 960px)').matches
-      if (!isSmallScreen) return
+    const handleBeforeInstall = (event: BeforeInstallPromptEvent) => {
+      if (!window.matchMedia('(max-width: 960px)').matches) return
       event.preventDefault()
-      setDeferredPrompt(event as BeforeInstallPromptEvent)
+      setDeferredPrompt(event)
       setVisible(true)
     }
 

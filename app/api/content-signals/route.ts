@@ -1,81 +1,47 @@
-import { NextResponse } from 'next/server'
+import { z } from 'zod'
 
-import { claimNextContentSignal } from '@/lib/content-signals'
+import { routing } from '@/i18n/routing'
+import { hasValidApiKey } from '@/lib/api-key'
+import { claimContentSignal } from '@/lib/data/content-signals'
 
-function parsePositiveInt(value: string | null) {
-  if (!value) return undefined
-  const parsed = Number.parseInt(value, 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
-}
-
-function parseBoolean(value: string | null) {
-  if (!value) return undefined
-  return ['1', 'true', 'yes'].includes(value.trim().toLowerCase())
-}
-
-function parseCategoryList(searchParams: URLSearchParams, key: string) {
-  return searchParams
-    .getAll(key)
+const list = z.array(z.string()).transform((values) =>
+  values
     .flatMap((value) => value.split(','))
     .map((value) => value.trim())
     .filter(Boolean)
-}
+)
 
-function parseContentSignalReferencedAt(value: string | null) {
-  if (!value) return false
+const querySchema = z.object({
+  locale: z.enum(routing.locales).default(routing.defaultLocale),
+  days: z.coerce.number().int().positive().max(3650).optional(),
+  category: z.string().trim().min(1).optional(),
+  excludeCategory: list.default([]),
+  claimed: z.stringbool().default(false),
+  includeContent: z.stringbool().default(true)
+})
 
-  const normalized = value.trim().toLowerCase()
-  if (['1', 'true', 'yes'].includes(normalized)) return true
-  if (['0', 'false', 'no'].includes(normalized)) return false
-
-  return undefined
-}
-
-function isAuthorized(request: Request) {
-  const expectedKey = process.env.CONTENT_SIGNALS_API_KEY?.trim()
-  if (!expectedKey) return true
-
-  const authorization = request.headers.get('authorization') ?? ''
-  const bearerToken = authorization.toLowerCase().startsWith('bearer ') ? authorization.slice(7).trim() : null
-  const headerToken = request.headers.get('x-api-key')?.trim()
-
-  return bearerToken === expectedKey || headerToken === expectedKey
-}
-
+/**
+ * GET /api/content-signals?locale=en&days=30&category=ai&excludeCategory=ai-daily&claimed=false
+ * Auth: `Authorization: Bearer <CONTENT_SIGNALS_API_KEY>` or `x-api-key`.
+ */
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasValidApiKey(request, process.env.CONTENT_SIGNALS_API_KEY)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const { searchParams } = new URL(request.url)
-
-  try {
-    const contentSignalReferencedAt = parseContentSignalReferencedAt(searchParams.get('contentSignalReferencedAt'))
-
-    if (contentSignalReferencedAt === undefined) {
-      return NextResponse.json({ error: 'contentSignalReferencedAt must be true or false' }, { status: 400 })
-    }
-
-    const result = await claimNextContentSignal({
-      days: parsePositiveInt(searchParams.get('days')),
-      locale: searchParams.get('locale') ?? undefined,
-      category: searchParams.get('category') ?? undefined,
-      excludeCategories: parseCategoryList(searchParams, 'excludeCategory'),
-      contentSignalReferencedAt,
-      includeContent: parseBoolean(searchParams.get('includeContent'))
-    })
-
-    if (!result) {
-      return NextResponse.json({ error: 'No available content signal' }, { status: 404 })
-    }
-
-    return NextResponse.json(result, {
-      headers: {
-        'Cache-Control': 'no-store'
-      }
-    })
-  } catch (error) {
-    console.error('Failed to load content posts', error)
-    return NextResponse.json({ error: 'Failed to load content posts' }, { status: 500 })
+  const query = querySchema.safeParse({
+    ...Object.fromEntries(searchParams),
+    excludeCategory: searchParams.getAll('excludeCategory')
+  })
+  if (!query.success) {
+    return Response.json({ error: 'Invalid query', issues: z.flattenError(query.error).fieldErrors }, { status: 400 })
   }
+
+  const { excludeCategory, ...options } = query.data
+  const result = await claimContentSignal({ ...options, excludeCategories: excludeCategory })
+  if (!result) {
+    return Response.json({ error: 'No available content signal' }, { status: 404 })
+  }
+  return Response.json(result, { headers: { 'Cache-Control': 'no-store' } })
 }

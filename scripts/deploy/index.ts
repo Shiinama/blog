@@ -1,111 +1,71 @@
-import 'dotenv/config'
-import { execSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-const PROJECT_NAME = process.env.PROJECT_NAME || 'next-template'
-
 /**
- * Run database migrations
+ * Production deploy: sync runtime secrets, apply pending D1 migrations, build & deploy the Worker.
+ *   pnpm deploy:prod
+ *
+ * `.env` also holds build/tooling credentials (CLOUDFLARE_API_TOKEN, …). Only the runtime secrets
+ * below are uploaded to the Worker; any other secret found on the Worker is removed.
  */
-const migrateDatabase = () => {
-  console.log('📝 Migrating remote database...')
-  try {
-    execSync('pnpm run db:migrate-remote', { stdio: 'inherit' })
-    console.log('✅ Database migration completed successfully')
-  } catch (error) {
-    console.error('❌ Database migration failed:', error)
-    throw error
-  }
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+const RUNTIME_SECRETS = [
+  'AUTH_SECRET',
+  'AUTH_TRUST_HOST',
+  'AUTH_GOOGLE_ID',
+  'AUTH_GOOGLE_SECRET',
+  'AUTH_GITHUB_ID',
+  'AUTH_GITHUB_SECRET',
+  'AUTH_RESEND_KEY',
+  'ADMIN_USER_IDS',
+  'CONTENT_SIGNALS_API_KEY',
+  'DOUYIN_SUBTITLE_API_KEY',
+  'APIFY_TOKEN',
+  'OPENAI_API_KEY',
+  'OPENAI_BASE_URL',
+  'AI_DAILY_MODEL'
+] as const
+const REQUIRED: (typeof RUNTIME_SECRETS)[number][] = ['AUTH_SECRET', 'ADMIN_USER_IDS', 'CONTENT_SIGNALS_API_KEY']
+
+const run = (args: string[]) => execFileSync('pnpm', ['exec', 'wrangler', ...args], { stdio: 'inherit' })
+/** Non-interactive (no TTY on stdin): wrangler takes the default answer for its confirmation prompts. */
+const runUnattended = (args: string[]) =>
+  execFileSync('pnpm', ['exec', 'wrangler', ...args], {
+    stdio: ['ignore', 'inherit', 'inherit'],
+    env: { ...process.env, CI: 'true' }
+  })
+const read = (args: string[]) => execFileSync('pnpm', ['exec', 'wrangler', ...args], { encoding: 'utf8' })
+
+process.loadEnvFile('.env')
+
+const missing = REQUIRED.filter((name) => !process.env[name])
+if (missing.length) {
+  console.error(`Missing required secrets in .env: ${missing.join(', ')}`)
+  process.exit(1)
 }
 
-const pushWorkerSecret = () => {
-  console.log('🔐 Pushing environment secrets to Pages...')
-
-  try {
-    // Ensure .env file exists
-    if (!existsSync(resolve('.env'))) {
-      setupEnvFile()
-    }
-
-    // Push all variables from the local .env file.
-    execSync(`pnpm dlx wrangler secret bulk ${resolve('.env')} --name ${PROJECT_NAME}`, { stdio: 'inherit' })
-
-    console.log('✅ Secrets pushed successfully')
-  } catch (error) {
-    console.error('❌ Failed to push secrets:', error)
-    throw error
-  }
+console.log('🔐 Syncing runtime secrets')
+const secrets = Object.fromEntries(
+  RUNTIME_SECRETS.flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : []))
+)
+const file = join(mkdtempSync(join(tmpdir(), 'blog-secrets-')), 'secrets.json')
+writeFileSync(file, JSON.stringify(secrets), { mode: 0o600 })
+try {
+  run(['secret', 'bulk', file])
+} finally {
+  rmSync(file)
 }
 
-/**
- * Deploy the Pages app
- */
-const deployWorkers = () => {
-  console.log('🚧 Deploying to Cloudflare Pages...')
-  try {
-    execSync('pnpm run deploy', { stdio: 'inherit' })
-    console.log('✅ Pages deployment completed successfully')
-  } catch (error) {
-    console.error('❌ Pages deployment failed:', error)
-    throw error
-  }
+console.log('🗄️  Applying D1 migrations')
+run(['d1', 'migrations', 'apply', 'BLOG_DATABASE', '--remote'])
+
+console.log('🚀 Building and deploying')
+execFileSync('pnpm', ['run', 'deploy'], { stdio: 'inherit' })
+
+// Only once the new version is live: the previous one may still read these.
+const existing = (JSON.parse(read(['secret', 'list', '--format', 'json'])) as { name: string }[]).map((s) => s.name)
+for (const name of existing.filter((name) => !(name in secrets))) {
+  console.log(`🧹 Removing stale secret ${name}`)
+  runUnattended(['secret', 'delete', name])
 }
-
-/**
- * Create or update the environment file
- */
-const setupEnvFile = () => {
-  console.log('📄 Setting up environment file...')
-  const envFilePath = resolve('.env')
-  const envExamplePath = resolve('.env.example')
-
-  // If .env is missing, create it from .env.example
-  if (!existsSync(envFilePath) && existsSync(envExamplePath)) {
-    console.log('⚠️ .env file does not exist, creating from example...')
-
-    // Copy the example file
-    let envContent = readFileSync(envExamplePath, 'utf-8')
-
-    // Fill in currently set environment variables
-    const envVarMatches = envContent.match(/^([A-Z_]+)\s*=\s*".*?"/gm)
-    if (envVarMatches) {
-      for (const match of envVarMatches) {
-        const varName = match.split('=')[0].trim()
-        if (process.env[varName]) {
-          const regex = new RegExp(`${varName}\\s*=\\s*".*?"`, 'g')
-          envContent = envContent.replace(regex, `${varName} = "${process.env[varName]}"`)
-        }
-      }
-    }
-
-    writeFileSync(envFilePath, envContent)
-    console.log('✅ .env file created from example')
-  } else if (existsSync(envFilePath)) {
-    console.log('✨ .env file already exists')
-  } else {
-    console.error('❌ .env.example file not found!')
-    throw new Error('.env.example file not found')
-  }
-}
-
-/**
- * Entrypoint
- */
-const main = async () => {
-  try {
-    console.log('🚀 Starting deployment process...')
-
-    setupEnvFile()
-    migrateDatabase()
-    await pushWorkerSecret()
-    deployWorkers()
-
-    console.log('🎉 Deployment completed successfully')
-  } catch (error) {
-    console.error('❌ Deployment failed:', error)
-    process.exit(1)
-  }
-}
-
-main()

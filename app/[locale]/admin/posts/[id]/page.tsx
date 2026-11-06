@@ -1,25 +1,30 @@
 import { notFound } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 
 import { PostForm } from '@/components/posts/post-form'
-import { getAllCategories, getPostById } from '@/lib/posts'
+import { categoryLabel } from '@/i18n/categories'
+import { getPostForEditing, listAllCategories } from '@/lib/data/posts'
+import { isLocale } from '@/lib/metadata'
+import { requireAdminPage } from '@/lib/session'
 
-interface EditPostPageProps {
-  params: Promise<{ id: string; locale: string }>
-}
-
-export default async function EditPostPage({ params }: EditPostPageProps) {
-  const { id, locale } = await params
-  if (!id) {
-    notFound()
-  }
-  const [post, categories] = await Promise.all([
-    getPostById(id, { includeDrafts: true, locale }),
-    getAllCategories()
+export default async function EditPostPage({ params, searchParams }: PageProps<'/[locale]/admin/posts/[id]'>) {
+  await requireAdminPage()
+  const [{ id }, { locale: requested }] = await Promise.all([params, searchParams])
+  const [post, categories, t] = await Promise.all([
+    getPostForEditing(id),
+    listAllCategories(),
+    getTranslations('categories')
   ])
+  if (!post) notFound()
 
-  if (!post) {
-    notFound()
-  }
+  const locale = typeof requested === 'string' && isLocale(requested) ? requested : post.locale
+  if (!isLocale(locale)) notFound()
 
-  return <PostForm post={post} categories={categories} locale={locale} />
+  return (
+    <PostForm
+      post={post}
+      locale={locale}
+      categories={categories.map((c) => ({ id: c.id, key: c.key, label: categoryLabel(t, c.key) }))}
+    />
+  )
 }

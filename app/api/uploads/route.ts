@@ -1,79 +1,43 @@
-import { NextResponse } from 'next/server'
+import { getBucket } from '@/lib/db'
+import { isAdminRequest } from '@/lib/session'
 
-import { auth } from '@/lib/auth'
-import { getR2Bucket } from '@/lib/r2'
-
-const MAX_UPLOAD_SIZE = 10 * 1024 * 1024 // 10MB
-
-function isAdmin(userId?: string | null) {
-  if (!userId) return false
-  const ids = process.env.NEXT_PUBLIC_ADMIN_ID?.split(',').map((id) => id.trim())
-  return ids?.includes(userId) ?? false
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+const EXTENSIONS: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+  'image/svg+xml': 'svg'
 }
 
-function toHex(buffer: ArrayBuffer) {
-  return Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-}
-
-function getExtension(file: File) {
-  const byName = file.name.split('.').pop()
-  if (byName && byName.length <= 5) {
-    return byName.toLowerCase()
-  }
-  const mimeExt = file.type.split('/').pop()
-  return mimeExt || 'bin'
-}
-
-function buildObjectKey(file: File, hashHex: string) {
-  const ext = getExtension(file)
-  return `uploads/${hashHex}.${ext}`
-}
-
-function buildPublicUrl(key: string) {
-  const base = (process.env.NEXT_PUBLIC_R2_DOMAIN || '').replace(/\/+$/, '')
-  if (!base) return key
-  return `${base}/${key}`
-}
-
+/** Admin image upload → R2, content-addressed so re-uploads are free. */
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!isAdmin(session?.user?.id)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!(await isAdminRequest())) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const formData = await request.formData()
-  const file = formData.get('file')
-
+  const file = (await request.formData()).get('file')
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    return Response.json({ error: 'No file provided' }, { status: 400 })
+  }
+  const extension = EXTENSIONS[file.type]
+  if (!extension) {
+    return Response.json({ error: 'Unsupported image type' }, { status: 415 })
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return Response.json({ error: 'File is too large' }, { status: 413 })
   }
 
-  if (!file.type.startsWith('image/')) {
-    return NextResponse.json({ error: 'Only image uploads are allowed' }, { status: 400 })
+  const bytes = await file.arrayBuffer()
+  const hash = Buffer.from(await crypto.subtle.digest('SHA-256', bytes)).toString('hex')
+  const key = `uploads/${hash}.${extension}`
+
+  const bucket = await getBucket()
+  if (!(await bucket.head(key))) {
+    await bucket.put(key, bytes, { httpMetadata: { contentType: file.type } })
   }
 
-  const fileBuffer = await file.arrayBuffer()
-  if (fileBuffer.byteLength > MAX_UPLOAD_SIZE) {
-    return NextResponse.json({ error: 'File is too large' }, { status: 413 })
-  }
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer)
-  const hashHex = toHex(hashBuffer)
-
-  const objectKey = buildObjectKey(file, hashHex)
-  const bucket = getR2Bucket()
-
-  const existing = await bucket.head(objectKey)
-
-  if (!existing) {
-    await bucket.put(objectKey, fileBuffer, {
-      httpMetadata: { contentType: file.type }
-    })
-  }
-
-  const url = buildPublicUrl(objectKey)
-
-  return NextResponse.json({ key: objectKey, url })
+  const base = process.env.NEXT_PUBLIC_R2_DOMAIN?.replace(/\/+$/, '')
+  return Response.json({ key, url: base ? `${base}/${key}` : key })
 }

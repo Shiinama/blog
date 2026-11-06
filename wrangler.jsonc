@@ -2,40 +2,35 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "blog",
 	"main": "worker.ts",
-	"compatibility_date": "2026-06-25",
-	"compatibility_flags": [
-		"nodejs_compat",
-		"global_fetch_strictly_public"
-	],
+	"compatibility_date": "2026-11-01",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	// esbuild's keepNames injects `__name` into functions that next-themes serialises
+	// into an inline <script>, which then throws in the browser.
+	"keep_names": false,
 	"observability": {
-		"logs": {
-			"enabled": true
-		}
+		"logs": { "enabled": true }
 	},
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
 	},
+	// Remote, so `next dev` works against real data. Builds never query it (see lib/db.ts).
 	"d1_databases": [
 		{
 			"binding": "BLOG_DATABASE",
 			"database_name": "blog",
-			"remote": true,
 			"database_id": "ce73ae09-d75b-4701-99bd-8dda6de6816e",
-			"migrations_dir": "./drizzle/migrations"
+			"migrations_dir": "./drizzle/migrations",
+			"remote": true
 		}
 	],
-	"ai": {
-		"remote": true,
-		"binding": "AI"
-	},
+	"r2_buckets": [
+		{ "binding": "BLOG_BUCKET", "bucket_name": "blog-bucket", "remote": true },
+		{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "open-next-cache-blog", "remote": true }
+	],
+	"images": { "binding": "IMAGES" },
 	"queues": {
-		"producers": [
-			{
-				"binding": "AI_DAILY_QUEUE",
-				"queue": "blog-ai-daily"
-			}
-		],
+		"producers": [{ "binding": "AI_DAILY_QUEUE", "queue": "blog-ai-daily" }],
 		"consumers": [
 			{
 				"queue": "blog-ai-daily",
@@ -48,22 +43,5 @@
 			}
 		]
 	},
-	"services": [
-		{
-			"binding": "WORKER_SELF_REFERENCE",
-			"service": "blog"
-		}
-	],
-	"r2_buckets": [
-		{
-			"bucket_name": "blog-bucket",
-			"binding": "BLOG_BUCKET",
-			"remote": true
-		},
-		{
-			"bucket_name": "open-next-cache-blog",
-			"binding": "NEXT_INC_CACHE_R2_BUCKET",
-			"remote": true
-		}
-	]
+	"services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "blog" }]
 }

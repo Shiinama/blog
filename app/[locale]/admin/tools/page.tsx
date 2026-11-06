@@ -3,12 +3,14 @@ import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
+import { requireAdminPage } from '@/lib/session'
 
 // Registry of admin tools. Add an entry here (plus its `admin.tools.<key>`
 // messages and a page under `tools/<slug>`) to surface a new tool.
 const TOOLS = [{ key: 'douyinSubtitle', href: '/admin/tools/douyin-subtitle' }] as const
 
 export default async function AdminToolsPage() {
+  await requireAdminPage()
   const t = await getTranslations('admin.tools')
 
   return (

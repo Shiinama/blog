@@ -1,211 +1,102 @@
 'use client'
 
-import Code from '@tiptap/extension-code'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Highlight from '@tiptap/extension-highlight'
 import Image from '@tiptap/extension-image'
-import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import { TableKit } from '@tiptap/extension-table'
-import { EditorContent, type Editor, useEditor } from '@tiptap/react'
+import { Markdown } from '@tiptap/markdown'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import bash from 'highlight.js/lib/languages/bash'
-import css from 'highlight.js/lib/languages/css'
-import javascript from 'highlight.js/lib/languages/javascript'
-import json from 'highlight.js/lib/languages/json'
-import markdown from 'highlight.js/lib/languages/markdown'
-import shell from 'highlight.js/lib/languages/shell'
-import typescript from 'highlight.js/lib/languages/typescript'
-import html from 'highlight.js/lib/languages/xml'
-import yaml from 'highlight.js/lib/languages/yaml'
-import { createLowlight } from 'lowlight'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { common, createLowlight } from 'lowlight'
+import { useTranslations } from 'next-intl'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 import { Spinner } from '@/components/ui/spinner'
-import { useToast } from '@/components/ui/use-toast'
-import { createEditorMarkdownSerializer } from '@/lib/markdown/editor-serialization'
-import { renderMarkdownToHtml } from '@/lib/markdown/pipeline'
 
-const lowlightInstance = createLowlight()
-lowlightInstance.register({ javascript, typescript, css, bash, shell, json, markdown, html, yaml, xml: html })
+const lowlight = createLowlight(common)
 
-interface MarkdownEditorProps {
-  value: string
-  onChange: (value: string) => void
+type Props = {
+  /** Initial Markdown. The editor is uncontrolled; remount it (via `key`) to load other content. */
+  defaultValue: string
+  onChange: (markdown: string) => void
   placeholder?: string
 }
 
-export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorProps) {
-  const turndownService = useMemo(() => createEditorMarkdownSerializer(), [])
+async function uploadImage(file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  const response = await fetch('/api/uploads', { method: 'POST', body })
+  const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string }
+  if (!response.ok || !data.url) throw new Error(data.error ?? response.statusText)
+  return data.url
+}
 
-  const htmlValue = useMemo(() => renderMarkdownToHtml(value), [value])
-  const lastSyncRef = useRef(value)
-  const editorRef = useRef<Editor | null>(null)
-  const { toast } = useToast()
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
+export function MarkdownEditor({ defaultValue, onChange, placeholder }: Props) {
+  const t = useTranslations('admin.editor')
+  const [uploading, setUploading] = useState(false)
 
-  const uploadImage = useCallback(async (file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const response = await fetch('/api/uploads', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include'
-    })
-
-    if (!response.ok) {
-      let message = '上传图片失败'
-      try {
-        const data = await response.text()
-        message = data
-      } catch (error) {
-        console.error('Failed to parse upload error', error)
+  const insertImages = async (editor: Editor, files: File[]) => {
+    setUploading(true)
+    try {
+      for (const file of files) {
+        editor
+          .chain()
+          .focus()
+          .setImage({ src: await uploadImage(file), alt: file.name })
+          .run()
       }
-      throw new Error(message)
+    } catch (error) {
+      toast.error(t('uploadFailed'), { description: error instanceof Error ? error.message : undefined })
+    } finally {
+      setUploading(false)
     }
-
-    const data = (await response.json()) as { url?: string }
-    if (!data.url) {
-      throw new Error('未获取到上传后的图片地址')
-    }
-
-    return data.url
-  }, [])
-
-  const handleImagePaste = useCallback(
-    async (files: File[]) => {
-      if (!files.length || !editorRef.current) {
-        return
-      }
-      try {
-        setIsUploadingImage(true)
-        for (const file of files) {
-          const url = await uploadImage(file)
-          editorRef.current.chain().focus().setImage({ src: url, alt: file.name }).run()
-        }
-      } catch (error) {
-        console.error('Image upload failed', error)
-        toast({
-          title: '上传图片失败',
-          description: error instanceof Error ? error.message : '请稍后再试',
-          variant: 'destructive'
-        })
-      } finally {
-        setIsUploadingImage(false)
-      }
-    },
-    [toast, uploadImage]
-  )
+  }
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
-      StarterKit.configure({
-        link: false,
-        code: false,
-        codeBlock: false
-      }),
+      StarterKit.configure({ codeBlock: false, link: { openOnClick: false } }),
+      CodeBlockLowlight.configure({ lowlight }),
       Image,
-      Placeholder.configure({
-        placeholder: placeholder ?? 'Write some Markdown...'
-      }),
-      Link.configure({
-        openOnClick: false
-      }),
-      TableKit.configure({
-        table: { resizable: true }
-      }),
-      Highlight.configure({ multicolor: true }),
-      CodeBlockLowlight.configure({
-        lowlight: lowlightInstance
-      }),
-      Code
+      TableKit,
+      Highlight,
+      Placeholder.configure({ placeholder }),
+      Markdown
     ],
+    content: defaultValue,
+    contentType: 'markdown',
     editorProps: {
-      attributes: {
-        class: 'min-h-[420px] focus:outline-none'
-      },
+      attributes: { class: 'min-h-[420px] focus:outline-none' },
       handlePaste: (_view, event) => {
-        const items = Array.from(event.clipboardData?.items || []).filter((item) => item.type.startsWith('image/'))
-        if (!items.length) {
-          const markdown = event.clipboardData?.getData('text/markdown')
-          const html = event.clipboardData?.getData('text/html')
-          const plainText = event.clipboardData?.getData('text/plain')
-
-          if (markdown?.trim()) {
-            event.preventDefault()
-            editorRef.current?.chain().focus().insertContent(renderMarkdownToHtml(markdown)).run()
-            return true
-          }
-
-          if (html?.trim()) {
-            event.preventDefault()
-            editorRef.current?.chain().focus().insertContent(html).run()
-            return true
-          }
-
-          if (!plainText?.trim()) {
-            return false
-          }
-
+        const files = [...(event.clipboardData?.files ?? [])].filter((file) => file.type.startsWith('image/'))
+        if (files.length && editor) {
           event.preventDefault()
-          editorRef.current?.chain().focus().insertContent(renderMarkdownToHtml(plainText)).run()
+          void insertImages(editor, files)
           return true
         }
-
-        const files = items
-          .map((item) => item.getAsFile())
-          .filter(Boolean)
-          .map((file) => file as File)
-
-        if (!files.length) {
-          return false
+        // Plain text is usually Markdown when writing a post.
+        const text = event.clipboardData?.getData('text/plain')
+        if (text && !event.clipboardData?.types.includes('text/html') && editor) {
+          event.preventDefault()
+          editor.commands.insertContent(text, { contentType: 'markdown' })
+          return true
         }
-
-        event.preventDefault()
-        handleImagePaste(files)
-        return true
+        return false
       }
     },
-    content: htmlValue,
-    immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML()
-      const nextMarkdown = turndownService.turndown(html)
-      if (nextMarkdown !== lastSyncRef.current) {
-        lastSyncRef.current = nextMarkdown
-        onChange(nextMarkdown)
-      }
-    }
+    onUpdate: ({ editor }) => onChange(editor.getMarkdown())
   })
-
-  useEffect(() => {
-    editorRef.current = editor
-    return () => {
-      editorRef.current = null
-    }
-  }, [editor])
-
-  useEffect(() => {
-    if (!editor) {
-      return
-    }
-    if (value === lastSyncRef.current) {
-      return
-    }
-
-    editor.commands.setContent(htmlValue)
-    lastSyncRef.current = value
-  }, [editor, htmlValue, value])
 
   return (
     <div className="relative">
-      {isUploadingImage ? (
-        <div className="bg-background/95 text-muted-foreground absolute top-0 right-0 z-10 flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium shadow-sm ring-1 ring-slate-200/70">
-          <Spinner className="h-3.5 w-3.5" />
-          <span>图片上传中...</span>
+      {uploading && (
+        <div className="bg-background/95 text-muted-foreground absolute top-0 right-0 z-10 flex items-center gap-2 rounded-full px-3 py-1 text-xs shadow-sm ring-1">
+          <Spinner className="size-3.5" />
+          {t('uploading')}
         </div>
-      ) : null}
+      )}
       <div className="prose dark:prose-invert min-h-[55vh] max-w-none border-t pt-6">
         <EditorContent editor={editor} />
       </div>

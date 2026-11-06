@@ -1,32 +1,23 @@
-import 'dotenv/config'
+import { defineConfig } from 'drizzle-kit'
 
-import type { Config } from 'drizzle-kit'
+if (process.env.CLOUDFLARE_API_TOKEN === undefined) {
+  try {
+    process.loadEnvFile()
+  } catch {
+    // No .env: `generate` works without credentials.
+  }
+}
 
-const { LOCAL_DB_PATH, DATABASE_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID } = process.env
-
-const baseConfig = {
+// `generate` only needs the schema; `studio` talks to production D1 over the HTTP API.
+export default defineConfig({
   schema: './drizzle/schema.ts',
   out: './drizzle/migrations',
-  verbose: true,
+  dialect: 'sqlite',
+  driver: 'd1-http',
   strict: true,
-  dialect: 'sqlite'
-} satisfies Partial<Config>
-
-const config: Config = LOCAL_DB_PATH
-  ? {
-      ...baseConfig,
-      dbCredentials: {
-        url: LOCAL_DB_PATH
-      }
-    }
-  : {
-      ...baseConfig,
-      driver: 'd1-http',
-      dbCredentials: {
-        databaseId: DATABASE_ID!,
-        token: CLOUDFLARE_API_TOKEN!,
-        accountId: CLOUDFLARE_ACCOUNT_ID!
-      }
-    }
-
-export default config
+  dbCredentials: {
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
+    databaseId: process.env.DATABASE_ID!,
+    token: process.env.CLOUDFLARE_API_TOKEN!
+  }
+})

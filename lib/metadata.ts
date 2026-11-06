@@ -1,52 +1,33 @@
-import { DEFAULT_LOCALE, routing } from '@/i18n/routing'
+import { routing, type Locale } from '@/i18n/routing'
 
-export const DEFAULT_SITE_NAME = 'Fish Blog'
+export const SITE_NAME = 'Fish Blog'
+export const SITE_AUTHOR = 'Felix'
 
-function normalizePathname(pathname: string) {
-  if (!pathname) return '/'
-  const prefixed = pathname.startsWith('/') ? pathname : `/${pathname}`
-  if (prefixed === '/') return prefixed
-  return prefixed.endsWith('/') ? prefixed.slice(0, -1) : prefixed
+export const siteOrigin = (process.env.NEXT_PUBLIC_BASE_URL || 'https://xibaoyu.xyz').replace(/\/+$/, '')
+
+/** Path for `pathname` in `locale`, following the `as-needed` prefix strategy. */
+export function localePath(pathname: string, locale: string) {
+  const path = pathname === '/' ? '' : pathname
+  return locale === routing.defaultLocale ? path || '/' : `/${locale}${path}`
 }
 
-export function buildLanguageAlternates(pathname: string, availableLocales?: string[]) {
-  const normalized = normalizePathname(pathname)
-  const localeList = (availableLocales?.length ? availableLocales : routing.locales).filter(
-    (locale, index, arr) => routing.locales.includes(locale) && arr.indexOf(locale) === index
-  )
+export function absoluteUrl(pathname: string, locale: string = routing.defaultLocale) {
+  return new URL(localePath(pathname, locale), siteOrigin).toString()
+}
 
-  return localeList.reduce<Record<string, string>>(
-    (acc, locale) => {
-      const href = locale === DEFAULT_LOCALE ? normalized : `/${locale}${normalized}`
-      acc[locale] = href
-      return acc
-    },
-    {
-      'x-default': normalized
+export const postPath = (id: string) => `/content/${id}`
+export const postUrl = (id: string, locale: string) => absoluteUrl(postPath(id), locale)
+
+/** `alternates` for Metadata: canonical for `locale` plus hreflang links for every available locale. */
+export function alternates(pathname: string, locale: string, available: readonly string[] = routing.locales) {
+  const locales = routing.locales.filter((l) => available.includes(l))
+  return {
+    canonical: localePath(pathname, locale),
+    languages: {
+      ...Object.fromEntries(locales.map((l) => [l, localePath(pathname, l)])),
+      'x-default': localePath(pathname, locales.includes(routing.defaultLocale) ? routing.defaultLocale : locales[0]!)
     }
-  )
-}
-
-export function getSiteOrigin() {
-  const envOrigin =
-    process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || 'https://xibaoyu.xyz'
-  let origin = envOrigin.trim()
-
-  if (!origin) {
-    origin = 'https://xibaoyu.xyz'
   }
-
-  if (!/^https?:\/\//i.test(origin)) {
-    origin = `https://${origin}`
-  }
-
-  return origin.replace(/\/+$/, '')
 }
 
-export function getOgImageUrl() {
-  return `${getSiteOrigin()}/og.png`
-}
-
-export function buildAbsoluteUrl(pathname: string) {
-  return new URL(normalizePathname(pathname), getSiteOrigin()).toString()
-}
+export const isLocale = (value: string): value is Locale => (routing.locales as readonly string[]).includes(value)

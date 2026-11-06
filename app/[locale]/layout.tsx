@@ -1,79 +1,64 @@
-import { notFound } from 'next/navigation'
+import { Inter } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
-import { getMessages, getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { ThemeProvider } from 'next-themes'
 
-import { AuthDialogsHost } from '@/components/auth-actions'
-import { AuthProvider } from '@/components/auth-provider'
-import Navbar from '@/components/navbar'
+import { Navbar } from '@/components/layout/navbar'
 import { PwaPrompt } from '@/components/pwa/pwa-prompt'
+import { Toaster } from '@/components/ui/sonner'
 import { routing } from '@/i18n/routing'
-import { buildAbsoluteUrl, buildLanguageAlternates, getSiteOrigin } from '@/lib/metadata'
+import { alternates, siteOrigin } from '@/lib/metadata'
 
-import type { Metadata } from 'next'
-import type { ReactNode } from 'react'
+import type { Metadata, Viewport } from 'next'
 
-type LocaleLayoutProps = Readonly<{
-  children: ReactNode
-  params: Promise<{ locale: string }>
-}>
+import '@/styles/globals.css'
 
-export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
-  const { locale } = await params
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
-  if (!routing.locales.includes(locale)) {
-    notFound()
-  }
-
-  const messages = await getMessages()
-
-  return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
-      <AuthProvider>
-        <AuthDialogsHost />
-        <main>
-          <Navbar />
-          <PwaPrompt />
-          {children}
-        </main>
-      </AuthProvider>
-    </NextIntlClientProvider>
-  )
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }))
 }
 
-export async function generateMetadata({ params }: LocaleLayoutProps): Promise<Metadata> {
-  const { locale } = await params
-
-  if (!routing.locales.includes(locale)) {
-    notFound()
-  }
-
-  const t = await getTranslations({ locale, namespace: 'seo' })
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  const t = await getTranslations('seo')
   const siteTitle = t('siteTitle')
-  const description = t('siteDescription')
 
   return {
-    metadataBase: new URL(getSiteOrigin()),
-    title: {
-      default: siteTitle,
-      template: `%s | ${siteTitle}`
-    },
-    description,
+    metadataBase: new URL(siteOrigin),
+    title: { default: siteTitle, template: `%s | ${siteTitle}` },
+    description: t('siteDescription'),
     alternates: {
-      canonical: locale === routing.defaultLocale ? '/' : `/${locale}`,
-      languages: buildLanguageAlternates('/')
+      ...alternates('/', locale),
+      types: { 'application/rss+xml': [{ url: locale === routing.defaultLocale ? '/rss.xml' : `/${locale}/rss.xml` }] }
     },
-    openGraph: {
-      title: siteTitle,
-      description,
-      url: buildAbsoluteUrl('/'),
-      siteName: siteTitle,
-      type: 'website',
-      locale
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: siteTitle,
-      description
-    }
+    openGraph: { siteName: siteTitle, type: 'website', locale },
+    twitter: { card: 'summary_large_image' }
   }
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' }
+  ]
+}
+
+export default async function RootLayout({ children }: LayoutProps<'/[locale]'>) {
+  const locale = await getLocale()
+
+  return (
+    <html lang={locale} className={inter.variable} suppressHydrationWarning>
+      <body className="bg-background min-h-screen font-sans antialiased">
+        <NextIntlClientProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            <Navbar />
+            <main>{children}</main>
+            <PwaPrompt />
+            <Toaster />
+          </ThemeProvider>
+        </NextIntlClientProvider>
+      </body>
+    </html>
+  )
 }

@@ -1,141 +1,117 @@
 import { ArrowLeft } from 'lucide-react'
-import { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
+import { Suspense } from 'react'
 
-import { CommentSection } from '@/components/comments/comment-section'
-import { LockedPaywall } from '@/components/content/locked-paywall'
-import { LockedPreview } from '@/components/content/locked-preview'
+import { CommentComposer } from '@/components/comments/comment-composer'
+import { CommentList } from '@/components/comments/comment-list'
 import { MarkdownRenderer } from '@/components/markdown/markdown-renderer'
+import { MembersOnlyContent, LockedPreview } from '@/components/posts/members-only'
 import { Link } from '@/i18n/navigation'
-import { routing } from '@/i18n/routing'
-import { auth } from '@/lib/auth'
-import { getCommentsForPost } from '@/lib/comments'
+import { getPublishedPost } from '@/lib/data/posts'
 import { buildSafePreviewContent } from '@/lib/markdown/preview'
-import { buildLanguageAlternates } from '@/lib/metadata'
-import { getPostById } from '@/lib/posts'
-import { hasActiveSubscription } from '@/lib/subscriptions'
-import { absoluteUrl } from '@/lib/utils'
+import { alternates, postPath, postUrl, SITE_AUTHOR } from '@/lib/metadata'
 
-type DocPageProps = {
-  id: string
-  locale: string
-}
+import type { Metadata } from 'next'
 
-export async function generateMetadata({ params }: { params: Promise<DocPageProps> }): Promise<Metadata> {
-  const parameters = await params
-  const post = await getPostById(parameters.id, { locale: parameters.locale })
-
-  if (!post) {
-    return {}
-  }
-
-  const seoT = await getTranslations({ locale: parameters.locale, namespace: 'seo' })
-
-  const summary = post.summary
-  const slugUrl = `/content/${post.id}`
-  const siteTitle = seoT('siteTitle')
-  const canonical =
-    parameters.locale === routing.defaultLocale ? `/content/${post.id}` : `/${parameters.locale}/content/${post.id}`
+export async function generateMetadata({ params }: PageProps<'/[locale]/content/[id]'>): Promise<Metadata> {
+  const [{ id }, locale] = await Promise.all([params, getLocale()])
+  const post = await getPublishedPost(id, locale)
+  if (!post) return {}
 
   return {
-    title: `${post.title} | ${siteTitle}`,
-    description: summary,
-    alternates: {
-      canonical,
-      languages: buildLanguageAlternates(`/content/${post.id}`, post.availableLocales)
-    },
+    title: post.title,
+    description: post.summary,
+    keywords: post.tags,
+    alternates: alternates(postPath(post.id), locale, post.locales),
     openGraph: {
-      title: post.title,
-      description: summary,
       type: 'article',
-      url: absoluteUrl(slugUrl),
-      locale: parameters.locale,
-      siteName: siteTitle
+      title: post.title,
+      description: post.summary,
+      url: postUrl(post.id, locale),
+      publishedTime: post.publishedAt?.toISOString(),
+      modifiedTime: post.updatedAt.toISOString(),
+      tags: post.tags,
+      images: post.coverImageUrl ? [post.coverImageUrl] : undefined
     }
   }
 }
 
-export default async function DocPage({ params }: { params: Promise<DocPageProps> }) {
-  const parameters = await params
-  const [post, contentT, initialComments] = await Promise.all([
-    getPostById(parameters.id, { locale: parameters.locale }),
-    getTranslations('content'),
-    getCommentsForPost(parameters.id)
-  ])
-  const session = await auth()
+export default async function PostPage({ params }: PageProps<'/[locale]/content/[id]'>) {
+  const [{ id }, locale] = await Promise.all([params, getLocale()])
+  const post = await getPublishedPost(id, locale)
+  if (!post) notFound()
 
-  if (!post) {
-    notFound()
+  const [t, format] = await Promise.all([getTranslations('post'), getFormatter()])
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.summary,
+    datePublished: post.publishedAt?.toISOString(),
+    dateModified: post.updatedAt.toISOString(),
+    inLanguage: locale,
+    image: post.coverImageUrl ?? undefined,
+    author: { '@type': 'Person', name: SITE_AUTHOR },
+    mainEntityOfPage: postUrl(post.id, locale)
   }
 
-  const viewerId = session?.user?.id
-
-  const isSubscriber = viewerId ? await hasActiveSubscription(viewerId) : false
-  const canViewFullContent = !post.isSubscriptionOnly || isSubscriber
-
-  const previewContent = canViewFullContent ? post.content : buildSafePreviewContent(post.content)
-  const authorName = post.author?.name
-
   return (
-    <div className="bg-background px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto min-h-screen w-full max-w-5xl px-4 m:px-6 lg:px-8 pt-6 lg:pt-12 pb-14">
-        <div className="flex items-center gap-3 pb-6">
-          <Link
-            href="/"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm font-medium transition"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {contentT('backToList')}
-          </Link>
-        </div>
+    <article className="mx-auto w-full max-w-3xl px-4 pt-6 pb-16 sm:px-6 lg:pt-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
+      <Link
+        href="/"
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm font-medium transition"
+      >
+        <ArrowLeft className="size-4" />
+        {t('back')}
+      </Link>
 
-        <h1 className="text-foreground text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
-          {post.title}
-        </h1>
-
-        {post.coverImageUrl && (
-          <figure className="mt-8">
-            <div className="relative h-56 w-full overflow-hidden rounded-2xl sm:h-80">
-              <Image
-                src={post.coverImageUrl}
-                alt={post.title}
-                fill
-                sizes="(max-width: 640px) 100vw, 768px"
-                className="object-cover"
-                priority
-              />
-            </div>
-          </figure>
+      <header className="mt-6 space-y-3">
+        <h1 className="text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">{post.title}</h1>
+        {post.publishedAt && (
+          <p className="text-muted-foreground text-sm">
+            <time dateTime={post.publishedAt.toISOString()}>{format.dateTime(post.publishedAt, 'short')}</time>
+            {post.isMembersOnly && <span> · {t('membersOnly')}</span>}
+          </p>
         )}
+      </header>
 
-        <div className="mt-8 space-y-10">
-          {canViewFullContent ? (
-            <article className="max-w-none">
-              <MarkdownRenderer content={post.content} />
-            </article>
-          ) : (
-            <div className="relative">
-              <LockedPreview
-                content={previewContent}
-                label={contentT('locked.previewTitle')}
-                description={contentT('locked.previewDescription')}
-              />
-              <div className="pt-6">
-                <LockedPaywall
-                  title={contentT('locked.title')}
-                  description={contentT('locked.description')}
-                  authorLine={`${authorName} · ${contentT('metadata.subscriptionOnly')}`}
-                  badgeLabel={contentT('metadata.subscriptionOnly')}
-                />
-              </div>
-            </div>
-          )}
-
-          <CommentSection postId={post.id} viewerId={viewerId} initialComments={initialComments} />
+      {post.coverImageUrl && (
+        <div className="relative mt-8 aspect-video w-full overflow-hidden rounded-2xl">
+          <Image
+            src={post.coverImageUrl}
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 768px"
+            className="object-cover"
+          />
         </div>
+      )}
+
+      <div className="mt-10">
+        {post.isMembersOnly ? (
+          // Only the preview is in the initial HTML; the full text streams in for members.
+          <Suspense fallback={<LockedPreview content={buildSafePreviewContent(post.content)} />}>
+            <MembersOnlyContent content={post.content} />
+          </Suspense>
+        ) : (
+          <MarkdownRenderer content={post.content} />
+        )}
       </div>
-    </div>
+
+      <section className="bg-card/80 ring-border/30 mt-14 space-y-5 rounded-3xl px-4 py-5 ring-1 sm:px-6">
+        <h2 className="text-lg font-semibold">{t('comments')}</h2>
+        <Suspense fallback={<div className="bg-muted/40 h-32 animate-pulse rounded-2xl" />}>
+          <CommentComposer postId={post.id} />
+        </Suspense>
+        <CommentList postId={post.id} />
+      </section>
+    </article>
   )
 }

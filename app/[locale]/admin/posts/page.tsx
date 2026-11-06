@@ -1,102 +1,101 @@
+import Form from 'next/form'
 import { getTranslations } from 'next-intl/server'
+import { z } from 'zod'
 
-import { AdminFilters } from '@/components/posts/admin-filters'
 import { PostTable } from '@/components/posts/post-table'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { postStatuses } from '@/drizzle/schema'
+import { categoryLabel } from '@/i18n/categories'
 import { Link } from '@/i18n/navigation'
-import { getAllCategories, getPaginatedPosts } from '@/lib/posts'
+import { listAllCategories, listPostsForAdmin } from '@/lib/data/posts'
+import { requireAdminPage } from '@/lib/session'
 
-import type { PostStatus } from '@/drizzle/schema'
+const filtersSchema = z.object({
+  q: z.string().trim().max(100).optional().catch(undefined),
+  status: z.enum(postStatuses).optional().catch(undefined),
+  category: z.string().max(64).optional().catch(undefined),
+  page: z.coerce.number().int().min(1).catch(1)
+})
 
-interface AdminPostsPageProps {
-  searchParams: Promise<Record<string, string | undefined>>
-  params: Promise<{ locale: string }>
-}
-
-function buildQueryString(params: Record<string, string | number | undefined>) {
-  const query = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === '' || value === 'all') return
-    query.set(key, String(value))
-  })
-  return query.toString()
-}
-
-export default async function AdminPostsPage({ searchParams, params }: AdminPostsPageProps) {
-  const localeParams = await params
-  const paramsObj = await searchParams
-  const locale = localeParams.locale
-  const page = Math.max(1, Number(paramsObj.page ?? '1') || 1)
-  const search = paramsObj.search ?? ''
-  const statusParam = paramsObj.status === 'PUBLISHED' || paramsObj.status === 'DRAFT' ? paramsObj.status : 'all'
-  const categoryParam = paramsObj.category && paramsObj.category !== 'all' ? paramsObj.category : undefined
-
-  const [data, categories] = await Promise.all([
-    getPaginatedPosts({
-      page,
-      pageSize: 20,
-      search: search || undefined,
-      status: statusParam === 'all' ? 'all' : (statusParam as PostStatus),
-      categoryId: categoryParam,
-      locale
-    }),
-    getAllCategories()
+export default async function AdminPostsPage({ searchParams }: PageProps<'/[locale]/admin/posts'>) {
+  await requireAdminPage()
+  const filters = filtersSchema.parse(await searchParams)
+  const [{ items, total, pageCount }, categories, t, tCategories] = await Promise.all([
+    listPostsForAdmin({ query: filters.q, status: filters.status, categoryId: filters.category, page: filters.page }),
+    listAllCategories(),
+    getTranslations('admin.posts'),
+    getTranslations('categories')
   ])
-
-  const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize))
-  const filterBase = {
-    search,
-    status: statusParam,
-    category: paramsObj.category ?? 'all'
-  }
-
-  const t = await getTranslations('admin')
+  const label = (key: string) => categoryLabel(tCategories, key)
+  const pageHref = (page: number) => ({
+    pathname: '/admin/posts',
+    query: {
+      ...(filters.q && { q: filters.q }),
+      ...(filters.status && { status: filters.status }),
+      ...(filters.category && { category: filters.category }),
+      page: String(page)
+    }
+  })
 
   return (
-    <div className="space-y-8">
-      <Card>
-        <CardHeader className="flex flex-col gap-3 pt-6 pb-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <CardDescription>{t('posts.description')}</CardDescription>
-            <CardTitle>{t('posts.title')}</CardTitle>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button asChild variant="outline" size="lg">
-              <Link href="/admin/subscriptions">{t('subscriptions.actions.open')}</Link>
-            </Button>
-            <Button asChild size="lg">
-              <Link href="/admin/posts/new">{t('posts.actions.newPost')}</Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0 pb-6">
-          <AdminFilters
-            initialSearch={search}
-            initialStatus={statusParam}
-            initialCategory={categoryParam ?? 'all'}
-            categories={categories}
-            locale={locale}
-          />
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">{t('title')}</h1>
+        <Button asChild>
+          <Link href="/admin/posts/new">{t('new')}</Link>
+        </Button>
+      </div>
+
+      <Form action="" className="flex flex-wrap gap-2">
+        <Input name="q" defaultValue={filters.q} placeholder={t('search')} className="max-w-xs" />
+        <select
+          name="status"
+          defaultValue={filters.status ?? ''}
+          className="bg-background rounded-md border px-2 text-sm"
+        >
+          <option value="">{t('allStatuses')}</option>
+          {postStatuses.map((status) => (
+            <option key={status} value={status}>
+              {t(`status.${status}`)}
+            </option>
+          ))}
+        </select>
+        <select
+          name="category"
+          defaultValue={filters.category ?? ''}
+          className="bg-background rounded-md border px-2 text-sm"
+        >
+          <option value="">{t('allCategories')}</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {label(category.key)}
+            </option>
+          ))}
+        </select>
+        <Button type="submit" variant="secondary">
+          {t('filter')}
+        </Button>
+      </Form>
+
       <Card>
         <CardContent className="p-0">
-          <PostTable posts={data.posts} />
+          <PostTable posts={items} categoryLabels={Object.fromEntries(categories.map((c) => [c.key, label(c.key)]))} />
         </CardContent>
-        <CardFooter>
-          <span>{t('posts.pagination.caption', { page, totalPages, total: data.total })}</span>
+        <CardFooter className="justify-between text-sm">
+          <span className="text-muted-foreground">{t('pagination', { page: filters.page, pageCount, total })}</span>
           <div className="flex gap-2">
-            <Button asChild variant="outline" disabled={page <= 1}>
-              <Link href={`/admin/posts?${buildQueryString({ ...filterBase, page: page - 1 })}`}>
-                {t('posts.pagination.prev')}
-              </Link>
-            </Button>
-            <Button asChild variant="outline" disabled={page >= totalPages}>
-              <Link href={`/admin/posts?${buildQueryString({ ...filterBase, page: page + 1 })}`}>
-                {t('posts.pagination.next')}
-              </Link>
-            </Button>
+            {filters.page > 1 && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={pageHref(filters.page - 1)}>{t('prev')}</Link>
+              </Button>
+            )}
+            {filters.page < pageCount && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={pageHref(filters.page + 1)}>{t('next')}</Link>
+              </Button>
+            )}
           </div>
         </CardFooter>
       </Card>

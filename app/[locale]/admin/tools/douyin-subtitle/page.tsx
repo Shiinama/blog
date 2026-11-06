@@ -4,8 +4,10 @@ import { DouyinSubtitleTool } from '@/components/tools/douyin-subtitle-tool'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link } from '@/i18n/navigation'
+import { requireAdminPage } from '@/lib/session'
 
 export default async function DouyinSubtitlePage() {
+  await requireAdminPage()
   const t = await getTranslations('admin.tools')
 
   return (

@@ -44,3 +44,7 @@ next-env.d.ts
 
 certificates
 scripts/delete-image.ts
+
+.backups
+.dev.vars*
+.playwright-mcp

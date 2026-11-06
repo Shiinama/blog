@@ -1,1 +1,0 @@
-ALTER TABLE `posts` ADD `content_signal_referenced_at` integer;

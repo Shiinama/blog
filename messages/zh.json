@@ -1,4 +1,22 @@
 {
+  "nav": {
+    "brand": "鱼的博客",
+    "about": "关于",
+    "signIn": "登录",
+    "account": "账户",
+    "admin": "后台",
+    "tools": "工具",
+    "signOut": "退出登录",
+    "toggleTheme": "切换主题"
+  },
+  "seo": {
+    "siteTitle": "鱼的博客",
+    "siteDescription": "记录工程、模型和商业实践的博客，直接分享可复用的经验与案例。",
+    "homeTitle": "文章库",
+    "homeDescription": "按主题浏览工程、SEO、增长、独立开发等文章，支持中英阅读。",
+    "aboutTitle": "Felix",
+    "aboutDescription": "Software Engineer，专注 AI 产品、增长与商业化。"
+  },
   "about": {
     "title": "Felix",
     "intro": "Software Engineer\n享受当下，做有趣的事情",
@@ -14,227 +32,211 @@
     },
     "contactMe": "联系我"
   },
-  "common": {
-    "home": "首页",
-    "about": "关于",
-    "myAccount": "我的账号",
-    "userId": "用户ID",
-    "copyId": "复制ID",
-    "copied": "已复制",
-    "copyFailed": "复制失败，请重试",
-    "email": "邮箱",
-    "username": "用户名",
-    "currentPlan": "当前套餐",
-    "expiresAt": "到期时间",
-    "planFree": "未订阅",
-    "planLoading": "加载中...",
-    "expiredTag": "已过期",
-    "scheduledTag": "未生效",
-    "startsAt": "开始于",
-    "notAvailable": "暂无",
-    "signout": "退出",
-    "loginIn": "登录",
-    "toggleTheme": "切换主题",
-    "uncategorized": "未分类",
-    "adminPanel": "管理后台",
-    "tools": "工具箱"
-  },
-  "article": {
-    "seo": "搜索引擎优化",
-    "life": "生活",
-    "faqAndPath": "学习路由以及答疑",
-    "timeline": "时间桩子",
-    "onPage": "大纲",
-    "reactSourceCode": "React源码",
-    "reactNative": "React Native",
-    "business": "商业",
-    "independentDevelopment": "独立开发",
-    "vue": "Vue",
-    "sdk": "SDK",
-    "fontEnd": "前端",
-    "interview": "面试",
-    "flutter": "Flutter 移动开发",
+  "categories": {
+    "ai": "AI",
+    "ai-daily": "AI 每日大事件",
     "app": "App 应用",
-    "backend": "后端",
+    "business": "商业",
     "commonBaseProject": "通用基础项目",
-    "nextjs": "Next.js",
     "fragments": "碎碎念",
     "other": "其他",
-    "aiDaily": "AI 每日大事件",
-    "ai": "AI"
+    "reactNative": "React Native",
+    "reactSourceCode": "React源码",
+    "seo": "搜索引擎优化",
+    "timeline": "时间桩子"
+  },
+  "explorer": {
+    "searchLabel": "搜索",
+    "searchPlaceholder": "按标题、摘要或关键词查找",
+    "categoryLabel": "分类",
+    "categoryAll": "全部分类",
+    "sortLabel": "排序",
+    "sort": {
+      "newest": "最新",
+      "oldest": "最早",
+      "title": "按标题"
+    },
+    "updating": "更新中",
+    "reset": "重置",
+    "stats": "{count, plural, other {共 # 篇文章}}",
+    "empty": {
+      "title": "暂无匹配结果",
+      "description": "调整筛选或清空搜索词"
+    },
+    "prev": "上一页",
+    "next": "下一页"
+  },
+  "post": {
+    "back": "返回文章库",
+    "membersOnly": "会员专享",
+    "comments": "评论",
+    "locked": {
+      "preview": "预览",
+      "title": "会员可阅读全文",
+      "description": "登录并成为会员即可阅读完整内容。",
+      "memberDescription": "本文为会员专享，联系作者即可开通会员。",
+      "signIn": "登录"
+    }
+  },
+  "comments": {
+    "empty": "还没有评论，来占个沙发吧。",
+    "anonymous": "访客",
+    "signInPrompt": "登录后参与讨论。",
+    "signIn": "登录",
+    "placeholder": "留下你的看法或问题...",
+    "submit": "发布"
+  },
+  "signIn": {
+    "title": "欢迎来到鱼的博客",
+    "description": "登录后可以评论、阅读会员文章。",
+    "checkEmail": "登录链接已发送，请查收邮箱。",
+    "error": "登录失败，请重试。",
+    "google": "使用 Google 登录",
+    "github": "使用 GitHub 登录",
+    "or": "或",
+    "emailPlaceholder": "you@example.com",
+    "email": "发送邮箱登录链接",
+    "invalidEmail": "请输入有效的邮箱地址。"
+  },
+  "account": {
+    "title": "账户",
+    "userId": "用户 ID",
+    "copy": "复制",
+    "copied": "已复制",
+    "name": "昵称",
+    "email": "邮箱",
+    "membership": "会员",
+    "signOut": "退出登录",
+    "plan": {
+      "none": "未开通会员",
+      "active": "有效期至 {end}",
+      "scheduled": "{start} 生效，{end} 到期",
+      "expired": "已于 {end} 过期"
+    }
+  },
+  "errors": {
+    "backHome": "返回首页",
+    "notFound": {
+      "title": "页面不存在",
+      "description": "你访问的页面不存在或已被移动。"
+    },
+    "forbidden": {
+      "title": "无权访问",
+      "description": "当前账户无法打开此页面。"
+    },
+    "unauthorized": {
+      "title": "需要登录",
+      "description": "请先登录再继续。",
+      "action": "去登录"
+    }
+  },
+  "actions": {
+    "errors": {
+      "invalid": "请检查标出的字段。",
+      "unauthorized": "请先登录。",
+      "notFound": "内容已不存在。",
+      "invalidEmail": "请输入有效的邮箱地址。",
+      "userNotFound": "找不到该用户 ID。",
+      "membershipOverlap": "该用户在这段时间内已有会员。",
+      "sameLocale": "这就是原文语言。",
+      "translationFailed": "翻译失败，请稍后再试。",
+      "titleTooShort": "标题至少 3 个字符。",
+      "contentTooShort": "内容至少 50 个字符。",
+      "categoryRequired": "请选择分类。",
+      "invalidDate": "日期无效。"
+    }
+  },
+  "pwa": {
+    "title": "安装应用",
+    "description": "添加到主屏，离线也能快速阅读。",
+    "cta": "安装",
+    "remindLater": "稍后提醒",
+    "close": "关闭"
   },
   "admin": {
-    "status": {
-      "draft": "草稿",
-      "published": "已发布"
+    "nav": {
+      "posts": "文章",
+      "memberships": "会员",
+      "tools": "工具"
     },
     "posts": {
-      "description": "集中管理所有文章，支持搜索与筛选。",
-      "title": "文章列表",
-      "actions": {
-        "newPost": "撰写新文章",
-        "toDraft": "改为草稿",
-        "publish": "发布",
-        "preview": "预览",
-        "delete": "删除",
-        "updatePublishTime": "更新发布时间"
+      "title": "文章",
+      "new": "写文章",
+      "search": "搜索标题或摘要",
+      "allStatuses": "全部状态",
+      "allCategories": "全部分类",
+      "filter": "筛选",
+      "status": {
+        "DRAFT": "草稿",
+        "PUBLISHED": "已发布"
       },
-      "access": {
-        "subscriptionOnly": "需要订阅",
-        "public": "公开阅读",
-        "switchLabel": "订阅开关",
-        "updateSuccess": "访问控制已更新为 {label}",
-        "updateFailed": "更新访问控制失败",
-        "updateFailedDescription": "请稍后再试。"
-      },
-      "contentSignal": {
-        "referenced": "已引用",
-        "unreferenced": "未引用",
-        "empty": "未引用",
-        "switchLabel": "引用开关",
-        "updateSuccess": "Content Signal 已更新为 {label}",
-        "updateFailed": "更新 Content Signal 失败",
-        "updateFailedDescription": "请稍后再试。"
-      },
-      "filters": {
-        "searchLabel": "搜索",
-        "searchPlaceholder": "标题或摘要关键字",
-        "statusLabel": "状态",
-        "statusOptions": {
-          "all": "全部",
-          "published": "已发布",
-          "draft": "草稿"
-        },
-        "categoryLabel": "分类",
-        "categoryOptions": {
-          "all": "全部",
-          "ai": "AI"
-        },
-        "apply": "应用筛选"
-      },
-      "pagination": {
-        "caption": "第 {page} / {totalPages} 页（共 {total} 篇文章）",
-        "prev": "上一页",
-        "next": "下一页"
-      },
-      "deleteConfirmation": "确定要删除这篇文章吗？此操作不可恢复。",
-      "deleteSuccess": "文章已删除",
-      "deleteFailed": "删除失败",
-      "deleteFailedDescription": "请稍后再试。",
-      "statusSwitchSuccess": "已切换为 {status}",
-      "statusUpdateFailed": "状态更新失败",
-      "statusUpdateFailedDescription": "请稍后再试。",
+      "pagination": "第 {page, number} / {pageCount, number} 页 · 共 {total, number} 篇",
+      "prev": "上一页",
+      "next": "下一页",
       "empty": "暂无文章。",
-      "table": {
-        "headers": {
-          "title": "标题",
-          "access": "订阅限制",
-          "contentSignalReferencedAt": "Content Signal 引用时间",
-          "status": "状态",
-          "updated": "更新时间",
-          "publishedAt": "发布时间",
-          "actions": "操作"
-        },
-        "uncategorized": "未分类"
-      },
-      "new": {
-        "description": "创建新文章",
-        "title": "撰写内容"
-      },
-      "publishTime": {
-        "invalid": "请选择有效的发布时间",
-        "updateSuccess": "发布时间已更新",
-        "updateFailed": "发布时间更新失败"
-      }
-    },
-    "subscriptions": {
-      "title": "会员订阅发放",
-      "description": "输入用户 ID 即可下发一年期会员，系统会自动创建商品、订单和订阅记录。",
-      "formTitle": "发放一年会员",
-      "helper": "用于线下收款或赠送场景，请先确认该用户 ID 已经注册。",
-      "bullet": {
-        "price": "价格：200 cny（订阅商品）",
-        "interval": "周期：1 年，一次性发放",
-        "howItWorks": "流程：通过用户 ID 匹配用户 → 创建订单 → 写入订阅记录"
-      },
-      "actions": {
-        "open": "下发会员订阅"
-      },
-      "form": {
-        "userIdLabel": "用户 ID",
-        "userIdPlaceholder": "复制自用户个人页的 ID",
-        "startAtLabel": "开始时间（可选）",
-        "startAtPlaceholder": "默认立即生效，也可以指定起始时间",
-        "startAtHelper": "不填则立刻生效，选择未来时间会在该时间点开始计算一年期",
-        "noteLabel": "备注（可选）",
-        "notePlaceholder": "记录发放原因或线下支付信息",
-        "submit": "发送一年会员",
-        "successTitle": "发放成功",
-        "errorTitle": "发放失败"
-      }
-    },
-    "form": {
-      "saveSuccessTitle": "内容已保存",
-      "saveSuccessDescription": "文章保存成功",
-      "saveFailedTitle": "保存失败",
-      "saveFailedDescription": "请稍后再试。",
-      "deleteConfirmation": "确定要删除这篇文章吗？此操作不可恢复。",
-      "deleteSuccess": "文章已删除",
-      "deleteFailed": "删除失败",
-      "deleteFailedDescription": "请稍后再试。",
-      "fields": {
+      "view": "查看",
+      "columns": {
         "title": "标题",
-        "slug": "Slug",
-        "category": "分类",
-        "status": "状态",
-        "coverImageUrl": "封面图 URL",
-        "tags": "标签（用逗号分隔）",
-        "sortOrder": "排序权重",
-        "language": "语言",
-        "publishedAt": "发布时间",
-        "summary": "摘要",
-        "content": "正文内容",
-        "subscriptionOnly": "这是一篇订阅文章"
+        "status": "发布",
+        "membersOnly": "会员专享",
+        "signal": "Signal 已领取",
+        "publishedAt": "发布时间"
+      }
+    },
+    "editor": {
+      "back": "返回文章列表",
+      "status": {
+        "published": "已发布",
+        "draft": "草稿"
       },
-      "placeholders": {
-        "title": "请输入标题",
-        "slug": "app/your-article",
-        "category": "选择文章归属分类",
-        "coverImageUrl": "https://...",
-        "summary": "用于列表与 SEO 的简介...",
-        "content": "使用 Markdown/MDX 进行写作..."
+      "locales": "语言",
+      "translate": "机器翻译",
+      "translated": "译文已保存",
+      "translateOverwrite": "覆盖现有译文？",
+      "export": "下载 Markdown",
+      "delete": "删除文章",
+      "deleteConfirm": "删除这篇文章及其所有译文？此操作不可撤销。",
+      "unpublish": "撤回为草稿",
+      "saveDraft": "保存草稿",
+      "update": "更新",
+      "publish": "发布",
+      "saved": "已保存",
+      "noTranslation": "还没有译文——可以直接在这里写，或使用机器翻译。",
+      "title": "标题",
+      "titlePlaceholder": "标题",
+      "summary": "摘要",
+      "summaryPlaceholder": "摘要（默认取第一段）",
+      "contentPlaceholder": "使用 Markdown 写作…",
+      "sharedSettings": "以下设置对所有语言生效。",
+      "category": "分类",
+      "categoryPlaceholder": "选择分类",
+      "cover": "封面图链接",
+      "tags": "标签（逗号分隔）",
+      "publishedAt": "发布时间",
+      "membersOnly": "会员专享",
+      "membersOnlyHint": "非会员只能看到文章开头部分。",
+      "uploading": "图片上传中…",
+      "uploadFailed": "图片上传失败"
+    },
+    "memberships": {
+      "title": "会员",
+      "recent": "最近发放",
+      "columns": {
+        "user": "用户",
+        "period": "有效期",
+        "note": "备注"
       },
-      "actions": {
-        "saveDraft": "保存草稿",
-        "publish": "发布文章",
-        "cancel": "取消",
-        "deleting": "删除中...",
-        "delete": "删除文章"
-      },
-      "publishTime": {
-        "invalid": "请选择有效的发布时间",
-        "updateSuccess": "发布时间已更新",
-        "updateFailed": "发布时间更新失败"
-      },
-      "publishModal": {
-        "title": "发布前确认",
-        "description": "最后确认一下封面和摘要，让文章准备好上线。",
-        "help": "摘要会默认使用文章前 100 个字符。",
-        "subscriptionHint": "开启后，未订阅用户只能看到 30% 的正文。"
-      },
-      "translation": {
-        "title": "文章翻译",
-        "description": "使用机器翻译生成并保存另一种语言的版本。",
-        "targetLabel": "目标语言",
-        "translate": "开始翻译",
-        "translating": "正在翻译...",
-        "successTitle": "翻译已保存",
-        "successDescription": "已保存 {locale} 版本。",
-        "errorTitle": "翻译失败",
-        "errorDescription": "请重试或更换目标语言。"
-      },
-      "sticky": {
-        "title": "快速操作"
+      "grant": {
+        "title": "发放会员",
+        "description": "用户可以在「账户」页找到自己的 ID。",
+        "success": "会员已发放",
+        "userId": "用户 ID",
+        "userIdPlaceholder": "粘贴用户 ID",
+        "startsAt": "开始日期（默认现在）",
+        "months": "月数",
+        "note": "备注",
+        "notePlaceholder": "付款凭证、原因等",
+        "submit": "发放"
       }
     },
     "tools": {
@@ -276,104 +278,5 @@
         "errorTitle": "提取失败"
       }
     }
-  },
-  "auth": {
-    "login": {
-      "page": {
-        "title": "欢迎来到鱼的博客",
-        "description": "登录后继续阅读和管理内容"
-      },
-      "google": "使用 Google 登录",
-      "github": "使用 GitHub 登录",
-      "orContinue": "或使用以下方式继续",
-      "emailPlaceholder": "输入你的邮箱",
-      "emailButton": "使用邮箱登录"
-    }
-  },
-  "content": {
-    "backToList": "返回文章列表",
-    "metadata": {
-      "published": "发布时间",
-      "readingTime": "阅读时间",
-      "author": "作者",
-      "access": "访问",
-      "subscriptionOnly": "会员专享",
-      "free": "公开阅读"
-    },
-    "updated": "更新于 {date}",
-    "coverImage": "封面图",
-    "badges": {
-      "subscriptionOnly": "订阅内容",
-      "member": "会员已解锁"
-    },
-    "locked": {
-      "previewTitle": "这是预览内容",
-      "previewDescription": "非会员仅可阅读 30% 的正文。",
-      "title": "订阅后解锁完整文章",
-      "description": "支持创作、解锁全文，未来更新也会第一时间送达。",
-      "primaryCta": "登录 / 订阅解锁",
-      "secondaryCta": "了解订阅权益"
-    }
-  },
-  "comments": {
-    "title": "评论",
-    "subtitle": "加入讨论",
-    "count": "{count, plural, one {# 条评论} other {# 条评论}}",
-    "placeholder": "留下你的看法或问题...",
-    "signin": "登录后评论",
-    "emptyError": "至少写几句再提交。",
-    "submitError": "提交失败，请稍后再试。",
-    "submit": "发布",
-    "loading": "评论加载中...",
-    "empty": "还没有评论，来占个沙发吧。",
-    "loadError": "暂时无法加载评论。",
-    "anonymous": "访客"
-  },
-  "explorer": {
-    "searchLabel": "搜索",
-    "searchPlaceholder": "按标题、摘要或关键词查找",
-    "categoryLabel": "分类",
-    "categoryAll": "全部分类",
-    "sortLabel": "排序",
-    "sortPlaceholder": "按发布时间排序",
-    "sortOptions": {
-      "newest": "最新",
-      "oldest": "最旧",
-      "alphabetical": "字母顺序"
-    },
-    "stats": "{count, plural, one {显示 # 篇文章} other {显示 # 篇文章}}",
-    "reset": "重置",
-    "updating": "更新中",
-    "readArticle": "阅读文章",
-    "empty": {
-      "title": "暂无匹配结果",
-      "description": "调整筛选或清空搜索词"
-    },
-    "loadMore": "加载更多",
-    "loadingMore": "加载中..."
-  },
-  "pwa": {
-    "title": "安装应用",
-    "description": "添加到主屏，离线也能快速阅读。",
-    "cta": "安装",
-    "remindLater": "稍后提醒",
-    "close": "关闭"
-  },
-  "home": {
-    "brandTitle": "鱼的博客",
-    "heroKicker": "移动优先 · 随时阅读",
-    "heroTitle": "工程、AI、产品的实战记录",
-    "heroDescription": "长篇文章、实战笔记都放在这里，按分类和搜索直接找到需要的内容。",
-    "rssCta": "订阅 RSS",
-    "rssHint": "加到你的阅读器，第一时间收到更新。",
-    "pwaHint": "添加到主屏，离线也能快速浏览。"
-  },
-  "seo": {
-    "siteTitle": "鱼的博客",
-    "siteDescription": "记录工程、模型和商业实践的博客，直接分享可复用的经验与案例。",
-    "homeTitle": "文章库 | 鱼的博客",
-    "homeDescription": "按主题浏览工程、SEO、增长、独立开发等文章，支持中英阅读。",
-    "aboutTitle": "Felix",
-    "aboutDescription": "Software Engineer，专注 AI 产品、增长与商业化。"
   }
 }

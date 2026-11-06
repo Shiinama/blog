@@ -1,27 +1,51 @@
 import { relations, sql } from 'drizzle-orm'
-import { integer, primaryKey, sqliteTable, text, real } from 'drizzle-orm/sqlite-core'
+import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 import type { AdapterAccountType } from 'next-auth/adapters'
 
-export const users = sqliteTable('user', {
-  id: text('id')
+/**
+ * Timestamps are stored as integer milliseconds. The SQL default keeps raw inserts
+ * (migrations, D1 console) correct; `$defaultFn` / `$onUpdateFn` keep ORM writes explicit.
+ */
+const timestamp = (name: string) => integer(name, { mode: 'timestamp_ms' })
+const createdAt = () =>
+  timestamp('created_at')
+    .notNull()
+    .default(sql`(unixepoch('subsec') * 1000)`)
+    .$defaultFn(() => new Date())
+const updatedAt = () =>
+  timestamp('updated_at')
+    .notNull()
+    .default(sql`(unixepoch('subsec') * 1000)`)
+    .$defaultFn(() => new Date())
+    .$onUpdateFn(() => new Date())
+const id = () =>
+  text('id')
     .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+    .$defaultFn(() => crypto.randomUUID())
+
+// ---------------------------------------------------------------------------
+// Auth.js (JWT sessions, so no session/authenticator tables)
+// Property names follow the Auth.js Drizzle adapter contract; column names are snake_case.
+// ---------------------------------------------------------------------------
+
+export const users = sqliteTable('users', {
+  id: id(),
   name: text('name'),
   email: text('email').unique(),
-  emailVerified: integer('emailVerified', { mode: 'timestamp_ms' }),
+  emailVerified: timestamp('email_verified'),
   image: text('image')
 })
 
 export const accounts = sqliteTable(
-  'account',
+  'accounts',
   {
-    userId: text('userId')
+    userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     type: text('type').$type<AdapterAccountType>().notNull(),
     provider: text('provider').notNull(),
-    providerAccountId: text('providerAccountId').notNull(),
+    providerAccountId: text('provider_account_id').notNull(),
     refresh_token: text('refresh_token'),
     access_token: text('access_token'),
     expires_at: integer('expires_at'),
@@ -30,252 +54,152 @@ export const accounts = sqliteTable(
     id_token: text('id_token'),
     session_state: text('session_state')
   },
-  (account) => [
-    primaryKey({
-      columns: [account.provider, account.providerAccountId]
-    })
+  (table) => [
+    primaryKey({ columns: [table.provider, table.providerAccountId] }),
+    index('accounts_user_idx').on(table.userId)
   ]
 )
 
-export const sessions = sqliteTable('session', {
-  sessionToken: text('sessionToken').primaryKey(),
-  userId: text('userId')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  expires: integer('expires', { mode: 'timestamp_ms' }).notNull()
-})
-
 export const verificationTokens = sqliteTable(
-  'verificationToken',
+  'verification_tokens',
   {
     identifier: text('identifier').notNull(),
     token: text('token').notNull(),
-    expires: integer('expires', { mode: 'timestamp_ms' }).notNull()
+    expires: timestamp('expires').notNull()
   },
-  (verificationToken) => [
-    primaryKey({
-      columns: [verificationToken.identifier, verificationToken.token]
-    })
-  ]
+  (table) => [primaryKey({ columns: [table.identifier, table.token] })]
 )
 
-export const authenticators = sqliteTable(
-  'authenticator',
-  {
-    credentialID: text('credentialID').notNull().unique(),
-    userId: text('userId')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    providerAccountId: text('providerAccountId').notNull(),
-    credentialPublicKey: text('credentialPublicKey').notNull(),
-    counter: integer('counter').notNull(),
-    credentialDeviceType: text('credentialDeviceType').notNull(),
-    credentialBackedUp: integer('credentialBackedUp', {
-      mode: 'boolean'
-    }).notNull(),
-    transports: text('transports')
-  },
-  (authenticator) => [
-    primaryKey({
-      columns: [authenticator.userId, authenticator.credentialID]
-    })
-  ]
-)
+// ---------------------------------------------------------------------------
+// Content
+// ---------------------------------------------------------------------------
 
 export const categories = sqliteTable('categories', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+  id: id(),
+  /** Stable slug; also the `article.categories.*` message key suffix. */
   key: text('key').notNull().unique(),
   sortOrder: integer('sort_order').notNull().default(0),
-  isVisible: integer('is_visible', { mode: 'boolean' }).notNull().default(false),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
+  isVisible: integer('is_visible', { mode: 'boolean' }).notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt()
 })
 
-export type Category = typeof categories.$inferSelect
+export const postStatuses = ['DRAFT', 'PUBLISHED'] as const
+export type PostStatus = (typeof postStatuses)[number]
 
-export const postStatusEnum = ['DRAFT', 'PUBLISHED'] as const
-export type PostStatus = (typeof postStatusEnum)[number]
+export const posts = sqliteTable(
+  'posts',
+  {
+    id: id(),
+    title: text('title').notNull(),
+    summary: text('summary').notNull(),
+    content: text('content').notNull(),
+    coverImageUrl: text('cover_image_url'),
+    /** Locale the post was originally written in; other locales live in `post_translations`. */
+    locale: text('locale').notNull(),
+    status: text('status', { enum: postStatuses }).notNull().default('DRAFT'),
+    categoryId: text('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'restrict' }),
+    tags: text('tags', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    isMembersOnly: integer('is_members_only', { mode: 'boolean' }).notNull().default(false),
+    /** Set when the content-signals API hands this post out. */
+    signalClaimedAt: timestamp('signal_claimed_at'),
+    publishedAt: timestamp('published_at'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (table) => [
+    index('posts_status_published_idx').on(table.status, table.publishedAt),
+    index('posts_category_idx').on(table.categoryId)
+  ]
+)
 
-export const posts = sqliteTable('posts', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  title: text('title').notNull(),
-  summary: text('summary').notNull(),
-  coverImageUrl: text('cover_image_url'),
-  content: text('content').notNull(),
-  status: text('status', { enum: postStatusEnum }).$type<PostStatus>().notNull().default('DRAFT'),
-  publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
-  authorId: text('author_id').references(() => users.id, { onDelete: 'set null' }),
-  categoryId: text('category_id')
-    .notNull()
-    .references(() => categories.id, { onDelete: 'restrict' }),
-  isSubscriptionOnly: integer('is_subscription_only', { mode: 'boolean' }).notNull().default(false),
-  sortOrder: integer('sort_order').notNull().default(0),
-  tags: text('tags', { mode: 'json' })
-    .$type<string[]>()
-    .notNull()
-    .default(sql`'[]'`),
-  language: text('language').notNull().default('zh'),
-  readingTime: integer('reading_time').notNull().default(1),
-  contentSignalReferencedAt: integer('content_signal_referenced_at', { mode: 'timestamp_ms' }),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
-})
+export const postTranslations = sqliteTable(
+  'post_translations',
+  {
+    postId: text('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    locale: text('locale').notNull(),
+    title: text('title').notNull(),
+    summary: text('summary').notNull(),
+    content: text('content').notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (table) => [primaryKey({ columns: [table.postId, table.locale] })]
+)
 
-export type Post = typeof posts.$inferSelect
+export const comments = sqliteTable(
+  'comments',
+  {
+    id: id(),
+    postId: text('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    content: text('content').notNull(),
+    createdAt: createdAt()
+  },
+  (table) => [index('comments_post_created_idx').on(table.postId, table.createdAt)]
+)
 
-export const postTranslations = sqliteTable('postTranslations', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  postId: text('postId')
-    .notNull()
-    .references(() => posts.id, { onDelete: 'cascade' }),
-  title: text('title').notNull(),
-  summary: text('summary').notNull(),
-  coverImageUrl: text('cover_image_url'),
-  locale: text('locale').notNull(),
-  content: text('content').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
-})
+// ---------------------------------------------------------------------------
+// Memberships (granted manually by an admin)
+// ---------------------------------------------------------------------------
 
-export type ProductType = 'one_time' | 'subscription'
-export type SubscriptionInterval = 'day' | 'week' | 'month' | 'year'
-export type OrderStatus = 'pending' | 'completed' | 'failed' | 'refunded'
-export type PaymentMethod = 'credit_card' | 'paypal' | 'upgrade.chat' | 'other'
-export type TransactionType = 'purchase' | 'usage' | 'refund' | 'subscription_renewal' | 'gift' | 'promotion'
-export type Currency = 'USD' | 'CNY' | 'EUR' | 'JPY' | 'GBP'
+export const memberships = sqliteTable(
+  'memberships',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    startsAt: timestamp('starts_at').notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    note: text('note'),
+    grantedBy: text('granted_by'),
+    createdAt: createdAt()
+  },
+  (table) => [index('memberships_user_expires_idx').on(table.userId, table.expiresAt)]
+)
 
-// Products table for purchasable items and subscriptions
-export const products = sqliteTable('products', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  name: text('name').notNull(),
-  type: text('type').$type<ProductType>().notNull(),
-  price: real('price').notNull(),
-  currency: text('currency').$type<Currency>().notNull().default('USD'),
-  interval: text('interval').$type<SubscriptionInterval>(), // Only used for subscription products
-  active: integer('active', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
-})
-
-// Orders table recording all transactions
-export const orders = sqliteTable('orders', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text('userId')
-    .notNull()
-    .references(() => users.id),
-  productId: text('productId')
-    .notNull()
-    .references(() => products.id),
-  status: text('status').$type<OrderStatus>().notNull().default('pending'),
-  transactionType: text('transactionType').$type<TransactionType>(),
-  paymentMethod: text('paymentMethod').$type<PaymentMethod>(),
-  paymentIntentId: text('paymentIntentId'), // Payment processor transaction ID
-  metadata: text('metadata'), // Extra metadata stored as JSON
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
-})
-
-// Subscriptions table tracking active subscriptions
-export const subscriptions = sqliteTable('subscriptions', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  userId: text('userId')
-    .notNull()
-    .references(() => users.id),
-  productId: text('productId')
-    .notNull()
-    .references(() => products.id),
-  orderId: text('orderId').references(() => orders.id),
-  expiredAt: integer('current_period_end', { mode: 'timestamp_ms' }).notNull(),
-  cancelAt: integer('cancel_at_period_end', { mode: 'boolean' }).default(false),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
-})
-
-export const comments = sqliteTable('comments', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  postId: text('post_id')
-    .notNull()
-    .references(() => posts.id, { onDelete: 'cascade' }),
-  userId: text('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  content: text('content').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
-})
-
-export type Comment = typeof comments.$inferSelect
+// ---------------------------------------------------------------------------
+// Relations & types
+// ---------------------------------------------------------------------------
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   posts: many(posts)
 }))
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [posts.categoryId],
-    references: [categories.id]
-  }),
-  author: one(users, {
-    fields: [posts.authorId],
-    references: [users.id]
-  }),
+  category: one(categories, { fields: [posts.categoryId], references: [categories.id] }),
   translations: many(postTranslations),
   comments: many(comments)
 }))
 
 export const postTranslationsRelations = relations(postTranslations, ({ one }) => ({
-  post: one(posts, {
-    fields: [postTranslations.postId],
-    references: [posts.id]
-  })
+  post: one(posts, { fields: [postTranslations.postId], references: [posts.id] })
 }))
 
 export const commentsRelations = relations(comments, ({ one }) => ({
-  post: one(posts, {
-    fields: [comments.postId],
-    references: [posts.id]
-  }),
-  author: one(users, {
-    fields: [comments.userId],
-    references: [users.id]
-  })
+  post: one(posts, { fields: [comments.postId], references: [posts.id] }),
+  author: one(users, { fields: [comments.userId], references: [users.id] })
 }))
+
+export const membershipsRelations = relations(memberships, ({ one }) => ({
+  user: one(users, { fields: [memberships.userId], references: [users.id] })
+}))
+
+export type Category = typeof categories.$inferSelect
+export type Post = typeof posts.$inferSelect
+export type NewPost = typeof posts.$inferInsert
+export type PostTranslation = typeof postTranslations.$inferSelect
+export type Comment = typeof comments.$inferSelect
+export type Membership = typeof memberships.$inferSelect

@@ -2,12 +2,10 @@
 /**
  * blog CLI — manage posts in the blog's D1 database from the command line.
  *
- * Local mode (default) uses the miniflare sqlite file under .wrangler/;
- * --remote talks to the production D1 database over the Cloudflare HTTP API
- * (requires CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN / DATABASE_ID in .env).
+ * Uses the app's D1 binding through wrangler: local by default, production with --remote.
  *
  * Markdown in/out uses frontmatter: title, summary, category, tags, status,
- * language, coverImageUrl, publishedAt.
+ * locale, coverImageUrl, publishedAt.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, resolve } from 'path'
@@ -17,15 +15,17 @@ import matter from 'gray-matter'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-import { categories, posts, postStatusEnum, type PostStatus } from '@/drizzle/schema'
-import { calculateReadingTime, extractSummary } from '@/lib/posts/utils'
+import { categories, posts, postStatuses, type PostStatus } from '@/drizzle/schema'
+import { extractSummary } from '@/lib/markdown/text'
 
 import { createCliDb, type CliDb } from './db'
 
 type GlobalArgs = { remote: boolean; json: boolean }
 
-function db(argv: GlobalArgs): CliDb {
-  return createCliDb(argv.remote)
+let session: Awaited<ReturnType<typeof createCliDb>> | undefined
+async function db(argv: GlobalArgs): Promise<CliDb> {
+  session ??= await createCliDb(argv.remote)
+  return session.db
 }
 
 function fail(message: string): never {
@@ -71,8 +71,8 @@ function parseTags(value: unknown): string[] {
 
 function normalizeStatus(value: string): PostStatus {
   const upper = value.trim().toUpperCase()
-  if (!(postStatusEnum as readonly string[]).includes(upper)) {
-    fail(`invalid status "${value}" (expected ${postStatusEnum.join(' | ')})`)
+  if (!(postStatuses as readonly string[]).includes(upper)) {
+    fail(`invalid status "${value}" (expected ${postStatuses.join(' | ')})`)
   }
   return upper as PostStatus
 }
@@ -84,7 +84,7 @@ type PostInput = {
   categoryKeyOrId?: string
   tags?: string[]
   status?: PostStatus
-  language?: string
+  locale?: string
   coverImageUrl?: string | null
   publishedAt?: Date | null
 }
@@ -98,7 +98,7 @@ function readMarkdownFile(file: string): PostInput {
   if (data.category) input.categoryKeyOrId = String(data.category)
   if (data.tags !== undefined) input.tags = parseTags(data.tags)
   if (data.status) input.status = normalizeStatus(String(data.status))
-  if (data.language) input.language = String(data.language)
+  if (data.locale) input.locale = String(data.locale)
   if (data.coverImageUrl !== undefined) input.coverImageUrl = data.coverImageUrl ? String(data.coverImageUrl) : null
   if (data.publishedAt) {
     const d = new Date(String(data.publishedAt))
@@ -114,13 +114,13 @@ function mergeCliOverrides(input: PostInput, argv: Record<string, unknown>): Pos
   if (argv.category) input.categoryKeyOrId = String(argv.category)
   if (argv.tags !== undefined && argv.tags !== '') input.tags = parseTags(argv.tags)
   if (argv.status) input.status = normalizeStatus(String(argv.status))
-  if (argv.language) input.language = String(argv.language)
+  if (argv.locale) input.locale = String(argv.locale)
   if (argv.cover !== undefined) input.coverImageUrl = argv.cover ? String(argv.cover) : null
   return input
 }
 
 async function cmdList(argv: GlobalArgs & { status?: string; category?: string; search?: string; limit: number }) {
-  const database = db(argv)
+  const database = await db(argv)
   const conditions: SQL<unknown>[] = []
   if (argv.status) conditions.push(eq(posts.status, normalizeStatus(argv.status)))
   if (argv.category) {
@@ -141,7 +141,7 @@ async function cmdList(argv: GlobalArgs & { status?: string; category?: string; 
       categoryId: posts.categoryId,
       categoryKey: categories.key,
       tags: posts.tags,
-      language: posts.language,
+      locale: posts.locale,
       publishedAt: posts.publishedAt,
       updatedAt: posts.updatedAt
     })
@@ -174,7 +174,7 @@ async function cmdList(argv: GlobalArgs & { status?: string; category?: string; 
 }
 
 async function cmdGet(argv: GlobalArgs & { id: string }) {
-  const database = db(argv)
+  const database = await db(argv)
   const post = await findPost(database, argv.id)
   if (!post) fail(`post "${argv.id}" not found`)
   if (argv.json) {
@@ -187,10 +187,9 @@ async function cmdGet(argv: GlobalArgs & { id: string }) {
   console.log(`status:      ${post.status}`)
   console.log(`category:    ${cat[0]?.key ?? post.categoryId}`)
   console.log(`tags:        ${(post.tags ?? []).join(', ') || '-'}`)
-  console.log(`language:    ${post.language}`)
+  console.log(`locale:      ${post.locale}`)
   console.log(`published:   ${fmtDate(post.publishedAt)}`)
   console.log(`updated:     ${fmtDate(post.updatedAt)}`)
-  console.log(`readingTime: ${post.readingTime} min`)
   console.log(`cover:       ${post.coverImageUrl ?? '-'}`)
   console.log(`summary:     ${post.summary}`)
   console.log('---')
@@ -204,7 +203,7 @@ function postToMarkdown(post: typeof posts.$inferSelect, categoryKey: string | n
     category: categoryKey ?? post.categoryId,
     tags: post.tags ?? [],
     status: post.status,
-    language: post.language,
+    locale: post.locale,
     coverImageUrl: post.coverImageUrl ?? '',
     publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString() : '',
     id: post.id
@@ -212,7 +211,7 @@ function postToMarkdown(post: typeof posts.$inferSelect, categoryKey: string | n
 }
 
 async function cmdExport(argv: GlobalArgs & { id: string; out?: string }) {
-  const database = db(argv)
+  const database = await db(argv)
   const post = await findPost(database, argv.id)
   if (!post) fail(`post "${argv.id}" not found`)
   const cat = await database.select().from(categories).where(eq(categories.id, post.categoryId))
@@ -228,7 +227,7 @@ async function cmdExport(argv: GlobalArgs & { id: string; out?: string }) {
 }
 
 async function cmdCreate(argv: GlobalArgs & Record<string, unknown> & { file?: string }) {
-  const database = db(argv)
+  const database = await db(argv)
   const input = mergeCliOverrides(argv.file ? readMarkdownFile(argv.file) : {}, argv)
 
   if (!input.title) fail('title is required (frontmatter `title:` or --title)')
@@ -238,7 +237,9 @@ async function cmdCreate(argv: GlobalArgs & Record<string, unknown> & { file?: s
   const cat = await resolveCategory(database, input.categoryKeyOrId)
   if (!cat) {
     const all = await database.select({ key: categories.key }).from(categories)
-    fail(`category "${input.categoryKeyOrId}" not found. Available: ${all.map((c) => c.key).join(', ') || '(none — create one with `blog categories --add <key>`)'}`)
+    fail(
+      `category "${input.categoryKeyOrId}" not found. Available: ${all.map((c) => c.key).join(', ') || '(none — create one with `blog categories --add <key>`)'}`
+    )
   }
 
   const status: PostStatus = input.status ?? 'DRAFT'
@@ -253,11 +254,8 @@ async function cmdCreate(argv: GlobalArgs & Record<string, unknown> & { file?: s
       categoryId: cat.id,
       status,
       tags: input.tags ?? [],
-      language: input.language ?? 'zh',
-      readingTime: calculateReadingTime(input.content),
-      publishedAt: status === 'PUBLISHED' ? (input.publishedAt ?? now) : null,
-      createdAt: now,
-      updatedAt: now
+      locale: input.locale ?? 'zh',
+      publishedAt: status === 'PUBLISHED' ? (input.publishedAt ?? now) : null
     })
     .returning({ id: posts.id, title: posts.title, status: posts.status })
 
@@ -267,22 +265,21 @@ async function cmdCreate(argv: GlobalArgs & Record<string, unknown> & { file?: s
 }
 
 async function cmdUpdate(argv: GlobalArgs & Record<string, unknown> & { id: string; file?: string }) {
-  const database = db(argv)
+  const database = await db(argv)
   const post = await findPost(database, argv.id)
   if (!post) fail(`post "${argv.id}" not found`)
 
   const input = mergeCliOverrides(argv.file ? readMarkdownFile(argv.file) : {}, argv)
-  const changes: Partial<typeof posts.$inferInsert> = { updatedAt: new Date() }
+  const changes: Partial<typeof posts.$inferInsert> = {}
 
   if (input.title) changes.title = input.title.trim()
   if (input.content) {
     changes.content = input.content
-    changes.readingTime = calculateReadingTime(input.content)
   }
   if (input.summary) changes.summary = input.summary.trim()
   else if (input.content && !post.summary) changes.summary = extractSummary(input.content)
   if (input.tags) changes.tags = input.tags
-  if (input.language) changes.language = input.language
+  if (input.locale) changes.locale = input.locale
   if (input.coverImageUrl !== undefined) changes.coverImageUrl = input.coverImageUrl
   if (input.categoryKeyOrId) {
     const cat = await resolveCategory(database, input.categoryKeyOrId)
@@ -304,15 +301,14 @@ async function cmdUpdate(argv: GlobalArgs & Record<string, unknown> & { id: stri
 }
 
 async function setStatus(argv: GlobalArgs & { id: string }, status: PostStatus) {
-  const database = db(argv)
+  const database = await db(argv)
   const post = await findPost(database, argv.id)
   if (!post) fail(`post "${argv.id}" not found`)
   await database
     .update(posts)
     .set({
       status,
-      publishedAt: status === 'PUBLISHED' ? (post.publishedAt ?? new Date()) : null,
-      updatedAt: new Date()
+      publishedAt: status === 'PUBLISHED' ? (post.publishedAt ?? new Date()) : post.publishedAt
     })
     .where(eq(posts.id, post.id))
   console.log(`${status === 'PUBLISHED' ? 'Published' : 'Unpublished'} ${post.id.slice(0, 8)}: ${post.title}`)
@@ -323,7 +319,7 @@ async function setStatus(argv: GlobalArgs & { id: string }, status: PostStatus) 
 }
 
 async function cmdDelete(argv: GlobalArgs & { id: string; yes: boolean }) {
-  const database = db(argv)
+  const database = await db(argv)
   const post = await findPost(database, argv.id)
   if (!post) fail(`post "${argv.id}" not found`)
   if (!argv.yes) fail(`refusing to delete "${post.title}" (${post.id.slice(0, 8)}) without --yes`)
@@ -332,20 +328,20 @@ async function cmdDelete(argv: GlobalArgs & { id: string; yes: boolean }) {
 }
 
 async function cmdCategories(argv: GlobalArgs & { add?: string; visible?: boolean }) {
-  const database = db(argv)
+  const database = await db(argv)
   if (argv.add) {
     const key = argv.add.trim()
     const existing = await database.select().from(categories).where(eq(categories.key, key))
     if (existing[0]) fail(`category "${key}" already exists`)
-    const maxRow = await database.select({ max: sql<number>`coalesce(max(${categories.sortOrder}), 0)` }).from(categories)
+    const maxRow = await database
+      .select({ max: sql<number>`coalesce(max(${categories.sortOrder}), 0)` })
+      .from(categories)
     const created = await database
       .insert(categories)
       .values({
         key,
         sortOrder: (maxRow[0]?.max ?? 0) + 1,
-        isVisible: argv.visible ?? true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        isVisible: argv.visible ?? true
       })
       .returning()
     console.log(`Created category ${created[0]!.key} (${created[0]!.id})`)
@@ -375,19 +371,23 @@ async function cmdCategories(argv: GlobalArgs & { add?: string; visible?: boolea
 }
 
 const contentOptions = {
-  file: { alias: 'f', type: 'string' as const, describe: 'markdown file (frontmatter: title/summary/category/tags/status/language/coverImageUrl/publishedAt)' },
+  file: {
+    alias: 'f',
+    type: 'string' as const,
+    describe: 'markdown file (frontmatter: title/summary/category/tags/status/locale/coverImageUrl/publishedAt)'
+  },
   title: { type: 'string' as const, describe: 'post title (overrides frontmatter)' },
   summary: { type: 'string' as const, describe: 'summary (defaults to first paragraph)' },
   category: { alias: 'c', type: 'string' as const, describe: 'category key or id' },
   tags: { type: 'string' as const, describe: 'comma-separated tags' },
   status: { type: 'string' as const, describe: 'DRAFT | PUBLISHED' },
-  language: { type: 'string' as const, describe: 'post language (default zh)' },
+  locale: { type: 'string' as const, describe: 'post locale (default zh)' },
   cover: { type: 'string' as const, describe: 'cover image url' }
 }
 
 void yargs(hideBin(process.argv))
   .scriptName('blog')
-  .option('remote', { alias: 'r', type: 'boolean', default: false, describe: 'use the remote D1 database (Cloudflare HTTP API)' })
+  .option('remote', { alias: 'r', type: 'boolean', default: false, describe: 'use the production D1 database' })
   .option('json', { type: 'boolean', default: false, describe: 'JSON output' })
   .command(
     'list',
@@ -415,7 +415,12 @@ void yargs(hideBin(process.argv))
         .option('out', { alias: 'o', type: 'string', describe: 'output file (default stdout)' }),
     (argv) => cmdExport(argv as never)
   )
-  .command('create', 'create a post from markdown', (y) => y.options(contentOptions), (argv) => cmdCreate(argv as never))
+  .command(
+    'create',
+    'create a post from markdown',
+    (y) => y.options(contentOptions),
+    (argv) => cmdCreate(argv as never)
+  )
   .command(
     'update <id>',
     'update fields of a post',
@@ -438,7 +443,9 @@ void yargs(hideBin(process.argv))
     'delete <id>',
     'delete a post',
     (y) =>
-      y.positional('id', { type: 'string', demandOption: true }).option('yes', { alias: 'y', type: 'boolean', default: false, describe: 'confirm deletion' }),
+      y
+        .positional('id', { type: 'string', demandOption: true })
+        .option('yes', { alias: 'y', type: 'boolean', default: false, describe: 'confirm deletion' }),
     (argv) => cmdDelete(argv as never)
   )
   .command(
@@ -457,4 +464,5 @@ void yargs(hideBin(process.argv))
     console.error(`Error: ${msg ?? err?.message}`)
     process.exit(1)
   })
-  .parse()
+  .parseAsync()
+  .finally(() => session?.dispose())

@@ -1,10 +1,7 @@
-import { drizzle as drizzleD1 } from 'drizzle-orm/d1'
 import OpenAI from 'openai'
 
 import { categories, posts, postTranslations } from '@/drizzle/schema'
-import * as schema from '@/drizzle/schema'
 import { createDb, type DB } from '@/lib/db'
-import { calculateReadingTime } from '@/lib/posts/utils'
 
 const AI_DAILY_CATEGORY_KEY = 'ai-daily'
 const DEFAULT_MODEL = 'gpt-5.5'
@@ -59,7 +56,7 @@ type DailyDraft = {
 
 export type AiDailyRunOptions = {
   now?: Date
-  env?: CloudflareEnv
+  env: CloudflareEnv
 }
 
 const POST_SCHEMA = {
@@ -103,29 +100,8 @@ const POST_SCHEMA = {
   }
 }
 
-function envValue(name: string, env?: CloudflareEnv) {
-  const binding = env?.[name as keyof CloudflareEnv]
-  if (typeof binding === 'string' && binding.trim()) return binding.trim()
-  return process.env[name]?.trim()
-}
-
-function runtimeDb(env?: CloudflareEnv) {
-  return env?.BLOG_DATABASE ? (drizzleD1(env.BLOG_DATABASE, { schema }) as DB) : createDb()
-}
-
-function openaiClient(env?: CloudflareEnv) {
-  const apiKey = envValue('OPENAI_API_KEY', env) || envValue('SOCHEAP_OPENAI_KEY', env)
-  if (!apiKey) {
-    throw new Error('Missing OPENAI_API_KEY or SOCHEAP_OPENAI_KEY for AI daily generation.')
-  }
-
-  const baseURL = envValue('OPENAI_BASE_URL', env) || envValue('SOCHEAP_BASE_URL', env)
-  return new OpenAI({ apiKey, baseURL: baseURL || undefined })
-}
-
-function model(env?: CloudflareEnv) {
-  return envValue('AI_DAILY_MODEL', env) || DEFAULT_MODEL
-}
+// The OpenAI SDK reads OPENAI_API_KEY / OPENAI_BASE_URL from the environment (Workers populate process.env).
+const model = () => process.env.AI_DAILY_MODEL?.trim() || DEFAULT_MODEL
 
 function zonedDateParts(date: Date) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -157,10 +133,7 @@ function dateInZone(day: string, hour: number) {
     const candidate = new Date(guess.getTime() + offset * 3_600_000)
     const parts = zonedDateParts(candidate)
 
-    if (
-      `${parts.year}-${parts.month}-${parts.day}` === day &&
-      Number.parseInt(parts.hour, 10) === hour
-    ) {
+    if (`${parts.year}-${parts.month}-${parts.day}` === day && Number.parseInt(parts.hour, 10) === hour) {
       return candidate
     }
   }
@@ -171,10 +144,7 @@ function dateInZone(day: string, hour: number) {
 function localDayRange(now: Date) {
   const day = zonedDateLabel(now)
   const start = dateInZone(day, 0)
-  const end = dateInZone(
-    zonedDateLabel(new Date(start.getTime() + 36 * 3_600_000)),
-    0
-  )
+  const end = dateInZone(zonedDateLabel(new Date(start.getTime() + 36 * 3_600_000)), 0)
 
   return { start, end }
 }
@@ -183,7 +153,10 @@ function localHalfDaySlot(now: Date) {
   const { start: dayStart } = localDayRange(now)
   const slotStartHour = Number.parseInt(zonedDateParts(now).hour, 10) < 12 ? 0 : 12
   const start = slotStartHour === 0 ? dayStart : dateInZone(zonedDateLabel(now), 12)
-  const end = slotStartHour === 0 ? dateInZone(zonedDateLabel(now), 12) : localDayRange(new Date(start.getTime() + 18 * 3_600_000)).start
+  const end =
+    slotStartHour === 0
+      ? dateInZone(zonedDateLabel(now), 12)
+      : localDayRange(new Date(start.getTime() + 18 * 3_600_000)).start
 
   return {
     start,
@@ -309,9 +282,9 @@ function translationPrompt(draft: DailyDraft) {
   ].join('\n\n')
 }
 
-async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, day: string, slotWindow: string) {
+async function generateDrafts(client: OpenAI, day: string, slotWindow: string) {
   const english = await client.responses.create({
-    model: model(env),
+    model: model(),
     input: englishPrompt(day, slotWindow),
     tools: [{ type: 'web_search', search_context_size: SEARCH_CONTEXT_SIZE }],
     text: {
@@ -326,7 +299,7 @@ async function generateDrafts(client: OpenAI, env: CloudflareEnv | undefined, da
   const en = parseDraft(english.output_text, 'Today in AI', 'English AI daily')
 
   const chinese = await client.responses.create({
-    model: model(env),
+    model: model(),
     input: translationPrompt(en),
     text: {
       format: {
@@ -353,7 +326,8 @@ function renderMarkdown(draft: DailyDraft, day: string, slotLabel: string, langu
           details: 'Key Details',
           sources: 'Sources',
           watchlist: 'Signals to Watch Next',
-          footer: 'This post was generated automatically from web search results. Key sources should be spot-checked before reuse.',
+          footer:
+            'This post was generated automatically from web search results. Key sources should be spot-checked before reuse.',
           date: (value: string) => ` (${value})`
         }
       : {
@@ -402,16 +376,9 @@ async function getOrCreateCategory(db: DB) {
   })
   if (existing) return existing
 
-  const now = new Date()
   const created = await db
     .insert(categories)
-    .values({
-      key: AI_DAILY_CATEGORY_KEY,
-      sortOrder: 22,
-      isVisible: true,
-      createdAt: now,
-      updatedAt: now
-    })
+    .values({ key: AI_DAILY_CATEGORY_KEY, sortOrder: 22, isVisible: true })
     .returning()
 
   return created[0]!
@@ -429,8 +396,8 @@ async function existingPostForSlot(db: DB, categoryId: string, now: Date) {
   })
 }
 
-export async function publishAiDailyPost({ env, now = new Date() }: AiDailyRunOptions = {}) {
-  const db = runtimeDb(env)
+export async function publishAiDailyPost({ env, now = new Date() }: AiDailyRunOptions) {
+  const db = createDb(env.BLOG_DATABASE)
   const category = await getOrCreateCategory(db)
   const existing = await existingPostForSlot(db, category.id, now)
 
@@ -444,7 +411,7 @@ export async function publishAiDailyPost({ env, now = new Date() }: AiDailyRunOp
 
   const day = dateLabel(now)
   const slot = localHalfDaySlot(now)
-  const drafts = await generateDrafts(openaiClient(env), env, day, slot.window)
+  const drafts = await generateDrafts(new OpenAI(), day, slot.window)
   const englishContent = renderMarkdown(drafts.en, day, slot.label, 'en')
   const chineseContent = renderMarkdown(drafts.zh, day, slot.label, 'zh')
 
@@ -458,10 +425,7 @@ export async function publishAiDailyPost({ env, now = new Date() }: AiDailyRunOp
       status: 'PUBLISHED',
       publishedAt: now,
       tags: TAGS,
-      language: 'en',
-      readingTime: calculateReadingTime(englishContent),
-      createdAt: now,
-      updatedAt: now
+      locale: 'en'
     })
     .returning({ id: posts.id, title: posts.title })
 
@@ -472,11 +436,9 @@ export async function publishAiDailyPost({ env, now = new Date() }: AiDailyRunOp
       locale: 'zh',
       title: drafts.zh.title,
       summary: drafts.zh.summary,
-      content: chineseContent,
-      createdAt: now,
-      updatedAt: now
+      content: chineseContent
     })
-    .returning({ id: postTranslations.id, locale: postTranslations.locale })
+    .returning({ locale: postTranslations.locale })
 
   return {
     status: 'created' as const,

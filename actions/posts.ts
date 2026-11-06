@@ -1,433 +1,177 @@
 'use server'
 
-import { and, eq } from 'drizzle-orm'
-import { revalidatePath } from 'next/cache'
+import { eq } from 'drizzle-orm'
+import { refresh } from 'next/cache'
 import { z } from 'zod'
 
-import { postTranslations, posts, PostStatus, postStatusEnum } from '@/drizzle/schema'
-import { auth } from '@/lib/auth'
-import { createDb, DB } from '@/lib/db'
-import { getOrCreatePostTranslation } from '@/lib/posts/translation'
-import { calculateReadingTime, extractSummary } from '@/lib/posts/utils'
+import { postStatuses, posts, postTranslations } from '@/drizzle/schema'
+import { redirect } from '@/i18n/navigation'
+import { routing } from '@/i18n/routing'
+import { getDb } from '@/lib/db'
+import { extractSummary } from '@/lib/markdown/text'
+import { requireAdmin } from '@/lib/session'
+import { translateText } from '@/lib/translate'
 
-type PostFormState = {
-  status: 'idle' | 'success' | 'error'
-  message?: string
-  errors?: Record<string, string[]>
-}
+import { fail, invalid, type ActionState } from './types'
 
-async function assertAdmin() {
-  const session = await auth()
+const locale = z.enum(routing.locales)
+const optionalDate = z
+  .string()
+  .optional()
+  .transform((value) => (value ? new Date(value) : null))
+  .refine((date) => date === null || !Number.isNaN(date.getTime()), 'invalidDate')
 
-  if (!session?.user || !process.env.NEXT_PUBLIC_ADMIN_ID?.split(',').includes(session?.user?.id ?? '')) {
-    throw new Error('Unauthorized')
-  }
-
-  return session.user
-}
-
-const postStatusValues = [...postStatusEnum] as [PostStatus, ...PostStatus[]]
-
-const postFormSchema = z.object({
-  postId: z.string().optional(),
-  title: z.string().min(3, '标题至少 3 个字符'),
-  summary: z.string().optional(),
-  content: z.string().min(50, '内容需要至少 50 个字符'),
-  coverImageUrl: z.string().url('封面链接格式不正确').optional().or(z.literal('')),
-  categoryId: z.string().min(1, '请选择分类'),
-  tags: z.string().optional(),
-  status: z.enum(postStatusValues).default('DRAFT'),
-  sortOrder: z.coerce.number().optional(),
-  publishedAt: z.string().optional(),
-  language: z.string().optional(),
-  editorLocale: z.string().optional(),
-  isSubscriptionOnly: z.coerce.boolean().default(false)
+const postSchema = z.object({
+  id: z.string().optional(),
+  /** UI locale, for redirects (Server Actions have no root params). */
+  uiLocale: locale,
+  /** Locale being edited: the original's locale, or a translation's. */
+  locale,
+  title: z.string().trim().min(3, 'titleTooShort'),
+  summary: z.string().trim().optional(),
+  content: z.string().min(50, 'contentTooShort'),
+  coverImageUrl: z.union([z.url(), z.literal('')]).optional(),
+  categoryId: z.string().min(1, 'categoryRequired'),
+  tags: z
+    .string()
+    .optional()
+    .transform((value) => [
+      ...new Set(
+        (value ?? '')
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      )
+    ]),
+  status: z.enum(postStatuses),
+  publishedAt: optionalDate,
+  isMembersOnly: z.stringbool().default(false)
 })
 
-function formatFieldErrors(error: z.ZodError): Record<string, string[]> {
-  const formatted: Record<string, string[]> = {}
-  const fieldErrors = error.flatten().fieldErrors
-  Object.entries(fieldErrors).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      const messages = value.filter(Boolean) as string[]
-      if (messages.length) {
-        formatted[key] = messages
-      }
-    }
-  })
-  return formatted
-}
+export async function savePost(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin()
+  const parsed = postSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return invalid(parsed.error, formData)
 
-function parseTags(value?: string) {
-  if (!value) return []
-  return value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-}
-
-async function upsertPost(db: DB, data: z.infer<typeof postFormSchema>, userId: string) {
-  const summary = data.summary?.trim() || extractSummary(data.content)
-  const coverImageUrl = data.coverImageUrl?.trim() ? data.coverImageUrl.trim() : null
-  const tags = parseTags(data.tags)
-  const readingTime = calculateReadingTime(data.content)
-  const language = data.language?.trim() || 'zh'
-  const sortOrder = Number.isFinite(data.sortOrder) ? (data.sortOrder as number) : 0
-  const isSubscriptionOnly = Boolean(data.isSubscriptionOnly)
-
-  const publishedAt =
-    data.status === 'PUBLISHED'
-      ? (() => {
-          const parsedDate = data.publishedAt ? new Date(data.publishedAt) : new Date()
-          return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate
-        })()
-      : null
-
-  const baseData = {
-    title: data.title.trim(),
-    summary,
-    content: data.content,
-    coverImageUrl,
+  const { id, uiLocale, locale, title, content, status, ...data } = parsed.data
+  const summary = data.summary || extractSummary(content)
+  const shared = {
     categoryId: data.categoryId,
-    status: data.status,
-    isSubscriptionOnly,
-    tags,
-    readingTime,
-    language,
-    sortOrder,
-    authorId: userId,
-    publishedAt
+    coverImageUrl: data.coverImageUrl || null,
+    tags: data.tags,
+    status,
+    isMembersOnly: data.isMembersOnly,
+    publishedAt: status === 'PUBLISHED' ? (data.publishedAt ?? new Date()) : data.publishedAt
+  }
+  const db = await getDb()
+
+  if (!id) {
+    const [created] = await db
+      .insert(posts)
+      .values({ ...shared, locale, title, summary, content })
+      .returning({ id: posts.id })
+    return redirect({ href: `/admin/posts/${created!.id}`, locale: uiLocale })
   }
 
-  if (data.postId) {
-    const existing = await db.query.posts.findFirst({
-      where: (post, { eq }) => eq(post.id, data.postId!)
-    })
+  const existing = await db.query.posts.findFirst({ where: eq(posts.id, id), columns: { locale: true } })
+  if (!existing) return fail('notFound', formData)
 
-    if (!existing) {
-      throw new Error('Post not found')
-    }
-
-    const updatedPublishedAt =
-      data.status === 'PUBLISHED' ? (baseData.publishedAt ?? existing.publishedAt ?? new Date()) : null
-
-    const updated = await db
+  if (existing.locale === locale) {
+    await db
       .update(posts)
-      .set({
-        ...baseData,
-        publishedAt: updatedPublishedAt,
-        updatedAt: new Date()
-      })
-      .where(eq(posts.id, data.postId))
-      .returning()
-
-    return updated[0]!
-  }
-
-  const created = await db
-    .insert(posts)
-    .values({
-      ...baseData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    })
-    .returning()
-
-  return created[0]!
-}
-
-function revalidatePostRoutes(postId: string) {
-  revalidatePath('/')
-  revalidatePath(`/content/${postId}`)
-  revalidatePath('/admin/posts')
-}
-
-export async function savePostAction(_prevState: PostFormState, formData: FormData): Promise<PostFormState> {
-  const db = createDb()
-  try {
-    const user = await assertAdmin()
-    const entries = Object.fromEntries(formData.entries()) as Record<string, string>
-    const payload = postFormSchema.safeParse(entries)
-
-    if (!payload.success) {
-      return {
-        status: 'error',
-        errors: formatFieldErrors(payload.error),
-        message: '请检查表单信息'
-      }
-    }
-
-    const editorLocale = (payload.data.editorLocale || payload.data.language || '').trim().toLowerCase()
-
-    if (payload.data.postId && editorLocale) {
-      const existing = await db.query.posts.findFirst({
-        where: (post, { eq }) => eq(post.id, payload.data.postId!)
-      })
-
-      if (!existing) {
-        throw new Error('Post not found')
-      }
-
-      const sourceLocale = (existing.language ?? 'zh').trim().toLowerCase() || 'zh'
-
-      if (editorLocale !== sourceLocale) {
-        const summary = payload.data.summary?.trim() || extractSummary(payload.data.content)
-        const coverImageUrl = payload.data.coverImageUrl?.trim() ? payload.data.coverImageUrl.trim() : null
-        const title = payload.data.title.trim()
-        const content = payload.data.content
-        const now = new Date()
-
-        const existingTranslation = await db.query.postTranslations.findFirst({
-          where: (translation, { eq }) => and(eq(translation.postId, existing.id), eq(translation.locale, editorLocale))
+      .set({ ...shared, title, summary, content })
+      .where(eq(posts.id, id))
+  } else {
+    await db.batch([
+      db.update(posts).set(shared).where(eq(posts.id, id)),
+      db
+        .insert(postTranslations)
+        .values({ postId: id, locale, title, summary, content })
+        .onConflictDoUpdate({
+          target: [postTranslations.postId, postTranslations.locale],
+          set: { title, summary, content, updatedAt: new Date() }
         })
-
-        if (existingTranslation) {
-          await db
-            .update(postTranslations)
-            .set({
-              title,
-              summary,
-              content,
-              coverImageUrl,
-              updatedAt: now
-            })
-            .where(and(eq(postTranslations.postId, existing.id), eq(postTranslations.locale, editorLocale)))
-        } else {
-          await db.insert(postTranslations).values({
-            postId: existing.id,
-            locale: editorLocale,
-            title,
-            summary,
-            content,
-            coverImageUrl,
-            createdAt: now,
-            updatedAt: now
-          })
-        }
-        if (payload.data.categoryId && payload.data.categoryId !== existing.categoryId) {
-          await db
-            .update(posts)
-            .set({
-              categoryId: payload.data.categoryId,
-              updatedAt: now
-            })
-            .where(eq(posts.id, existing.id))
-        }
-
-        revalidatePostRoutes(existing.id)
-
-        return {
-          status: 'success',
-          message: '翻译已保存'
-        }
-      }
-    }
-
-    const post = await upsertPost(db, payload.data, user.id)
-
-    revalidatePostRoutes(post.id)
-
-    return {
-      status: 'success',
-      message: '文章已保存'
-    }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return {
-        status: 'error',
-        errors: formatFieldErrors(error),
-        message: '请检查表单信息'
-      }
-    }
-
-    console.error('Failed to save post', error)
-    return {
-      status: 'error',
-      message: error instanceof Error ? error.message : '保存失败，请稍后重试'
-    }
-  }
-}
-
-export async function deletePostAction(postId: string) {
-  await assertAdmin()
-  const db = createDb()
-  const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ id: posts.id })
-
-  if (!deleted[0]) {
-    return { status: 'error', message: '文章不存在' }
+    ])
   }
 
-  revalidatePostRoutes(deleted[0].id)
-
-  return { status: 'success' }
+  refresh()
+  return { ok: true }
 }
 
-export async function togglePostStatusAction(postId: string, status: PostStatus) {
-  await assertAdmin()
-  const db = createDb()
+const idSchema = z.string().min(1).max(64)
+
+export async function deletePost(id: string, uiLocale: string) {
+  await requireAdmin()
+  const db = await getDb()
+  await db.delete(posts).where(eq(posts.id, idSchema.parse(id)))
+  return redirect({ href: '/admin/posts', locale: locale.parse(uiLocale) })
+}
+
+const flagsSchema = z
+  .object({
+    status: z.enum(postStatuses),
+    isMembersOnly: z.boolean(),
+    signalClaimed: z.boolean(),
+    publishedAt: z.coerce.date().nullable()
+  })
+  .partial()
+
+/** Inline toggles from the admin table. */
+export async function updatePostFlags(id: string, input: z.input<typeof flagsSchema>): Promise<ActionState> {
+  await requireAdmin()
+  const flags = flagsSchema.safeParse(input)
+  if (!flags.success) return invalid(flags.error)
+
+  const db = await getDb()
   const existing = await db.query.posts.findFirst({
-    where: (post, { eq }) => eq(post.id, postId)
+    where: eq(posts.id, idSchema.parse(id)),
+    columns: { publishedAt: true }
   })
+  if (!existing) return fail('notFound')
 
-  if (!existing) {
-    return { status: 'error', message: '文章不存在' }
-  }
-
-  const publishedAt = status === 'PUBLISHED' ? (existing.publishedAt ?? new Date()) : null
-
-  const updated = await db
+  const { status, isMembersOnly, signalClaimed, publishedAt } = flags.data
+  await db
     .update(posts)
     .set({
-      status,
-      publishedAt,
-      updatedAt: new Date()
+      ...(status && { status }),
+      ...(status === 'PUBLISHED' && !existing.publishedAt && { publishedAt: new Date() }),
+      ...(isMembersOnly !== undefined && { isMembersOnly }),
+      ...(signalClaimed !== undefined && { signalClaimedAt: signalClaimed ? new Date() : null }),
+      ...(publishedAt !== undefined && { publishedAt })
     })
-    .where(eq(posts.id, postId))
-    .returning({ id: posts.id, status: posts.status })
+    .where(eq(posts.id, id))
 
-  const updatedPost = updated[0]
-  if (!updatedPost) {
-    return { status: 'error', message: '文章不存在' }
-  }
-
-  revalidatePostRoutes(updatedPost.id)
-
-  return { status: 'success', statusValue: updatedPost.status }
+  refresh()
+  return { ok: true }
 }
 
-export async function updatePostPublishedAtAction(postId: string, publishedAt?: string | null) {
-  await assertAdmin()
-  const db = createDb()
-  const existing = await db.query.posts.findFirst({
-    where: (post, { eq }) => eq(post.id, postId)
-  })
+/** Machine-translate the original into `target` and store it as a translation (overwrites an existing one). */
+export async function translatePost(id: string, target: string): Promise<ActionState> {
+  await requireAdmin()
+  const to = locale.safeParse(target)
+  if (!to.success) return fail('invalid')
 
-  if (!existing) {
-    return { status: 'error', message: '文章不存在' }
-  }
-
-  let parsedDate: Date | null = null
-  if (publishedAt) {
-    const candidate = new Date(publishedAt)
-    if (Number.isNaN(candidate.getTime())) {
-      return { status: 'error', message: 'Invalid published time' }
-    }
-    parsedDate = candidate
-  }
-
-  const updated = await db
-    .update(posts)
-    .set({
-      publishedAt: parsedDate,
-      updatedAt: new Date()
-    })
-    .where(eq(posts.id, postId))
-    .returning({ id: posts.id })
-
-  if (!updated[0]) {
-    return { status: 'error', message: '文章不存在' }
-  }
-
-  revalidatePostRoutes(updated[0].id)
-
-  return { status: 'success' }
-}
-
-export async function updatePostSubscriptionAction(postId: string, isSubscriptionOnly: boolean) {
-  await assertAdmin()
-  const db = createDb()
-  const updated = await db
-    .update(posts)
-    .set({
-      isSubscriptionOnly,
-      updatedAt: new Date()
-    })
-    .where(eq(posts.id, postId))
-    .returning({ id: posts.id, isSubscriptionOnly: posts.isSubscriptionOnly })
-
-  const record = updated[0]
-  if (!record) {
-    return { status: 'error', message: '文章不存在' }
-  }
-
-  revalidatePostRoutes(record.id)
-
-  return { status: 'success', value: record.isSubscriptionOnly }
-}
-
-export async function updatePostContentSignalReferenceAction(postId: string, isReferenced: boolean) {
-  await assertAdmin()
-  const db = createDb()
-  const updated = await db
-    .update(posts)
-    .set({
-      contentSignalReferencedAt: isReferenced ? new Date() : null,
-      updatedAt: new Date()
-    })
-    .where(eq(posts.id, postId))
-    .returning({
-      id: posts.id,
-      contentSignalReferencedAt: posts.contentSignalReferencedAt
-    })
-
-  const record = updated[0]
-  if (!record) {
-    return { status: 'error', message: '文章不存在' }
-  }
-
-  revalidatePostRoutes(record.id)
-
-  return { status: 'success', value: record.contentSignalReferencedAt }
-}
-
-export async function translatePostAction(postId: string, targetLocale: string) {
-  await assertAdmin()
-  const db = createDb()
-  const trimmedLocale = targetLocale?.trim().toLowerCase()
-
-  if (!trimmedLocale) {
-    return { status: 'error', message: '请选择目标语言' }
-  }
-
-  const post = await db.query.posts.findFirst({
-    where: (post, { eq }) => eq(post.id, postId)
-  })
-
-  if (!post) {
-    return { status: 'error', message: '文章不存在' }
-  }
-
-  const sourceLocale = (post.language ?? 'en').trim().toLowerCase() || 'en'
-  if (sourceLocale === trimmedLocale) {
-    return { status: 'error', message: '目标语言与原文相同' }
-  }
+  const db = await getDb()
+  const post = await db.query.posts.findFirst({ where: eq(posts.id, idSchema.parse(id)) })
+  if (!post) return fail('notFound')
+  if (post.locale === to.data) return fail('sameLocale')
 
   try {
-    const translation = await getOrCreatePostTranslation(
-      {
-        postId: post.id,
-        content: post.content,
-        targetLocale: trimmedLocale,
-        sourceLocale,
-        originalTitle: post.title,
-        originalSummary: post.summary,
-        coverImageUrl: post.coverImageUrl ?? null
-      },
-      true
+    const [title, summary, content] = await Promise.all(
+      [post.title, post.summary, post.content].map((text) => translateText(text, post.locale, to.data))
     )
-
-    if (!translation) {
-      return { status: 'error', message: '翻译失败，请稍后重试' }
-    }
-
-    revalidatePostRoutes(post.id)
-
-    return { status: 'success', translation }
+    await db
+      .insert(postTranslations)
+      .values({ postId: id, locale: to.data, title: title!, summary: summary!, content: content! })
+      .onConflictDoUpdate({
+        target: [postTranslations.postId, postTranslations.locale],
+        set: { title: title!, summary: summary!, content: content!, updatedAt: new Date() }
+      })
   } catch (error) {
-    console.error('Failed to translate post', error)
-    return {
-      status: 'error',
-      message: error instanceof Error ? error.message : '翻译失败，请稍后重试'
-    }
+    console.error('Translation failed', error)
+    return fail('translationFailed')
   }
+
+  refresh()
+  return { ok: true }
 }

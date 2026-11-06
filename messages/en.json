@@ -1,4 +1,22 @@
 {
+  "nav": {
+    "brand": "Fish Blog",
+    "about": "About",
+    "signIn": "Sign in",
+    "account": "Account",
+    "admin": "Admin",
+    "tools": "Tools",
+    "signOut": "Sign out",
+    "toggleTheme": "Toggle theme"
+  },
+  "seo": {
+    "siteTitle": "Fish Blog",
+    "siteDescription": "Practical notes on engineering, applied AI, and growth, written to be used.",
+    "homeTitle": "Content Library",
+    "homeDescription": "Browse articles on engineering, SEO, growth, and indie building in English and Chinese.",
+    "aboutTitle": "Felix",
+    "aboutDescription": "Software Engineer focused on AI products, growth, and monetization."
+  },
   "about": {
     "title": "Felix",
     "intro": "Software Engineer\nEnjoy the present, do interesting things.",
@@ -14,222 +32,211 @@
     },
     "contactMe": "Contact Me"
   },
-  "common": {
-    "home": "Home",
-    "about": "About",
-    "myAccount": "My Account",
-    "userId": "User ID",
-    "copyId": "Copy ID",
-    "copied": "Copied",
-    "copyFailed": "Failed to copy, please try again.",
-    "email": "Email",
-    "username": "Username",
-    "currentPlan": "Current plan",
-    "expiresAt": "Expires at",
-    "planFree": "Not subscribed",
-    "planLoading": "Loading...",
-    "expiredTag": "expired",
-    "scheduledTag": "scheduled",
-    "startsAt": "Starts at",
-    "notAvailable": "N/A",
-    "loginIn": "Login",
-    "signout": "Sign Out",
-    "toggleTheme": "Toggle theme",
-    "uncategorized": "Uncategorized",
-    "adminPanel": "Admin Dashboard",
-    "tools": "Tools"
-  },
-  "article": {
-    "life": "Life",
-    "seo": "SEO",
-    "faqAndPath": "FAQ and Learning Path",
-    "timeline": "Timeline",
-    "onPage": "Outline",
-    "reactSourceCode": "React Source Code",
-    "reactNative": "React Native",
-    "business": "Business",
-    "independentDevelopment": "Independent Development",
-    "vue": "Vue",
-    "sdk": "SDK",
-    "fontEnd": "Front-End",
-    "interview": "Interview",
-    "flutter": "Flutter",
+  "categories": {
+    "ai": "AI",
+    "ai-daily": "AI Daily",
     "app": "App",
-    "backend": "Backend",
+    "business": "Business",
     "commonBaseProject": "Common Base Project",
-    "nextjs": "Next.js",
     "fragments": "Fragments",
     "other": "Other",
-    "aiDaily": "AI Daily",
-    "ai": "AI"
+    "reactNative": "React Native",
+    "reactSourceCode": "React Source Code",
+    "seo": "SEO",
+    "timeline": "Timeline"
+  },
+  "explorer": {
+    "searchLabel": "Search",
+    "searchPlaceholder": "Find by title, summary, or keyword",
+    "categoryLabel": "Category",
+    "categoryAll": "All categories",
+    "sortLabel": "Sort",
+    "sort": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "title": "A → Z"
+    },
+    "updating": "Updating",
+    "reset": "Reset",
+    "stats": "{count, plural, one {# article} other {# articles}}",
+    "empty": {
+      "title": "Nothing matches yet.",
+      "description": "Adjust the filters or clear the search."
+    },
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "post": {
+    "back": "Back to library",
+    "membersOnly": "Members only",
+    "comments": "Comments",
+    "locked": {
+      "preview": "Preview",
+      "title": "Members get the full article",
+      "description": "Sign in and become a member to read every paragraph.",
+      "memberDescription": "This article is for members. Contact the author to get a membership.",
+      "signIn": "Sign in"
+    }
+  },
+  "comments": {
+    "empty": "No comments yet. Be the first to add one.",
+    "anonymous": "Someone",
+    "signInPrompt": "Sign in to join the conversation.",
+    "signIn": "Sign in",
+    "placeholder": "Share your take or ask a question...",
+    "submit": "Post"
+  },
+  "signIn": {
+    "title": "Welcome to Fish Blog",
+    "description": "Sign in to comment and read member posts.",
+    "checkEmail": "Check your inbox — we sent you a sign-in link.",
+    "error": "Sign-in failed. Please try again.",
+    "google": "Continue with Google",
+    "github": "Continue with GitHub",
+    "or": "or",
+    "emailPlaceholder": "you@example.com",
+    "email": "Email me a sign-in link",
+    "invalidEmail": "Enter a valid email address."
+  },
+  "account": {
+    "title": "Account",
+    "userId": "User ID",
+    "copy": "Copy",
+    "copied": "Copied",
+    "name": "Name",
+    "email": "Email",
+    "membership": "Membership",
+    "signOut": "Sign out",
+    "plan": {
+      "none": "Not a member",
+      "active": "Active until {end}",
+      "scheduled": "Starts {start}, ends {end}",
+      "expired": "Expired on {end}"
+    }
+  },
+  "errors": {
+    "backHome": "Back to home",
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you’re looking for doesn’t exist or was moved."
+    },
+    "forbidden": {
+      "title": "No access",
+      "description": "Your account can’t open this page."
+    },
+    "unauthorized": {
+      "title": "Sign in required",
+      "description": "Please sign in to continue.",
+      "action": "Sign in"
+    }
+  },
+  "actions": {
+    "errors": {
+      "invalid": "Please check the highlighted fields.",
+      "unauthorized": "Please sign in first.",
+      "notFound": "It no longer exists.",
+      "invalidEmail": "Enter a valid email address.",
+      "userNotFound": "No user with that ID.",
+      "membershipOverlap": "This user already has a membership in that period.",
+      "sameLocale": "That is the original language.",
+      "translationFailed": "Translation failed. Try again later.",
+      "titleTooShort": "Title needs at least 3 characters.",
+      "contentTooShort": "Content needs at least 50 characters.",
+      "categoryRequired": "Pick a category.",
+      "invalidDate": "Invalid date."
+    }
+  },
+  "pwa": {
+    "title": "Install the app",
+    "description": "Add Fish Blog to your home screen for faster, offline-friendly reading.",
+    "cta": "Install",
+    "remindLater": "Maybe later",
+    "close": "Close"
   },
   "admin": {
-    "status": {
-      "draft": "Draft",
-      "published": "Published"
+    "nav": {
+      "posts": "Posts",
+      "memberships": "Memberships",
+      "tools": "Tools"
     },
     "posts": {
-      "description": "Manage all posts in one place with search and filters.",
-      "title": "Post list",
-      "actions": {
-        "newPost": "Write new post",
-        "toDraft": "Switch to draft",
-        "publish": "Publish",
-        "preview": "Preview",
-        "delete": "Delete",
-        "updatePublishTime": "Update publish time"
+      "title": "Posts",
+      "new": "New post",
+      "search": "Search title or summary",
+      "allStatuses": "All statuses",
+      "allCategories": "All categories",
+      "filter": "Filter",
+      "status": {
+        "DRAFT": "Draft",
+        "PUBLISHED": "Published"
       },
-      "access": {
-        "subscriptionOnly": "Subscription only",
-        "public": "Public",
-        "switchLabel": "Toggle access",
-        "updateSuccess": "Access updated to {label}",
-        "updateFailed": "Failed to update access",
-        "updateFailedDescription": "Please try again later."
-      },
-      "contentSignal": {
-        "referenced": "Referenced",
-        "unreferenced": "Unreferenced",
-        "empty": "Unreferenced",
-        "switchLabel": "Reference switch",
-        "updateSuccess": "Content Signal updated to {label}",
-        "updateFailed": "Failed to update Content Signal",
-        "updateFailedDescription": "Please try again later."
-      },
-      "filters": {
-        "searchLabel": "Search",
-        "searchPlaceholder": "Title or summary keywords",
-        "statusLabel": "Status",
-        "statusOptions": {
-          "all": "All",
-          "published": "Published",
-          "draft": "Draft"
-        },
-        "categoryLabel": "Category",
-        "categoryOptions": {
-          "all": "All",
-          "ai": "AI"
-        },
-        "apply": "Apply filters"
-      },
-      "pagination": {
-        "caption": "Page {page} / {totalPages} ({total} posts)",
-        "prev": "Previous",
-        "next": "Next"
-      },
-      "deleteConfirmation": "Are you sure you want to delete this post? This action cannot be undone.",
-      "deleteSuccess": "Post deleted",
-      "deleteFailed": "Failed to delete post",
-      "deleteFailedDescription": "Please try again later.",
-      "statusSwitchSuccess": "Switched to {status}",
-      "statusUpdateFailed": "Failed to update status",
-      "statusUpdateFailedDescription": "Please try again later.",
-      "empty": "No posts available.",
-      "table": {
-        "headers": {
-          "title": "Title",
-          "access": "Access",
-          "contentSignalReferencedAt": "Content Signal referenced at",
-          "status": "Status",
-          "updated": "Updated at",
-          "publishedAt": "Published at",
-          "actions": "Actions"
-        },
-        "uncategorized": "Uncategorized"
-      },
-      "new": {
-        "description": "Create a new article",
-        "title": "Compose content"
-      },
-      "publishTime": {
-        "invalid": "Pick a valid published time",
-        "updateSuccess": "Publish time updated",
-        "updateFailed": "Failed to update publish time"
-      }
-    },
-    "subscriptions": {
-      "title": "Manual membership grant",
-      "description": "Issue a 1-year membership by user ID. The system will create the product, order, and subscription records for you.",
-      "formTitle": "Send annual membership",
-      "helper": "Use this for gifting or offline payments. Make sure the user has already signed up with this user ID.",
-      "bullet": {
-        "price": "Price: 200 cny (subscription product)",
-        "interval": "Interval: 1 year, single delivery",
-        "howItWorks": "Flow: find user by ID -> create order -> write subscription record"
-      },
-      "actions": {
-        "open": "Grant membership"
-      },
-      "form": {
-        "userIdLabel": "User ID",
-        "userIdPlaceholder": "Copy from the user's profile",
-        "startAtLabel": "Start time (optional)",
-        "startAtPlaceholder": "Defaults to now, or pick a specific start time",
-        "startAtHelper": "Leave empty to activate immediately. Future start times will schedule the 1-year period.",
-        "noteLabel": "Note (optional)",
-        "notePlaceholder": "Reason, offline payment info, etc.",
-        "submit": "Send subscription",
-        "successTitle": "Membership sent",
-        "errorTitle": "Failed to send"
-      }
-    },
-    "form": {
-      "saveSuccessTitle": "Content saved",
-      "saveSuccessDescription": "Post saved successfully",
-      "saveFailedTitle": "Save failed",
-      "saveFailedDescription": "Please try again later.",
-      "deleteConfirmation": "Are you sure you want to delete this post? This action cannot be undone.",
-      "deleteSuccess": "Post deleted",
-      "deleteFailed": "Failed to delete post",
-      "deleteFailedDescription": "Please try again later.",
-      "fields": {
+      "pagination": "Page {page, number} of {pageCount, number} · {total, number} posts",
+      "prev": "Previous",
+      "next": "Next",
+      "empty": "No posts.",
+      "view": "View",
+      "columns": {
         "title": "Title",
-        "slug": "Slug",
-        "category": "Category",
-        "status": "Status",
-        "coverImageUrl": "Cover image URL",
-        "tags": "Tags (comma separated)",
-        "sortOrder": "Sort weight",
-        "language": "Language",
-        "publishedAt": "Published at",
-        "summary": "Summary",
-        "content": "Content",
-        "subscriptionOnly": "This is a member-only post"
+        "status": "Published",
+        "membersOnly": "Members only",
+        "signal": "Signal claimed",
+        "publishedAt": "Published at"
+      }
+    },
+    "editor": {
+      "back": "Back to posts",
+      "status": {
+        "published": "Published",
+        "draft": "Draft"
       },
-      "placeholders": {
-        "title": "Enter a title",
-        "slug": "app/your-article",
-        "category": "Select the category",
-        "coverImageUrl": "https://...",
-        "summary": "Short intro for lists & SEO...",
-        "content": "Write using Markdown/MDX..."
+      "locales": "Languages",
+      "translate": "Machine translate",
+      "translated": "Translation saved",
+      "translateOverwrite": "Overwrite the existing translation?",
+      "export": "Download Markdown",
+      "delete": "Delete post",
+      "deleteConfirm": "Delete this post and all its translations? This cannot be undone.",
+      "unpublish": "Unpublish",
+      "saveDraft": "Save draft",
+      "update": "Update",
+      "publish": "Publish",
+      "saved": "Saved",
+      "noTranslation": "No translation yet — write one here or use machine translation.",
+      "title": "Title",
+      "titlePlaceholder": "Title",
+      "summary": "Summary",
+      "summaryPlaceholder": "Summary (defaults to the first paragraph)",
+      "contentPlaceholder": "Write in Markdown…",
+      "sharedSettings": "These settings are shared by all languages.",
+      "category": "Category",
+      "categoryPlaceholder": "Choose a category",
+      "cover": "Cover image URL",
+      "tags": "Tags (comma separated)",
+      "publishedAt": "Published at",
+      "membersOnly": "Members only",
+      "membersOnlyHint": "Non-members see the first part of the article.",
+      "uploading": "Uploading image…",
+      "uploadFailed": "Image upload failed"
+    },
+    "memberships": {
+      "title": "Memberships",
+      "recent": "Recently granted",
+      "columns": {
+        "user": "User",
+        "period": "Period",
+        "note": "Note"
       },
-      "actions": {
-        "saveDraft": "Save draft",
-        "publish": "Publish post",
-        "cancel": "Cancel",
-        "deleting": "Deleting...",
-        "delete": "Delete post"
-      },
-      "publishModal": {
-        "title": "Finalize publishing",
-        "description": "Double-check the metadata, cover image, and summary before going live.",
-        "help": "Summary defaults to the first 100 characters of your article.",
-        "subscriptionHint": "When enabled, non-members only see 30% of the article."
-      },
-      "translation": {
-        "title": "Translate post",
-        "description": "Generate and save a machine translation for this article.",
-        "targetLabel": "Target language",
-        "translate": "Translate now",
-        "translating": "Translating...",
-        "successTitle": "Translation added",
-        "successDescription": "Saved the {locale} version.",
-        "errorTitle": "Translation failed",
-        "errorDescription": "Try again or choose another language."
-      },
-      "sticky": {
-        "title": "Quick actions"
+      "grant": {
+        "title": "Grant a membership",
+        "description": "Users find their ID on the Account page.",
+        "success": "Membership granted",
+        "userId": "User ID",
+        "userIdPlaceholder": "Paste the user ID",
+        "startsAt": "Starts (default: now)",
+        "months": "Months",
+        "note": "Note",
+        "notePlaceholder": "Payment reference, reason…",
+        "submit": "Grant"
       }
     },
     "tools": {
@@ -271,104 +278,5 @@
         "errorTitle": "Extraction failed"
       }
     }
-  },
-  "auth": {
-    "login": {
-      "page": {
-        "title": "Welcome to Fish Blog",
-        "description": "Sign in to keep reading and managing content"
-      },
-      "google": "Continue with Google",
-      "github": "Continue with GitHub",
-      "orContinue": "Or continue with",
-      "emailPlaceholder": "Enter your email",
-      "emailButton": "Sign in with Email"
-    }
-  },
-  "content": {
-    "backToList": "Back to library",
-    "metadata": {
-      "published": "Published",
-      "readingTime": "Reading Time",
-      "author": "Author",
-      "access": "Access",
-      "subscriptionOnly": "Members only",
-      "free": "Public"
-    },
-    "updated": "Updated {date}",
-    "coverImage": "Cover image",
-    "badges": {
-      "subscriptionOnly": "Member content",
-      "member": "Unlocked"
-    },
-    "locked": {
-      "previewTitle": "Preview only",
-      "previewDescription": "Non-members can read 30% of the article.",
-      "title": "Subscribe to unlock the full article",
-      "description": "Support the writing, unlock every paragraph, and receive future updates instantly.",
-      "primaryCta": "Sign in / Subscribe",
-      "secondaryCta": "See member benefits"
-    }
-  },
-  "comments": {
-    "title": "Comments",
-    "subtitle": "Join the conversation",
-    "count": "{count, plural, one {# comment} other {# comments}}",
-    "placeholder": "Share your take or ask a question...",
-    "signin": "Sign in to comment",
-    "emptyError": "Write a few words before sending.",
-    "submitError": "Could not post comment. Please try again.",
-    "submit": "Post",
-    "loading": "Loading comments...",
-    "empty": "No comments yet. Be the first to add one.",
-    "loadError": "Unable to load comments right now.",
-    "anonymous": "Someone"
-  },
-  "explorer": {
-    "searchLabel": "Search",
-    "searchPlaceholder": "Find by title, summary, or keyword",
-    "categoryLabel": "Category",
-    "categoryAll": "All categories",
-    "sortLabel": "Sort",
-    "sortPlaceholder": "Newest first",
-    "sortOptions": {
-      "newest": "Newest",
-      "oldest": "Oldest",
-      "alphabetical": "A → Z"
-    },
-    "stats": "{count, plural, one {Showing # article} other {Showing # articles}}",
-    "reset": "Reset",
-    "updating": "Updating",
-    "readArticle": "Read article",
-    "empty": {
-      "title": "Nothing matches yet.",
-      "description": "Adjust the filters or clear the search."
-    },
-    "loadMore": "Load more",
-    "loadingMore": "Loading..."
-  },
-  "pwa": {
-    "title": "Install the app",
-    "description": "Add Fish Blog to your home screen for faster, offline-friendly reading.",
-    "cta": "Install",
-    "remindLater": "Maybe later",
-    "close": "Close"
-  },
-  "home": {
-    "brandTitle": "Fish Blog",
-    "heroKicker": "Mobile-first · Offline-ready",
-    "heroTitle": "Practical notes on engineering, AI, and product",
-    "heroDescription": "Long form walkthroughs, playbooks, and debriefs. Filter below to jump to what you need.",
-    "rssCta": "Subscribe via RSS",
-    "rssHint": "Add to your reader to catch new drops automatically.",
-    "pwaHint": "Add Fish Blog to your home screen for quick, offline-friendly reading."
-  },
-  "seo": {
-    "siteTitle": "Fish Blog",
-    "siteDescription": "Practical notes on engineering, applied AI, and growth, written to be used.",
-    "homeTitle": "Content Library | Fish Blog",
-    "homeDescription": "Browse articles on engineering, SEO, growth, and indie building in English and Chinese.",
-    "aboutTitle": "Felix",
-    "aboutDescription": "Software Engineer focused on AI products, growth, and monetization."
   }
 }

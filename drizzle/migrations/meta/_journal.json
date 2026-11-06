@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1763384154813,
-      "tag": "0000_clumsy_morgan_stark",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1763389611557,
-      "tag": "0002_thankful_eternals",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1763389914615,
-      "tag": "0002_cute_terror",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1763850736759,
-      "tag": "0003_add_comments",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1763890398842,
-      "tag": "0004_calm_vin_gonzales",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1763908699452,
-      "tag": "0005_nasty_rhodey",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1777909207343,
-      "tag": "0006_nice_mister_sinister",
+      "when": 1793950568507,
+      "tag": "0000_baseline",
       "breakpoints": true
     }
   ]

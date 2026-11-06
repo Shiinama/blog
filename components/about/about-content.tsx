@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 
 import { Link } from '@/i18n/navigation'
 
@@ -66,7 +66,7 @@ export function AboutContent(props: AboutContentProps) {
     >
       <motion.header variants={itemVariants} className="space-y-4">
         <h1 className="text-foreground text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
-        <p className="text-muted-foreground max-w-prose whitespace-pre-line text-base leading-relaxed sm:text-lg">
+        <p className="text-muted-foreground max-w-prose text-base leading-relaxed whitespace-pre-line sm:text-lg">
           {intro}
         </p>
       </motion.header>

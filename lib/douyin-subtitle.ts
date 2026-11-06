@@ -1,3 +1,5 @@
+import 'server-only'
+
 /**
  * Extract subtitles / spoken-word transcript from a Douyin video.
  *
@@ -126,7 +128,9 @@ function toSrtTime(seconds: number) {
 /** Build a SubRip (.srt) document from timestamped segments. */
 export function segmentsToSrt(segments: DouyinSubtitleSegment[]) {
   return segments
-    .map((segment, index) => `${index + 1}\n${toSrtTime(segment.start)} --> ${toSrtTime(segment.end)}\n${segment.text}\n`)
+    .map(
+      (segment, index) => `${index + 1}\n${toSrtTime(segment.start)} --> ${toSrtTime(segment.end)}\n${segment.text}\n`
+    )
     .join('\n')
     .trim()
 }
@@ -159,7 +163,7 @@ function buildResult(runId: string, item: Record<string, unknown>, fallbackLangu
   return {
     status: 'succeeded',
     runId,
-    url: typeof item.url === 'string' ? item.url : (typeof item.inputUrl === 'string' ? item.inputUrl : ''),
+    url: typeof item.url === 'string' ? item.url : typeof item.inputUrl === 'string' ? item.inputUrl : '',
     language: typeof item.language === 'string' ? item.language : fallbackLanguage,
     duration: Number.isFinite(duration) ? duration : null,
     title:
@@ -178,18 +182,21 @@ type ApifyRun = { id: string; status: string; defaultDatasetId: string }
 
 /** Kick off an actor run for a single Douyin URL and return the run handle. */
 async function startRun(url: string, targetLanguage: string, token: string, signal?: AbortSignal) {
-  const data = await apify<{ data: ApifyRun }>(`${APIFY_BASE}/acts/${ACTOR_ID}/runs?token=${encodeURIComponent(token)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      videoUrls: [url],
-      targetLanguage,
-      outputSrt: false,
-      shouldDownloadVideos: false,
-      shouldDownloadCovers: false
-    }),
-    signal
-  })
+  const data = await apify<{ data: ApifyRun }>(
+    `${APIFY_BASE}/acts/${ACTOR_ID}/runs?token=${encodeURIComponent(token)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoUrls: [url],
+        targetLanguage,
+        outputSrt: false,
+        shouldDownloadVideos: false,
+        shouldDownloadCovers: false
+      }),
+      signal
+    }
+  )
   if (!data?.data?.id) {
     throw new DouyinSubtitleError('Failed to start transcript run', 502)
   }
