@@ -59,12 +59,13 @@ console.log('🔐 Syncing runtime secrets')
 const secrets = Object.fromEntries(
   RUNTIME_SECRETS.flatMap((name) => (process.env[name] ? [[name, process.env[name]]] : []))
 )
-const file = join(mkdtempSync(join(tmpdir(), 'blog-secrets-')), 'secrets.json')
+const dir = mkdtempSync(join(tmpdir(), 'blog-secrets-'))
+const file = join(dir, 'secrets.json')
 writeFileSync(file, JSON.stringify(secrets), { mode: 0o600 })
 try {
   run(['secret', 'bulk', file])
 } finally {
-  rmSync(file)
+  rmSync(dir, { recursive: true, force: true })
 }
 
 console.log('🗄️  Applying D1 migrations')
