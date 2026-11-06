@@ -23,7 +23,6 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply BLOG_DATABASE --remote",
     "db:migrate:local": "wrangler d1 migrations apply BLOG_DATABASE --local",
-    "db:rebuild": "tsx scripts/db/rebuild.ts",
     "db:studio": "drizzle-kit studio",
     "blog": "tsx --env-file-if-exists=.env scripts/blog/cli.ts"
   },

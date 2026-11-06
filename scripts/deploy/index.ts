@@ -37,6 +37,16 @@ const runUnattended = (args: string[]) =>
   })
 const read = (args: string[]) => execFileSync('pnpm', ['exec', 'wrangler', ...args], { encoding: 'utf8' })
 
+/** The secrets list is eventually consistent after an upload; wait until it shows what we just wrote. */
+async function listSecretsIncluding(expected: string[], attempts = 10): Promise<string[]> {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const names = (JSON.parse(read(['secret', 'list', '--format', 'json'])) as { name: string }[]).map((s) => s.name)
+    if (expected.every((name) => names.includes(name))) return names
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+  }
+  throw new Error('Secret list did not converge; skipped stale-secret cleanup')
+}
+
 process.loadEnvFile('.env')
 
 const missing = REQUIRED.filter((name) => !process.env[name])
@@ -64,8 +74,7 @@ console.log('🚀 Building and deploying')
 execFileSync('pnpm', ['run', 'deploy'], { stdio: 'inherit' })
 
 // Only once the new version is live: the previous one may still read these.
-const existing = (JSON.parse(read(['secret', 'list', '--format', 'json'])) as { name: string }[]).map((s) => s.name)
-for (const name of existing.filter((name) => !(name in secrets))) {
+for (const name of (await listSecretsIncluding(Object.keys(secrets))).filter((name) => !(name in secrets))) {
   console.log(`🧹 Removing stale secret ${name}`)
   runUnattended(['secret', 'delete', name])
 }
